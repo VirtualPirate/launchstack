@@ -19,6 +19,11 @@
     "add component": { "command": "cd apps/frontend && pnpm dlx shadcn@latest add", "description": "Add a shadcn component (append component name)" },
     "init": { "command": "cd apps/frontend && pnpm dlx shadcn@latest init", "description": "Re-initialize shadcn configuration" }
   },
+  "db": {
+    "start": { "command": "docker compose up -d postgres", "description": "Start PostgreSQL database (port 11753)" },
+    "stop": { "command": "docker compose down", "description": "Stop PostgreSQL database" },
+    "status": { "command": "docker compose ps", "description": "Check database container status" }
+  },
   "lint": {
     "all": { "command": "pnpm lint", "description": "Lint all packages and apps" }
   }

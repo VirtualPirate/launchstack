@@ -1,0 +1,23 @@
+{
+  "name": "voicelane-js",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend start:dev",
+    "dev": "pnpm run --parallel dev:frontend dev:backend",
+    "build:packages": "pnpm --filter @voicelane/api-interfaces --filter @voicelane/core build",
+    "build:apps": "pnpm --filter frontend --filter backend build",
+    "build": "pnpm run build:packages && pnpm run build:apps",
+    "lint": "pnpm -r lint",
+    "deploy:frontend": "pnpm run build:packages && pnpm --filter frontend build",
+    "deploy:backend": "pnpm run build:packages && pnpm --filter backend build && pnpm --filter backend deploy ./deploy/backend --prod",
+    "deploy": "pnpm run build:packages && pnpm run build:apps && pnpm --filter backend deploy ./deploy/backend --prod",
+    "start:prod:backend": "node ./deploy/backend/dist/main.js",
+    "preview:frontend": "pnpm --filter frontend preview",
+    "serve:frontend:prod": "pnpm run deploy:frontend && pnpm --filter frontend preview"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

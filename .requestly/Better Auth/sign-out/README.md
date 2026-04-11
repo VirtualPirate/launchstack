@@ -1,0 +1,1 @@
+Collection for /sign-out endpoints

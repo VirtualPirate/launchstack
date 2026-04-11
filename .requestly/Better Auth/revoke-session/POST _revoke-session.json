@@ -1,0 +1,31 @@
+{
+  "name": "POST _revoke-session",
+  "rank": "b0I",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/revoke-session",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"token\": \"\"\n}",
+    "bodyContainer": {
+      "text": "{\n  \"token\": \"\"\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

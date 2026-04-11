@@ -1,17 +1,23 @@
 import 'dotenv/config';
 import { defineConfig } from '@drepkovsky/drizzle-migrations';
+import type { Config as DrizzleKitConfig } from 'drizzle-kit';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-export default defineConfig({
+const config: DrizzleKitConfig = defineConfig({
   out: './drizzle',
-  schema: './src/databases/pg-drizzle/schema.ts',
+  schema: [
+    './src/databases/pg-drizzle/schema.ts',
+    './src/databases/pg-drizzle/auth-schema.ts',
+  ],
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  getMigrator: async () => {
+  getMigrator: () => {
     const client = postgres(process.env.DATABASE_URL!, { max: 1 });
-    return drizzle(client);
+    return Promise.resolve(drizzle(client) as any);
   },
 });
+
+export default config;

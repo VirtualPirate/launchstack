@@ -1,0 +1,31 @@
+{
+  "name": "sendVerificationEmail",
+  "rank": "b09",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/send-verification-email",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"email\": \"user@example.com\",\n  \"callbackURL\": \"https://example.com/callback\"\n}",
+    "bodyContainer": {
+      "text": "{\n  \"email\": \"user@example.com\",\n  \"callbackURL\": \"https://example.com/callback\"\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

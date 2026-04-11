@@ -1,0 +1,1 @@
+Collection for /change-password endpoints

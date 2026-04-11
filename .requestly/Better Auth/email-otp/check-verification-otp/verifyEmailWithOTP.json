@@ -1,0 +1,31 @@
+{
+  "name": "verifyEmailWithOTP",
+  "rank": "b0U",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/email-otp/check-verification-otp",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"email\": \"\",\n  \"type\": \"\",\n  \"otp\": \"\"\n}",
+    "bodyContainer": {
+      "text": "{\n  \"email\": \"\",\n  \"type\": \"\",\n  \"otp\": \"\"\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

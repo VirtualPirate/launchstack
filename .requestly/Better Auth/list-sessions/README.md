@@ -1,0 +1,1 @@
+Collection for /list-sessions endpoints

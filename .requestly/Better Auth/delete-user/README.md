@@ -1,0 +1,1 @@
+Collection for /delete-user endpoints

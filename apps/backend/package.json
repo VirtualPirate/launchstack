@@ -31,16 +31,20 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.1",
+    "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.4",
-    "@nestjs/core": "^11.0.1",
-    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@thallesp/nestjs-better-auth": "^2.6.0",
     "@voicelane/api-interfaces": "workspace:^",
     "@voicelane/core": "workspace:^",
+    "better-auth": "^1.6.2",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "resend": "^6.10.0",
+    "rxjs": "^7.8.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@drepkovsky/drizzle-migrations": "^0.6.0",
@@ -48,10 +52,10 @@
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.0.1",
+    "@nestjs/testing": "^11.1.6",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.19.17",
     "@types/supertest": "^6.0.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.18.0",
@@ -66,7 +70,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.9.2",
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
@@ -79,6 +83,11 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^@thallesp/nestjs-better-auth$": "<rootDir>/__mocks__/@thallesp/nestjs-better-auth.ts",
+      "^better-auth/plugins$": "<rootDir>/__mocks__/better-auth/plugins.ts",
+      "^resend$": "<rootDir>/__mocks__/resend.ts"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

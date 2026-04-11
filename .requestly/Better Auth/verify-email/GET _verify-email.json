@@ -1,0 +1,48 @@
+{
+  "name": "GET _verify-email",
+  "rank": "b08",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/verify-email",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "GET",
+    "queryParams": [
+      {
+        "id": 1,
+        "key": "token",
+        "value": "string",
+        "isEnabled": true,
+        "description": "The token to verify the email",
+        "dataType": "string"
+      },
+      {
+        "id": 2,
+        "key": "callbackURL",
+        "value": "string",
+        "isEnabled": true,
+        "description": "The URL to redirect to after email verification",
+        "dataType": "string"
+      }
+    ],
+    "headers": [],
+    "body": null,
+    "bodyContainer": {
+      "text": "",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "text/plain",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

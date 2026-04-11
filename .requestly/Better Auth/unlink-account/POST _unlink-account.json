@@ -1,0 +1,31 @@
+{
+  "name": "POST _unlink-account",
+  "rank": "b0N",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/unlink-account",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"providerId\": \"\",\n  \"accountId\": null\n}",
+    "bodyContainer": {
+      "text": "{\n  \"providerId\": \"\",\n  \"accountId\": null\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

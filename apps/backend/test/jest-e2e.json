@@ -5,5 +5,12 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@thallesp/nestjs-better-auth$": "<rootDir>/../src/__mocks__/@thallesp/nestjs-better-auth.ts",
+    "^better-auth$": "<rootDir>/../src/__mocks__/better-auth.ts",
+    "^better-auth/adapters/drizzle$": "<rootDir>/../src/__mocks__/better-auth/adapters/drizzle.ts",
+    "^better-auth/plugins$": "<rootDir>/../src/__mocks__/better-auth/plugins.ts",
+    "^resend$": "<rootDir>/../src/__mocks__/resend.ts"
   }
 }

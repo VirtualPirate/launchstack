@@ -1,0 +1,39 @@
+{
+  "name": "GET _callback_{id}",
+  "rank": "az",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/callback/:id",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "GET",
+    "queryParams": [],
+    "headers": [],
+    "body": null,
+    "bodyContainer": {
+      "text": "",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "text/plain",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": [
+      {
+        "id": 1,
+        "key": "id",
+        "value": "",
+        "description": "",
+        "dataType": "string"
+      }
+    ]
+  }
+}

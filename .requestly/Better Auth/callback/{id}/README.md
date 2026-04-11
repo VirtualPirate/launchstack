@@ -1,0 +1,1 @@
+Collection for /callback/{id} endpoints

@@ -1,0 +1,1 @@
+Collection for /forget-password endpoints

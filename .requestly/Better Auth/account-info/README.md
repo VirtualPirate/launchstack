@@ -1,0 +1,1 @@
+Collection for /account-info endpoints

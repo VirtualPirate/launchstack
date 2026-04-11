@@ -1,0 +1,31 @@
+{
+  "name": "requestEmailChangeWithEmailOTP",
+  "rank": "b0Y",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/email-otp/request-email-change",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"newEmail\": \"\",\n  \"otp\": null\n}",
+    "bodyContainer": {
+      "text": "{\n  \"newEmail\": \"\",\n  \"otp\": null\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

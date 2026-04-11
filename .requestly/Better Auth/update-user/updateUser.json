@@ -1,0 +1,31 @@
+{
+  "name": "updateUser",
+  "rank": "b0D",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/update-user",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"name\": \"\",\n  \"image\": \"\"\n}",
+    "bodyContainer": {
+      "text": "{\n  \"name\": \"\",\n  \"image\": \"\"\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

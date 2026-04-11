@@ -1,0 +1,8 @@
+{
+  "base_url": {
+    "value": "http://localhost:3000/api/auth",
+    "type": "string",
+    "id": 1,
+    "isSecret": false
+  }
+}

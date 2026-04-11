@@ -1,0 +1,1 @@
+API Reference for your Better Auth Instance

@@ -1,0 +1,31 @@
+{
+  "name": "changeEmail",
+  "rank": "b0A",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/change-email",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"newEmail\": \"\",\n  \"callbackURL\": null\n}",
+    "bodyContainer": {
+      "text": "{\n  \"newEmail\": \"\",\n  \"callbackURL\": null\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "name": "@voicelane/core",
+  "name": "@launchstack/core",
   "version": "1.0.0",
-  "description": "Core utilities for voicelane",
+  "description": "Core utilities for launchstack",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

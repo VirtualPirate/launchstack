@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { User, ApiResponse } from '@voicelane/api-interfaces';
-import { generateId, formatDate, API_VERSION } from '@voicelane/core';
+import type { User, ApiResponse } from '@launchstack/api-interfaces';
+import { generateId, formatDate, API_VERSION } from '@launchstack/core';
 
 @Injectable()
 export class AppService {
   getHello(): ApiResponse<{ message: string; version: string }> {
     return {
       data: {
-        message: 'Hello from Voicelane!',
+        message: 'Hello from launchstack!',
         version: API_VERSION,
       },
       message: 'Success',

@@ -25,10 +25,10 @@ importers:
       '@thallesp/nestjs-better-auth':
         specifier: ^2.6.0
         version: 2.6.0(@nestjs/common@11.1.18)(@nestjs/core@11.1.18)(better-auth@1.6.2)(typescript@5.9.3)
-      '@voicelane/api-interfaces':
+      '@launchstack/api-interfaces':
         specifier: workspace:^
         version: link:../../packages/api-interfaces
-      '@voicelane/core':
+      '@launchstack/core':
         specifier: workspace:^
         version: link:../../packages/core
       better-auth:
@@ -137,10 +137,10 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.2.2
         version: 4.2.2(vite@7.3.2)
-      '@voicelane/api-interfaces':
+      '@launchstack/api-interfaces':
         specifier: workspace:^
         version: link:../../packages/api-interfaces
-      '@voicelane/core':
+      '@launchstack/core':
         specifier: workspace:^
         version: link:../../packages/core
       class-variance-authority:

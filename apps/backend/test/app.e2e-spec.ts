@@ -26,7 +26,7 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body.success).toBe(true);
-        expect(res.body.data.message).toBe('Hello from Voicelane!');
+        expect(res.body.data.message).toBe('Hello from launchstack!');
       });
   });
 });

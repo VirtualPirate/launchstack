@@ -25,7 +25,7 @@ describe('AppController', () => {
     it('should return hello response', () => {
       const result = appController.getHello();
       expect(result.success).toBe(true);
-      expect(result.data.message).toBe('Hello from Voicelane!');
+      expect(result.data.message).toBe('Hello from launchstack!');
       expect(result.data.version).toBeDefined();
     });
   });

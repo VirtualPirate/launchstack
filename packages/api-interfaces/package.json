@@ -1,7 +1,7 @@
 {
-  "name": "@voicelane/api-interfaces",
+  "name": "@launchstack/api-interfaces",
   "version": "1.0.0",
-  "description": "Shared API interfaces for voicelane",
+  "description": "Shared API interfaces for launchstack",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

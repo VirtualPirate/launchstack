@@ -1,12 +1,12 @@
 {
-  "name": "voicelane-js",
+  "name": "launchstack-js",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend start:dev",
     "dev": "pnpm run --parallel dev:frontend dev:backend",
-    "build:packages": "pnpm --filter @voicelane/api-interfaces --filter @voicelane/core build",
+    "build:packages": "pnpm --filter @launchstack/api-interfaces --filter @launchstack/core build",
     "build:apps": "pnpm --filter frontend --filter backend build",
     "build": "pnpm run build:packages && pnpm run build:apps",
     "lint": "pnpm -r lint",

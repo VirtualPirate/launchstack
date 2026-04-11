@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { AppService } from './app.service';
-import type { User, ApiResponse } from '@voicelane/api-interfaces';
+import type { User, ApiResponse } from '@launchstack/api-interfaces';
 
 @Controller()
 export class AppController {

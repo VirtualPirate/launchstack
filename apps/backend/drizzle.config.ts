@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import 'dotenv/config';
 import { defineConfig } from '@drepkovsky/drizzle-migrations';
 import type { Config as DrizzleKitConfig } from 'drizzle-kit';

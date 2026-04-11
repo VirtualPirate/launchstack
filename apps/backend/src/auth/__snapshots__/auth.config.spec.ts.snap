@@ -1,0 +1,85 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`createAuth config snapshot should match snapshot with Google OAuth 1`] = `
+{
+  "account": {
+    "accountLinking": {
+      "enabled": true,
+      "trustedProviders": [
+        "google",
+      ],
+    },
+  },
+  "baseURL": "http://localhost:3000",
+  "database": {
+    "id": "drizzle",
+  },
+  "databaseHooks": {
+    "account": {
+      "create": {
+        "before": "[Function]",
+      },
+      "update": {
+        "before": "[Function]",
+      },
+    },
+  },
+  "emailAndPassword": {
+    "enabled": true,
+  },
+  "plugins": [
+    {
+      "id": "email-otp",
+    },
+    {
+      "id": "open-api",
+    },
+  ],
+  "secret": "test-secret-for-unit-tests-only",
+  "socialProviders": {
+    "google": {
+      "clientId": "google-client-id",
+      "clientSecret": "google-client-secret",
+    },
+  },
+  "trustedOrigins": [
+    "http://localhost:3000",
+    "http://localhost:5173",
+  ],
+}
+`;
+
+exports[`createAuth config snapshot should match snapshot without Google OAuth 1`] = `
+{
+  "baseURL": "http://localhost:3000",
+  "database": {
+    "id": "drizzle",
+  },
+  "databaseHooks": {
+    "account": {
+      "create": {
+        "before": "[Function]",
+      },
+      "update": {
+        "before": "[Function]",
+      },
+    },
+  },
+  "emailAndPassword": {
+    "enabled": true,
+  },
+  "plugins": [
+    {
+      "id": "email-otp",
+    },
+    {
+      "id": "open-api",
+    },
+  ],
+  "secret": "test-secret-for-unit-tests-only",
+  "trustedOrigins": [
+    "http://localhost:3000",
+    "http://localhost:5173",
+  ],
+}
+`;

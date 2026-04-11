@@ -1,5 +1,6 @@
 import { Home, LayoutDashboard, Settings, Rocket, Menu, X } from "lucide-react"
 import { useState } from "react"
+import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -98,8 +99,16 @@ function App() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                  <Button>Get Started</Button>
-                  <Button variant="outline">Documentation</Button>
+                  <Button
+                    onClick={() =>
+                      authClient.signIn.social({
+                        provider: "google",
+                        callbackURL: "/",
+                      })
+                    }
+                  >
+                    Sign in with Google
+                  </Button>
                 </div>
               </CardContent>
             </Card>

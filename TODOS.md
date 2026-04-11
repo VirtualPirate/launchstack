@@ -1,12 +1,11 @@
 # TODOS
 
-## Social OAuth Providers
-**What:** Add GitHub and Google OAuth to BetterAuth socialProviders config.
-**Why:** Email/password is minimum viable. Social login reduces friction for users who don't want to create passwords.
-**Effort:** human: ~1hr / CC: ~5min
-**Depends on:** BetterAuth base setup (this branch)
-**Context:** BetterAuth supports socialProviders natively via config. Requires creating OAuth apps with each provider and adding client ID/secret env vars. No plugins needed.
-**Also:** Update `.requestly/collections/betterauth-api.json` with OAuth endpoint configs when providers are added.
+## GitHub OAuth Provider
+**What:** Add GitHub OAuth to BetterAuth socialProviders config (Google OAuth is already done).
+**Why:** Social login reduces friction. GitHub is structurally identical to the existing Google OAuth setup.
+**Effort:** human: ~30min / CC: ~2min
+**Depends on:** Google OAuth setup (done)
+**Context:** Same pattern as Google: add `githubClientId`/`githubClientSecret` to AuthConfig, conditional spread in socialProviders, add to trustedProviders array, 2 env vars. Also add `github` to the `trustedProviders` array alongside `google`.
 
 ## Frontend Auth Client
 **What:** Install better-auth/react in frontend, create auth client, add sign-up/sign-in forms, protect routes.

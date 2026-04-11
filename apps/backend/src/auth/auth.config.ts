@@ -4,6 +4,7 @@ import { emailOTP, openAPI } from 'better-auth/plugins';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { Resend } from 'resend';
 import * as authSchema from '../databases/pg-drizzle/auth-schema';
+import { deriveKey, encrypt } from './crypto';
 
 export interface AuthConfig {
   db: PostgresJsDatabase<Record<string, unknown>>;
@@ -13,10 +14,14 @@ export interface AuthConfig {
   resendApiKey: string;
   emailFrom: string;
   nodeEnv?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
 }
 
 export function createAuth(config: AuthConfig) {
   const resend = new Resend(config.resendApiKey);
+  const googleEnabled = config.googleClientId && config.googleClientSecret;
+  const encryptionKey = deriveKey(config.secret);
 
   return betterAuth({
     database: drizzleAdapter(config.db, {
@@ -26,7 +31,55 @@ export function createAuth(config: AuthConfig) {
     secret: config.secret,
     baseURL: config.baseURL,
     trustedOrigins: config.trustedOrigins,
+    ...(googleEnabled && {
+      socialProviders: {
+        google: {
+          clientId: config.googleClientId!,
+          clientSecret: config.googleClientSecret!,
+        },
+      },
+      account: {
+        accountLinking: {
+          enabled: true,
+          trustedProviders: ['google'],
+        },
+      },
+    }),
     emailAndPassword: { enabled: true },
+    databaseHooks: {
+      account: {
+        create: {
+          before: async (account) => {
+            const encrypted = { ...account };
+            if (account.accessToken) {
+              encrypted.accessToken = encrypt(account.accessToken, encryptionKey);
+            }
+            if (account.refreshToken) {
+              encrypted.refreshToken = encrypt(
+                account.refreshToken,
+                encryptionKey,
+              );
+            }
+            return { data: encrypted };
+          },
+        },
+        update: {
+          before: async (account) => {
+            const encrypted = { ...account };
+            if (account.accessToken) {
+              encrypted.accessToken = encrypt(account.accessToken, encryptionKey);
+            }
+            if (account.refreshToken) {
+              encrypted.refreshToken = encrypt(
+                account.refreshToken,
+                encryptionKey,
+              );
+            }
+            return { data: encrypted };
+          },
+        },
+      },
+    },
     plugins: [
       emailOTP({
         otpLength: 6,

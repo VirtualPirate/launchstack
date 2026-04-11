@@ -15,6 +15,10 @@ import { createAuth } from './auth.config';
         const frontendURL = configService.getOrThrow<string>('FRONTEND_URL');
         const resendApiKey = configService.getOrThrow<string>('RESEND_API_KEY');
         const emailFrom = configService.getOrThrow<string>('EMAIL_FROM');
+        const googleClientId = configService.get<string>('GOOGLE_CLIENT_ID');
+        const googleClientSecret = configService.get<string>(
+          'GOOGLE_CLIENT_SECRET',
+        );
         return {
           auth: createAuth({
             db,
@@ -24,6 +28,8 @@ import { createAuth } from './auth.config';
             resendApiKey,
             emailFrom,
             nodeEnv: configService.get<string>('NODE_ENV'),
+            googleClientId,
+            googleClientSecret,
           }),
         };
       },

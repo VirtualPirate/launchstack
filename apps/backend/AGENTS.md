@@ -73,8 +73,12 @@ Auth uses [Better Auth](https://www.better-auth.com/) v1.6.2 via the `@thallesp/
 
 - Drizzle adapter (PostgreSQL)
 - Email + password authentication
+- Google OAuth social provider (optional, enabled when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set). Account linking is enabled with Google as a trusted provider, meaning Google sign-in auto-links to existing email+password accounts with the same email.
+- Token encryption via `databaseHooks` — OAuth access tokens and refresh tokens are encrypted at rest using AES-256-GCM. Encryption key is derived from `BETTER_AUTH_SECRET` via scrypt. **Note:** Changing `BETTER_AUTH_SECRET` after OAuth tokens are stored will make existing encrypted tokens unreadable.
 - Email OTP plugin (6-digit codes, 5-minute expiry, auto-sends on signup via Resend)
 - OpenAPI plugin (non-production only)
+
+**Crypto:** `src/auth/crypto.ts` — AES-256-GCM encrypt/decrypt utility. Key derived from `BETTER_AUTH_SECRET` via `scryptSync`. Use `decrypt()` when reading OAuth tokens from the `account` table for external API calls.
 
 **Routes:** All auth endpoints are served at `/api/auth/*` by the NestJS wrapper.
 
@@ -84,13 +88,17 @@ Auth uses [Better Auth](https://www.better-auth.com/) v1.6.2 via the `@thallesp/
 - `@OptionalAuth()` — Auth optional, session may or may not exist
 - `@Session()` — Parameter decorator to inject the current session
 
-**Auth flow documentation:** See `docs/auth-signup-flow.md` for the sign-up + email OTP verification flow with cURL examples.
+**Auth flow documentation:**
+- `docs/auth-signup-flow.md` — Email + password sign-up with OTP verification (cURL examples)
+- `docs/google-oauth-flow.md` — Google OAuth sign-in/sign-up, account linking, token encryption, frontend integration
 
 ### Testing
 
 **Unit tests** (`*.spec.ts` in `src/`): Better Auth and Resend are ESM-only packages that don't work directly with Jest (CJS). Manual mocks in `src/__mocks__/` handle this via `moduleNameMapper` in package.json:
 
 - `src/__mocks__/@thallesp/nestjs-better-auth.ts`
+- `src/__mocks__/better-auth.ts`
+- `src/__mocks__/better-auth/adapters/drizzle.ts`
 - `src/__mocks__/better-auth/plugins.ts`
 - `src/__mocks__/resend.ts`
 
@@ -111,8 +119,13 @@ All API responses use the shared `ApiResponse<T>` type from `@launchstack/api-in
 See `.env.example` for the full template. Required:
 
 - `DATABASE_URL` — PostgreSQL connection string (default port 11753 via Docker)
-- `BETTER_AUTH_SECRET` — Auth signing secret (generate with `openssl rand -base64 32`)
+- `BETTER_AUTH_SECRET` — Auth signing secret (generate with `openssl rand -base64 32`). Also used to derive the token encryption key.
 - `BETTER_AUTH_URL` — Backend base URL (e.g., `http://localhost:3000`)
 - `FRONTEND_URL` — Frontend origin for CORS trusted origins
 - `RESEND_API_KEY` — Resend email service API key
 - `EMAIL_FROM` — Sender email address
+
+Optional:
+
+- `GOOGLE_CLIENT_ID` — Google OAuth client ID (omit to disable Google sign-in)
+- `GOOGLE_CLIENT_SECRET` — Google OAuth client secret (omit to disable Google sign-in)

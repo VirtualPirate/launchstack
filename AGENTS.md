@@ -67,9 +67,9 @@ Packages are built with tsup (CJS + ESM) and must be built before apps (`pnpm bu
 
 Migrations live in `apps/backend/drizzle/` and use `@drepkovsky/drizzle-migrations`. The `drizzle.config.ts` configures both drizzle-kit (for push/studio) and drizzle-migrations (for generate/up/down).
 
-**Auth:** Better Auth v1.6.2 integrated via `@thallesp/nestjs-better-auth`. Auth config is in `src/auth/auth.config.ts` — creates the Better Auth instance with drizzle adapter, email+password, email OTP (Resend), and openAPI plugin (non-prod). The `AppAuthModule` wires it up with env-based config. Auth routes are served at `/api/auth/*` by the NestJS wrapper. Auth decorators available: `@AllowAnonymous()`, `@OptionalAuth()`, `@Session()`.
+**Auth:** Better Auth v1.6.2 integrated via `@thallesp/nestjs-better-auth`. Auth config is in `src/auth/auth.config.ts` — creates the Better Auth instance with drizzle adapter, email+password, Google OAuth (optional, via `socialProviders`), email OTP (Resend), token encryption (AES-256-GCM via `databaseHooks`), and openAPI plugin (non-prod). The `AppAuthModule` wires it up with env-based config. Auth routes are served at `/api/auth/*` by the NestJS wrapper. Auth decorators available: `@AllowAnonymous()`, `@OptionalAuth()`, `@Session()`.
 
-**Testing:** Jest with module mocks for `@thallesp/nestjs-better-auth`, `better-auth/plugins`, and `resend` (see `moduleNameMapper` in package.json).
+**Testing:** Jest with module mocks for `@thallesp/nestjs-better-auth`, `better-auth`, `better-auth/adapters/drizzle`, `better-auth/plugins`, and `resend` (see `moduleNameMapper` in package.json).
 
 ### Frontend (React + Vite)
 
@@ -89,4 +89,10 @@ BETTER_AUTH_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
 RESEND_API_KEY=<resend api key>
 EMAIL_FROM=onboarding@resend.dev
+```
+
+Optional (omit to disable Google sign-in):
+```
+GOOGLE_CLIENT_ID=<google oauth client id>
+GOOGLE_CLIENT_SECRET=<google oauth client secret>
 ```

@@ -49,10 +49,13 @@ export function createAuth(config: AuthConfig) {
     databaseHooks: {
       account: {
         create: {
-          before: async (account) => {
+          before: (account) => {
             const encrypted = { ...account };
             if (account.accessToken) {
-              encrypted.accessToken = encrypt(account.accessToken, encryptionKey);
+              encrypted.accessToken = encrypt(
+                account.accessToken,
+                encryptionKey,
+              );
             }
             if (account.refreshToken) {
               encrypted.refreshToken = encrypt(
@@ -60,14 +63,17 @@ export function createAuth(config: AuthConfig) {
                 encryptionKey,
               );
             }
-            return { data: encrypted };
+            return Promise.resolve({ data: encrypted });
           },
         },
         update: {
-          before: async (account) => {
+          before: (account) => {
             const encrypted = { ...account };
             if (account.accessToken) {
-              encrypted.accessToken = encrypt(account.accessToken, encryptionKey);
+              encrypted.accessToken = encrypt(
+                account.accessToken,
+                encryptionKey,
+              );
             }
             if (account.refreshToken) {
               encrypted.refreshToken = encrypt(
@@ -75,7 +81,7 @@ export function createAuth(config: AuthConfig) {
                 encryptionKey,
               );
             }
-            return { data: encrypted };
+            return Promise.resolve({ data: encrypted });
           },
         },
       },

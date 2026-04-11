@@ -4,6 +4,7 @@ import { emailOTP, openAPI } from 'better-auth/plugins';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { Resend } from 'resend';
 import * as authSchema from '../databases/pg-drizzle/auth-schema';
+import { renderOtpEmail } from '../emails/render-email';
 import { deriveKey, encrypt } from './crypto';
 
 export interface AuthConfig {
@@ -46,6 +47,9 @@ export function createAuth(config: AuthConfig) {
       },
     }),
     emailAndPassword: { enabled: true },
+    advanced: {
+      disableCSRFCheck: config.nodeEnv !== 'production',
+    },
     databaseHooks: {
       account: {
         create: {
@@ -92,16 +96,13 @@ export function createAuth(config: AuthConfig) {
         expiresIn: 300,
         sendVerificationOnSignUp: true,
         async sendVerificationOTP({ email, otp, type }) {
+          const { subject, html, text } = await renderOtpEmail(otp, type);
           const { data, error } = await resend.emails.send({
             from: config.emailFrom,
             to: email,
-            subject:
-              type === 'sign-in'
-                ? `Your sign-in code: ${otp}`
-                : type === 'email-verification'
-                  ? `Verify your email: ${otp}`
-                  : `Reset your password: ${otp}`,
-            text: `Your verification code is: ${otp}. It expires in 5 minutes.`,
+            subject,
+            html,
+            text,
           });
           if (error) {
             console.error('Resend email failed:', error);

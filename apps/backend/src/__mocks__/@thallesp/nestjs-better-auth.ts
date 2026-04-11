@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module, SetMetadata, DynamicModule } from '@nestjs/common';
 
 export const AllowAnonymous = () => SetMetadata('isPublic', true);

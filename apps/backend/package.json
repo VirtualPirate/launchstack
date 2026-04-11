@@ -17,7 +17,8 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
+    "test": "jest && tsx src/emails/__tests__/render-integration.ts",
+    "test:email": "tsx src/emails/__tests__/render-integration.ts",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -31,16 +32,19 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@launchstack/api-interfaces": "workspace:^",
+    "@launchstack/core": "workspace:^",
     "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.6",
     "@thallesp/nestjs-better-auth": "^2.6.0",
-    "@launchstack/api-interfaces": "workspace:^",
-    "@launchstack/core": "workspace:^",
     "better-auth": "^1.6.2",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
+    "react": "^19.2.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.10.0",
     "rxjs": "^7.8.1",
@@ -56,6 +60,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.17",
+    "@types/react": "^19.2.5",
     "@types/supertest": "^6.0.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.18.0",
@@ -66,10 +71,11 @@
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.4.9",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.20.0"
   },
@@ -77,19 +83,22 @@
     "moduleFileExtensions": [
       "js",
       "json",
-      "ts"
+      "ts",
+      "tsx"
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)sx?$": "ts-jest"
     },
     "moduleNameMapper": {
       "^@thallesp/nestjs-better-auth$": "<rootDir>/__mocks__/@thallesp/nestjs-better-auth.ts",
       "^better-auth$": "<rootDir>/__mocks__/better-auth.ts",
       "^better-auth/adapters/drizzle$": "<rootDir>/__mocks__/better-auth/adapters/drizzle.ts",
       "^better-auth/plugins$": "<rootDir>/__mocks__/better-auth/plugins.ts",
-      "^resend$": "<rootDir>/__mocks__/resend.ts"
+      "^resend$": "<rootDir>/__mocks__/resend.ts",
+      "^@react-email/render$": "<rootDir>/__mocks__/@react-email/render.ts",
+      "^@react-email/components$": "<rootDir>/__mocks__/@react-email/components.ts"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

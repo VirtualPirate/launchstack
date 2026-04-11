@@ -10,6 +10,9 @@ exports[`createAuth config snapshot should match snapshot with Google OAuth 1`] 
       ],
     },
   },
+  "advanced": {
+    "disableCSRFCheck": true,
+  },
   "baseURL": "http://localhost:3000",
   "database": {
     "id": "drizzle",
@@ -51,6 +54,9 @@ exports[`createAuth config snapshot should match snapshot with Google OAuth 1`] 
 
 exports[`createAuth config snapshot should match snapshot without Google OAuth 1`] = `
 {
+  "advanced": {
+    "disableCSRFCheck": true,
+  },
   "baseURL": "http://localhost:3000",
   "database": {
     "id": "drizzle",

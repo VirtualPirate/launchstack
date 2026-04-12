@@ -1,0 +1,89 @@
+---
+description: Two-layer API integration pattern for the frontend (API module + React Query hook)
+globs: apps/frontend/**
+alwaysApply: false
+---
+
+# Frontend API Integration
+
+When integrating a backend endpoint, always create **two files**: an API module and a React Query hook.
+
+## File structure
+
+```
+src/
+  api/
+    axios-client.ts        # Shared Axios instance (already exists)
+    <domain>.api.ts         # API module per domain
+  hooks/
+    api/
+      use-<domain>.ts       # React Query hooks per domain
+```
+
+## 1. API module — `src/api/<domain>.api.ts`
+
+Export a plain object named `<Domain>API` with async methods. Use `axiosInstance.request()` and return typed `response.data`.
+
+```typescript
+import { ApiResponse } from "@launchstack/api-interfaces";
+import { axiosInstance } from "./axios-client";
+
+export const AppAPI = {
+  getHello: async (): Promise<ApiResponse<{ message: string; version: string }>> => {
+    const response = await axiosInstance.request({
+      url: "/",
+      method: "GET",
+    });
+    return response.data as ApiResponse<{ message: string; version: string }>;
+  },
+};
+```
+
+Rules:
+- One file per backend domain/controller (e.g. `users.api.ts`, `organizations.api.ts`).
+- Always use `axiosInstance.request({ url, method, params?, data? })` — not `axiosInstance.get()` / `.post()`.
+- GET requests pass query parameters via `params`. POST/PUT/PATCH pass body via `data`.
+- Import request/response types from `@launchstack/api-interfaces`. Never duplicate types locally.
+- Return `response.data` with a type assertion matching the endpoint's return type.
+
+## 2. React Query hook — `src/hooks/api/use-<domain>.ts`
+
+Export named functions wrapping `useQuery` (reads) or `useMutation` (writes).
+
+```typescript
+import { useQuery } from "@tanstack/react-query";
+import { ApiResponse } from "@launchstack/api-interfaces";
+import { AppAPI } from "../../api/app.api";
+
+export function useGetHello() {
+  return useQuery<ApiResponse<{ message: string; version: string }>>({
+    queryKey: ["app", "hello"],
+    queryFn: () => AppAPI.getHello(),
+  });
+}
+```
+
+Rules:
+- Query keys follow `["<domain>", "<action>", ...params]` — include all arguments that affect the request.
+- Use `enabled` for conditional fetching (e.g. `enabled: !!id`).
+- Hook functions are named `use<Verb><Noun>` (e.g. `useGetUsers`, `useCreateOrganization`).
+- One hook file per API module. Multiple hooks per file are fine when they share a domain.
+
+## Common mistakes
+
+```typescript
+// BAD: fetching directly in a component without the hook layer
+const [data, setData] = useState(null);
+useEffect(() => { axiosInstance.get("/").then(r => setData(r.data)); }, []);
+
+// GOOD: use the hook
+const { data, isLoading } = useGetHello();
+```
+
+```typescript
+// BAD: duplicating interface types in the frontend
+interface HelloResponse { message: string; version: string; }
+
+// GOOD: import from shared package
+import { ApiResponse } from "@launchstack/api-interfaces";
+```

@@ -1,9 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Module } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthModule as BetterAuthModule } from '@thallesp/nestjs-better-auth';
+import * as express from 'express';
 import { DRIZZLE_DB } from '../databases/pg-drizzle';
 import { createAuth } from './auth.config';
+import { EmailOtpController } from './email-otp.controller';
+import { EmailOtpService } from './email-otp.service';
 
 @Module({
   imports: [
@@ -35,5 +42,11 @@ import { createAuth } from './auth.config';
       },
     }),
   ],
+  controllers: [EmailOtpController],
+  providers: [EmailOtpService],
 })
-export class AppAuthModule {}
+export class AppAuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(express.json()).forRoutes(EmailOtpController);
+  }
+}

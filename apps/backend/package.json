@@ -95,6 +95,7 @@
       "^@thallesp/nestjs-better-auth$": "<rootDir>/__mocks__/@thallesp/nestjs-better-auth.ts",
       "^better-auth$": "<rootDir>/__mocks__/better-auth.ts",
       "^better-auth/adapters/drizzle$": "<rootDir>/__mocks__/better-auth/adapters/drizzle.ts",
+      "^better-auth/api$": "<rootDir>/__mocks__/better-auth/api.ts",
       "^better-auth/plugins$": "<rootDir>/__mocks__/better-auth/plugins.ts",
       "^resend$": "<rootDir>/__mocks__/resend.ts",
       "^@react-email/render$": "<rootDir>/__mocks__/@react-email/render.ts",

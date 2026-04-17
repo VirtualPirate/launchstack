@@ -30,6 +30,9 @@ exports[`createAuth config snapshot should match snapshot with Google OAuth 1`] 
   "emailAndPassword": {
     "enabled": true,
   },
+  "hooks": {
+    "before": "[Function]",
+  },
   "plugins": [
     {
       "id": "email-otp",
@@ -73,6 +76,9 @@ exports[`createAuth config snapshot should match snapshot without Google OAuth 1
   },
   "emailAndPassword": {
     "enabled": true,
+  },
+  "hooks": {
+    "before": "[Function]",
   },
   "plugins": [
     {

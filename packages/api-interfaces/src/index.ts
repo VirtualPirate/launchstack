@@ -39,3 +39,6 @@ export interface ApiError {
   message: string;
   details?: Record<string, unknown>;
 }
+
+export * from "./requests/auth.requests";
+export * from "./responses/auth.responses";

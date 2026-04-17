@@ -134,9 +134,7 @@ describe('createAuth', () => {
 
     it('should exclude openAPI plugin in production', () => {
       const options = getAuthOptions({ ...baseConfig, nodeEnv: 'production' });
-      expect(
-        options.plugins.some((p: any) => p.id === 'open-api'),
-      ).toBeFalsy();
+      expect(options.plugins.some((p: any) => p.id === 'open-api')).toBeFalsy();
     });
   });
 });

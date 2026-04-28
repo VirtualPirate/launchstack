@@ -1,16 +1,19 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
+  "moduleFileExtensions": ["js", "json", "ts", "tsx"],
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)sx?$": "ts-jest"
   },
   "moduleNameMapper": {
     "^@thallesp/nestjs-better-auth$": "<rootDir>/../src/__mocks__/@thallesp/nestjs-better-auth.ts",
     "^better-auth$": "<rootDir>/../src/__mocks__/better-auth.ts",
     "^better-auth/adapters/drizzle$": "<rootDir>/../src/__mocks__/better-auth/adapters/drizzle.ts",
+    "^better-auth/api$": "<rootDir>/../src/__mocks__/better-auth/api.ts",
     "^better-auth/plugins$": "<rootDir>/../src/__mocks__/better-auth/plugins.ts",
-    "^resend$": "<rootDir>/../src/__mocks__/resend.ts"
+    "^resend$": "<rootDir>/../src/__mocks__/resend.ts",
+    "^@react-email/render$": "<rootDir>/../src/__mocks__/@react-email/render.ts",
+    "^@react-email/components$": "<rootDir>/../src/__mocks__/@react-email/components.ts"
   }
 }

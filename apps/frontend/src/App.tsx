@@ -1,19 +1,35 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, LayoutDashboard, LogOut, Menu, Rocket, Settings, X } from "lucide-react";
+import {
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Rocket,
+  Settings,
+  Users,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { OrgSwitcher } from "@/components/organization/org-switcher";
+import { PendingInvitesBadge } from "@/components/organization/pending-invites-badge";
 import { useAuthSession, useSignOut } from "@/hooks/api/use-auth";
+import { useBootstrapActiveOrganization } from "@/hooks/use-bootstrap-active-organization";
 
 const navItems = [
   { icon: Home, label: "Home", to: "/" },
   { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
   { icon: Settings, label: "Settings", to: "/settings" },
+  { icon: Settings, label: "Organization", to: "/settings/organization" },
+  { icon: Users, label: "Members", to: "/settings/organization/members" },
 ] as const;
 
 function App() {
+  useBootstrapActiveOrganization();
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -55,9 +71,13 @@ function App() {
           </Button>
           <Rocket className="size-5" />
           <span className="text-lg font-semibold tracking-tight">LaunchStack</span>
+          <div className="ml-4">
+            <OrgSwitcher />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <PendingInvitesBadge />
           <Button
             variant="ghost"
             size="sm"

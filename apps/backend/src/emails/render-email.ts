@@ -1,5 +1,6 @@
 import { render } from '@react-email/render';
 import { OtpEmail } from './otp-email';
+import { InviteEmail, type InviteEmailProps } from './invite-email';
 
 export type OtpType = 'email-verification' | 'sign-in' | 'password-reset';
 
@@ -48,5 +49,14 @@ export async function renderOtpEmail(
     { plainText: true },
   );
 
+  return { subject, html, text };
+}
+
+export async function renderInviteEmail(
+  props: InviteEmailProps,
+): Promise<{ subject: string; html: string; text: string }> {
+  const subject = `${props.inviterName} invited you to ${props.organizationName}`;
+  const html = await render(InviteEmail(props));
+  const text = await render(InviteEmail(props), { plainText: true });
   return { subject, html, text };
 }

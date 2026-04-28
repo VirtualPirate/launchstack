@@ -9,11 +9,16 @@ import {
 import App from "@/App";
 import { AuthAPI } from "@/api/auth.api";
 import { normalizeRedirectPath } from "@/lib/auth-redirect";
+import { AcceptInvitePage } from "@/routes/accept-invite";
 import { AuthErrorPage } from "@/routes/auth-error";
+import { CreateOrganizationPage } from "@/routes/create-organization";
 import { DashboardPage } from "@/routes/dashboard";
 import { GoogleSignInPage } from "@/routes/google-sign-in";
 import { GoogleSignUpPage } from "@/routes/google-sign-up";
 import { HomePage } from "@/routes/home";
+import { OrganizationMembersPage } from "@/routes/organization-members";
+import { OrganizationSettingsPage } from "@/routes/organization-settings";
+import { PendingInvitesPage } from "@/routes/pending-invites";
 import { SettingsPage } from "@/routes/settings";
 import { SignInPage } from "@/routes/sign-in";
 import { SignUpPage } from "@/routes/sign-up";
@@ -21,6 +26,7 @@ import { VerifyEmailPage } from "@/routes/verify-email";
 
 type AuthSearch = {
   redirect?: string;
+  email?: string;
 };
 
 type VerifyEmailSearch = {
@@ -36,8 +42,13 @@ type AuthErrorSearch = {
   error_description?: string;
 };
 
+type AcceptInviteSearch = {
+  token?: string;
+};
+
 const authSearchSchema = (search: Record<string, unknown>): AuthSearch => ({
   redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  email: typeof search.email === "string" ? search.email : undefined,
 });
 
 const verifyEmailSearchSchema = (
@@ -61,6 +72,12 @@ const authErrorSearchSchema = (
     typeof search.error_description === "string"
       ? search.error_description
       : undefined,
+});
+
+const acceptInviteSearchSchema = (
+  search: Record<string, unknown>,
+): AcceptInviteSearch => ({
+  token: typeof search.token === "string" ? search.token : undefined,
 });
 
 const rootRoute = createRootRoute({
@@ -151,6 +168,13 @@ const authErrorRoute = createRoute({
   component: AuthErrorPage,
 });
 
+const acceptInviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/accept-invite",
+  validateSearch: acceptInviteSearchSchema,
+  component: AcceptInvitePage,
+});
+
 const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
@@ -196,6 +220,30 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+const createOrganizationRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/organizations/new",
+  component: CreateOrganizationPage,
+});
+
+const pendingInvitesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/invites",
+  component: PendingInvitesPage,
+});
+
+const organizationSettingsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/settings/organization",
+  component: OrganizationSettingsPage,
+});
+
+const organizationMembersRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/settings/organization/members",
+  component: OrganizationMembersPage,
+});
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
@@ -203,7 +251,16 @@ const routeTree = rootRoute.addChildren([
   googleSignUpRoute,
   verifyEmailRoute,
   authErrorRoute,
-  protectedRoute.addChildren([homeRoute, dashboardRoute, settingsRoute]),
+  acceptInviteRoute,
+  protectedRoute.addChildren([
+    homeRoute,
+    dashboardRoute,
+    settingsRoute,
+    createOrganizationRoute,
+    pendingInvitesRoute,
+    organizationSettingsRoute,
+    organizationMembersRoute,
+  ]),
 ]);
 
 export const router = createRouter({

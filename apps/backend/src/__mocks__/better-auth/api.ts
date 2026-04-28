@@ -1,9 +1,6 @@
 export class APIError extends Error {
   status: number;
-  constructor(
-    status: string,
-    options?: { message?: string },
-  ) {
+  constructor(status: string, options?: { message?: string }) {
     super(options?.message ?? status);
     this.status = 400;
   }

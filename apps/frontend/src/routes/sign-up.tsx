@@ -38,7 +38,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function SignUpPage() {
-  const search = useSearch({ strict: false }) as { redirect?: string };
+  const search = useSearch({ strict: false }) as { redirect?: string; email?: string };
   const redirectTo = normalizeRedirectPath(search.redirect);
   const callbackURL = toAbsoluteCallbackURL(redirectTo);
 
@@ -98,6 +98,7 @@ export function SignUpPage() {
             mode="sign-up"
             isPending={signUpEmail.isPending}
             errorMessage={errorMessage}
+            initialEmail={search.email ?? ""}
             onSubmit={handleEmailSignUp}
           />
 

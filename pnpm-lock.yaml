@@ -245,22 +245,44 @@ importers:
         version: 7.3.2(@types/node@24.12.2)
 
   packages/api-interfaces:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.1
+        version: 9.39.4
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.4
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.46.4
+        version: 8.58.1(eslint@9.39.4)(typescript@5.9.3)
 
   packages/core:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.1
+        version: 9.39.4
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.4
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.46.4
+        version: 8.58.1(eslint@9.39.4)(typescript@5.9.3)
 
 packages:
 

@@ -14,6 +14,7 @@ interface EmailAuthFormProps {
   mode: EmailAuthMode;
   isPending?: boolean;
   errorMessage?: string | null;
+  initialEmail?: string;
   onSubmit: (values: EmailAuthSubmitValues) => Promise<void> | void;
 }
 
@@ -24,10 +25,11 @@ export function EmailAuthForm({
   mode,
   isPending = false,
   errorMessage,
+  initialEmail = "",
   onSubmit,
 }: EmailAuthFormProps) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
 
   const submitLabel = useMemo(() => {

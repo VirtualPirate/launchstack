@@ -92,6 +92,74 @@ Auth uses [Better Auth](https://www.better-auth.com/) v1.6.2 via the `@thallesp/
 - `docs/auth-signup-flow.md` — Email + password sign-up with OTP verification (cURL examples)
 - `docs/google-oauth-flow.md` — Google OAuth sign-in/sign-up, account linking, token encryption, frontend integration
 
+### Background jobs (pg-boss)
+
+Background jobs run on [pg-boss](https://github.com/timgit/pg-boss) v12 via a thin in-house NestJS integration in `src/queue/`.
+
+**Module graph:** `PgBossModule.forRoot()` is global; it constructs and starts a single `PGBoss` instance and (when `WORKER_ROLE` is `worker` or `both`) discovers `@Handler(JobDef)` methods via `DiscoveryService` and registers them through `boss.work()`. `QueueModule` registers job-specific handlers and the smoke-test controller.
+
+**Producer API (`PgBossService`):** Inject anywhere and call `send(JobDef, data)`, `sendAfter(JobDef, data, delaySeconds)`, or `sendOnce(JobDef, data, key)`. Payloads are validated with `JobDef.schema.parse()` before the INSERT. Use `getJob(id)` to inspect status; `raw()` returns the underlying PGBoss instance as an escape hatch.
+
+**Defining a job:**
+
+```ts
+// queue/jobs/send-welcome-email.job.ts
+import { z } from 'zod';
+import { defineJob } from '../define-job';
+
+export const SendWelcomeEmailJob = defineJob({
+  name: 'send-welcome-email',
+  schema: z.object({ userId: z.string() }),
+  workOptions: { localConcurrency: 5 },
+  retryLimit: 3,
+  retryDelay: 60,
+  retryBackoff: true,
+});
+```
+
+Add a handler class with `@Handler(JobDef)` and register it in a feature module's `providers`. The handler is auto-discovered on boot.
+
+**Run modes (`WORKER_ROLE`):**
+
+| Value | Boots `boss.start()` | Producers (`send`) | Handlers (`work`) |
+| --- | --- | --- | --- |
+| `api` | yes | yes | no |
+| `worker` | yes | yes | yes |
+| `both` (default, dev) | yes | yes | yes |
+
+In production, run API replicas with `WORKER_ROLE=api` and worker replicas with `WORKER_ROLE=worker`. Worker capacity scales with replica count x per-job `localConcurrency` (and/or `groupConcurrency` where used).
+
+**Smoke test:**
+
+```bash
+curl -X POST http://localhost:3000/api/_internal/queue/noop \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Token: $INTERNAL_API_TOKEN" \
+  -d '{"message":"hello"}'
+```
+
+Watch the backend logs for `[noop <jobId>] received: hello`.
+
+**Operational risks:**
+
+- **First-run permissions.** pg-boss creates and migrates its own `pgboss` schema on `boss.start()`. The `DATABASE_URL` user must have `CREATE` on the database the first time the app starts. Local Docker Postgres satisfies this; locked-down production users may need a one-time admin run of `boss.start()` or manual schema bootstrap.
+- **DB connection growth.** pg-boss uses `node-postgres` and Drizzle uses `postgres-js`; they cannot share a pool. Total connections per worker replica ~= `drizzle_pool + PG_BOSS_POOL_MAX`. Cap with `PG_BOSS_POOL_MAX` (default 10) and check Postgres `max_connections` headroom before scaling worker replicas.
+- **Schema is owned by pg-boss.** Never reference the `pgboss` schema in `drizzle/` migrations.
+
+**Dashboard (local dev):**
+
+A web UI for inspecting queues and jobs. Local-dev only — binds to 127.0.0.1, no auth.
+
+In a separate terminal:
+
+```bash
+pnpm dev:dashboard
+```
+
+Open http://localhost:3210. Reads from the same `DATABASE_URL` / `pgboss` schema as the backend (`PGBOSS_SCHEMA` in `.env`, mirroring `PG_BOSS_SCHEMA`). Port `3210` is hard-coded in the `dev:dashboard` script; edit the script to change it. Warning history populates because the queue config sets `persistWarnings: true`.
+
+**Production deployment** is intentionally not wired up. When the time comes, the dashboard ships as a standalone process (Node or Docker) fronted by a reverse proxy with auth (`PGBOSS_DASHBOARD_AUTH_USERNAME` / `PGBOSS_DASHBOARD_AUTH_PASSWORD`). See https://github.com/timgit/pg-boss/blob/master/packages/dashboard/README.md.
+
 ### Testing
 
 **Unit tests** (`*.spec.ts` in `src/`): Better Auth and Resend are ESM-only packages that don't work directly with Jest (CJS). Manual mocks in `src/__mocks__/` handle this via `moduleNameMapper` in package.json:

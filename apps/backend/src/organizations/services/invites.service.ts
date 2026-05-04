@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -21,14 +21,11 @@ import {
 import { generateInviteToken, hashInviteToken } from '../tokens';
 import { serializeOrganization } from './organizations.service';
 import { InviteMailer } from './invite-mailer';
+import { AppError } from '../../common/errors';
 
 type Db = PostgresJsDatabase<Record<string, unknown>>;
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function apiError(code: string, message: string) {
-  return { code, message };
-}
 
 function serializeInvite(row: InviteWithRefs): OrganizationInvite {
   return {
@@ -87,13 +84,7 @@ export class InvitesService {
 
   private requireVerifiedCaller(caller: CallerContext) {
     if (!caller.emailVerified) {
-      throw new HttpException(
-        apiError(
-          'EMAIL_NOT_VERIFIED',
-          'Verify your email before handling invites',
-        ),
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw AppError.EMAIL_NOT_VERIFIED();
     }
   }
 
@@ -107,10 +98,7 @@ export class InvitesService {
 
     const existingMembers = await this.members.listByOrg(input.organizationId);
     if (existingMembers.some((m) => m.user.email.toLowerCase() === email)) {
-      throw new HttpException(
-        apiError('INVITE_TARGET_IS_MEMBER', 'User is already a member'),
-        HttpStatus.CONFLICT,
-      );
+      throw AppError.INVITE_TARGET_IS_MEMBER();
     }
 
     const rawToken = generateInviteToken();
@@ -180,10 +168,7 @@ export class InvitesService {
   }): Promise<void> {
     const row = await this.invites.findById(input.inviteId);
     if (!row || row.organizationId !== input.organizationId) {
-      throw new HttpException(
-        apiError('INVITE_NOT_FOUND', 'Invite not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.INVITE_NOT_FOUND();
     }
     if (row.status !== 'pending') return;
     await this.invites.updateStatus(row.id, 'revoked');
@@ -195,16 +180,10 @@ export class InvitesService {
   }): Promise<OrganizationInvite> {
     const row = await this.invites.findById(input.inviteId);
     if (!row || row.organizationId !== input.organizationId) {
-      throw new HttpException(
-        apiError('INVITE_NOT_FOUND', 'Invite not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.INVITE_NOT_FOUND();
     }
     if (row.status !== 'pending') {
-      throw new HttpException(
-        apiError('INVITE_NOT_PENDING', 'Invite is not pending'),
-        HttpStatus.GONE,
-      );
+      throw AppError.INVITE_NOT_PENDING();
     }
 
     const rawToken = generateInviteToken();
@@ -232,15 +211,10 @@ export class InvitesService {
         acceptUrl: this.buildAcceptUrl(rawToken),
         expiresInDays: 7,
       });
-    } catch {
+    } catch (err) {
       await this.invites.rotateToken(row.id, previousToken);
-      throw new HttpException(
-        apiError(
-          'INVITE_RESEND_FAILED',
-          'Failed to resend invite email. Previous invite link remains valid.',
-        ),
-        HttpStatus.BAD_GATEWAY,
-      );
+      const reason = err instanceof Error ? err.message : 'unknown error';
+      throw AppError.INVITE_RESEND_FAILED({ reason });
     }
 
     return serializeInvite({
@@ -253,19 +227,10 @@ export class InvitesService {
   async previewInvite(rawToken: string): Promise<InvitePreview> {
     const row = await this.invites.findByTokenHash(hashInviteToken(rawToken));
     if (!row) {
-      throw new HttpException(
-        apiError('INVITE_NOT_FOUND', 'Invite not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.INVITE_NOT_FOUND();
     }
     if (row.status !== 'pending' || row.expiresAt <= new Date()) {
-      throw new HttpException(
-        apiError(
-          'INVITE_NOT_PENDING',
-          'Invite is expired or no longer pending',
-        ),
-        HttpStatus.GONE,
-      );
+      throw AppError.INVITE_NOT_PENDING();
     }
     const org = await this.orgs.findById(row.organizationId);
     const inviter = row.invitedByUserId
@@ -311,31 +276,16 @@ export class InvitesService {
       inviteId: input.inviteId,
     });
     if (!row) {
-      throw new HttpException(
-        apiError('INVITE_NOT_FOUND', 'Invite not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.INVITE_NOT_FOUND();
     }
     if (row.email.toLowerCase() !== input.caller.email.toLowerCase()) {
-      throw new HttpException(
-        apiError(
-          'INVITE_EMAIL_MISMATCH',
-          'Invite was sent to a different email',
-        ),
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw AppError.INVITE_EMAIL_MISMATCH();
     }
     if (row.status !== 'pending') {
-      throw new HttpException(
-        apiError('INVITE_NOT_PENDING', 'Invite is not pending'),
-        HttpStatus.GONE,
-      );
+      throw AppError.INVITE_NOT_PENDING();
     }
     if (row.expiresAt <= new Date()) {
-      throw new HttpException(
-        apiError('INVITE_EXPIRED', 'Invite is expired'),
-        HttpStatus.GONE,
-      );
+      throw AppError.INVITE_EXPIRED();
     }
 
     const result = await this.db.transaction(async (tx) => {
@@ -365,10 +315,7 @@ export class InvitesService {
 
     const org = await this.orgs.findById(row.organizationId);
     if (!org) {
-      throw new HttpException(
-        apiError('ORG_NOT_FOUND', 'Organization not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.ORG_NOT_FOUND();
     }
     return {
       organization: serializeOrganization(org),
@@ -387,19 +334,10 @@ export class InvitesService {
       inviteId: input.inviteId,
     });
     if (!row) {
-      throw new HttpException(
-        apiError('INVITE_NOT_FOUND', 'Invite not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.INVITE_NOT_FOUND();
     }
     if (row.email.toLowerCase() !== input.caller.email.toLowerCase()) {
-      throw new HttpException(
-        apiError(
-          'INVITE_EMAIL_MISMATCH',
-          'Invite was sent to a different email',
-        ),
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw AppError.INVITE_EMAIL_MISMATCH();
     }
     if (row.status !== 'pending') return;
     await this.invites.updateStatus(row.id, 'revoked');

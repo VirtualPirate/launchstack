@@ -1,7 +1,8 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import { renderInviteEmail } from '../../emails/render-email';
+import { AppError } from '../../common/errors';
 
 export interface SendInviteEmailInput {
   to: string;
@@ -38,10 +39,7 @@ export class InviteMailer {
       text,
     });
     if (error) {
-      throw new HttpException(
-        `Failed to send invite email: ${error.message}`,
-        HttpStatus.BAD_GATEWAY,
-      );
+      throw AppError.INVITE_EMAIL_SEND_FAILED({ reason: error.message });
     }
   }
 }

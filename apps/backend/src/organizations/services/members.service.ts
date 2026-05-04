@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   OrganizationMember,
   OrganizationRole,
@@ -6,10 +6,7 @@ import type {
 import { OrganizationMembersRepository } from '../repositories/members.repository';
 import type { OrgMembershipContext } from '../decorators/org-membership.decorator';
 import type { MemberRowWithUser } from '../repositories/members.repository';
-
-function apiError(code: string, message: string) {
-  return { code, message };
-}
+import { AppError } from '../../common/errors';
 
 function serializeMember(row: MemberRowWithUser): OrganizationMember {
   return {
@@ -44,29 +41,17 @@ export class MembersService {
     const rows = await this.members.listByOrg(input.organizationId);
     const target = rows.find((r) => r.member.id === input.memberId);
     if (!target) {
-      throw new HttpException(
-        apiError('MEMBER_NOT_FOUND', 'Member not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.MEMBER_NOT_FOUND();
     }
     if (target.member.role === 'owner') {
-      throw new HttpException(
-        apiError(
-          'MEMBER_IS_OWNER',
-          'Use transfer-ownership to change the owner role',
-        ),
-        HttpStatus.CONFLICT,
-      );
+      throw AppError.MEMBER_IS_OWNER();
     }
     const updated = await this.members.updateRole(
       input.memberId,
       input.newRole,
     );
     if (!updated) {
-      throw new HttpException(
-        apiError('MEMBER_NOT_FOUND', 'Member not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.MEMBER_NOT_FOUND();
     }
     return serializeMember({ member: updated, user: target.user });
   }
@@ -79,39 +64,21 @@ export class MembersService {
     const rows = await this.members.listByOrg(input.organizationId);
     const target = rows.find((r) => r.member.id === input.targetMemberId);
     if (!target) {
-      throw new HttpException(
-        apiError('MEMBER_NOT_FOUND', 'Member not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.MEMBER_NOT_FOUND();
     }
 
     const callerRole = input.callerMembership.role;
 
     if (target.member.role === 'owner') {
-      throw new HttpException(
-        apiError(
-          'MEMBER_FORBIDDEN',
-          'Cannot remove the owner — use transfer-ownership or delete',
-        ),
-        HttpStatus.FORBIDDEN,
-      );
+      throw AppError.MEMBER_REMOVE_OWNER_FORBIDDEN();
     }
 
     if (target.member.userId === input.callerMembership.userId) {
-      throw new HttpException(
-        apiError(
-          'MEMBER_FORBIDDEN',
-          'Use the leave endpoint to remove yourself',
-        ),
-        HttpStatus.FORBIDDEN,
-      );
+      throw AppError.MEMBER_REMOVE_SELF_FORBIDDEN();
     }
 
     if (callerRole !== 'owner' && callerRole !== 'admin') {
-      throw new HttpException(
-        apiError('MEMBER_FORBIDDEN', 'Insufficient role'),
-        HttpStatus.FORBIDDEN,
-      );
+      throw AppError.MEMBER_INSUFFICIENT_ROLE();
     }
 
     await this.members.delete(input.targetMemberId);
@@ -122,13 +89,7 @@ export class MembersService {
     callerMembership: OrgMembershipContext;
   }): Promise<void> {
     if (input.callerMembership.role === 'owner') {
-      throw new HttpException(
-        apiError(
-          'OWNER_CANNOT_LEAVE',
-          'Owner must transfer ownership or delete the organization',
-        ),
-        HttpStatus.CONFLICT,
-      );
+      throw AppError.OWNER_CANNOT_LEAVE();
     }
     await this.members.deleteByOrgAndUser(
       input.organizationId,

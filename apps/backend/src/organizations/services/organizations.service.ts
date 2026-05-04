@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type {
@@ -13,12 +13,9 @@ import type {
 } from '../../databases/pg-drizzle/types';
 import { OrganizationsRepository } from '../repositories/organizations.repository';
 import { OrganizationMembersRepository } from '../repositories/members.repository';
+import { AppError } from '../../common/errors';
 
 type Db = PostgresJsDatabase<Record<string, unknown>>;
-
-function apiError(code: string, message: string) {
-  return { code, message };
-}
 
 function buildSlug(name: string): string {
   const base = name
@@ -58,10 +55,7 @@ export class OrganizationsService {
   }> {
     const existing = await this.orgs.findByOwnerId(ownerUserId);
     if (existing) {
-      throw new HttpException(
-        apiError('ORG_OWNER_CONFLICT', 'You already own an organization'),
-        HttpStatus.CONFLICT,
-      );
+      throw AppError.ORG_OWNER_CONFLICT();
     }
 
     const result = await this.db.transaction(async (tx) => {
@@ -103,10 +97,7 @@ export class OrganizationsService {
   ): Promise<{ organization: Organization; role: OrganizationRole }> {
     const row = await this.orgs.findById(organizationId);
     if (!row) {
-      throw new HttpException(
-        apiError('ORG_NOT_FOUND', 'Organization not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.ORG_NOT_FOUND();
     }
     return { organization: serializeOrganization(row), role };
   }
@@ -118,18 +109,12 @@ export class OrganizationsService {
     if (patch.slug) {
       const clash = await this.orgs.findBySlug(patch.slug);
       if (clash && clash.id !== organizationId) {
-        throw new HttpException(
-          apiError('ORG_SLUG_CONFLICT', 'Slug already in use'),
-          HttpStatus.CONFLICT,
-        );
+        throw AppError.ORG_SLUG_CONFLICT();
       }
     }
     const updated = await this.orgs.update(organizationId, patch);
     if (!updated) {
-      throw new HttpException(
-        apiError('ORG_NOT_FOUND', 'Organization not found'),
-        HttpStatus.NOT_FOUND,
-      );
+      throw AppError.ORG_NOT_FOUND();
     }
     return serializeOrganization(updated);
   }
@@ -144,10 +129,7 @@ export class OrganizationsService {
     newOwnerUserId: string;
   }): Promise<Organization> {
     if (input.currentOwnerUserId === input.newOwnerUserId) {
-      throw new HttpException(
-        apiError('ORG_TRANSFER_INVALID', 'Cannot transfer to yourself'),
-        HttpStatus.CONFLICT,
-      );
+      throw AppError.ORG_TRANSFER_TO_SELF();
     }
 
     return await this.db.transaction(async (tx) => {
@@ -157,13 +139,7 @@ export class OrganizationsService {
         tx,
       );
       if (!target || target.role !== 'admin') {
-        throw new HttpException(
-          apiError(
-            'ORG_TRANSFER_INVALID',
-            'Target must be an existing admin of this organization',
-          ),
-          HttpStatus.CONFLICT,
-        );
+        throw AppError.ORG_TRANSFER_TARGET_NOT_ADMIN();
       }
 
       const targetOwnsElsewhere = await this.orgs.findByOwnerId(
@@ -171,13 +147,7 @@ export class OrganizationsService {
         tx,
       );
       if (targetOwnsElsewhere) {
-        throw new HttpException(
-          apiError(
-            'ORG_TRANSFER_INVALID',
-            'Target already owns another organization',
-          ),
-          HttpStatus.CONFLICT,
-        );
+        throw AppError.ORG_TRANSFER_TARGET_OWNS_ELSEWHERE();
       }
 
       const currentOwnerMembership = await this.members.findByOrgAndUser(
@@ -186,10 +156,7 @@ export class OrganizationsService {
         tx,
       );
       if (!currentOwnerMembership || currentOwnerMembership.role !== 'owner') {
-        throw new HttpException(
-          apiError('ORG_TRANSFER_INVALID', 'Caller is not the current owner'),
-          HttpStatus.CONFLICT,
-        );
+        throw AppError.ORG_TRANSFER_CALLER_NOT_OWNER();
       }
 
       const updatedOrg = await this.orgs.setOwner(
@@ -198,10 +165,7 @@ export class OrganizationsService {
         tx,
       );
       if (!updatedOrg) {
-        throw new HttpException(
-          apiError('ORG_NOT_FOUND', 'Organization not found'),
-          HttpStatus.NOT_FOUND,
-        );
+        throw AppError.ORG_NOT_FOUND();
       }
 
       await this.members.updateRole(target.id, 'owner', tx);

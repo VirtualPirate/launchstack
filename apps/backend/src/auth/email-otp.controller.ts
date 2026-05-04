@@ -1,12 +1,7 @@
-import {
-  Body,
-  Controller,
-  HttpException,
-  HttpStatus,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { EmailOtpService } from './email-otp.service';
+import { AppError } from '../common/errors';
 
 const ALLOWED_OTP_TYPES = [
   'email-verification',
@@ -28,15 +23,12 @@ export class EmailOtpController {
   ): Promise<{ success: boolean }> {
     const email = body?.email?.trim().toLowerCase();
     if (!email) {
-      throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
+      throw AppError.EMAIL_REQUIRED();
     }
 
     const type = body?.type;
     if (!type || !ALLOWED_OTP_TYPES.includes(type as OtpType)) {
-      throw new HttpException(
-        `Invalid OTP type. Must be one of: ${ALLOWED_OTP_TYPES.join(', ')}`,
-        HttpStatus.BAD_REQUEST,
-      );
+      throw AppError.OTP_TYPE_INVALID({ allowed: ALLOWED_OTP_TYPES });
     }
 
     await this.emailOtpService.sendVerificationOtp(email, type as OtpType);

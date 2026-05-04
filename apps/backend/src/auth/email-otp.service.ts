@@ -1,8 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '@thallesp/nestjs-better-auth';
 import { Resend } from 'resend';
 import { renderOtpEmail } from '../emails/render-email';
+import { AppError } from '../common/errors';
 import type { Auth } from './auth.config';
 
 @Injectable()
@@ -30,9 +31,9 @@ export class EmailOtpService {
         body: { email, type },
       });
     } catch (error) {
-      const message =
+      const reason =
         error instanceof Error ? error.message : 'Failed to create OTP';
-      throw new HttpException(message, HttpStatus.BAD_REQUEST);
+      throw AppError.OTP_CREATE_FAILED({ reason });
     }
 
     const { subject, html, text } = await renderOtpEmail(otp, type);
@@ -46,10 +47,7 @@ export class EmailOtpService {
     });
 
     if (error) {
-      throw new HttpException(
-        `Failed to send verification email: ${error.message}`,
-        HttpStatus.BAD_GATEWAY,
-      );
+      throw AppError.OTP_EMAIL_SEND_FAILED({ reason: error.message });
     }
 
     console.log('OTP email sent:', data?.id);

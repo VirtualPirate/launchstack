@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
-    "dev:backend": "pnpm --filter backend start:dev",
+    "dev:backend": "pnpm --filter backend start:debug",
     "dev:dashboard": "pnpm --filter backend dev:dashboard",
     "dev:packages": "pnpm --filter @launchstack/api-interfaces --filter @launchstack/core --parallel dev",
     "dev": "pnpm build:packages && pnpm \"/^dev:(frontend|backend|packages)$/\"",

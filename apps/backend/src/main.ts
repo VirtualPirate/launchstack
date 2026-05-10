@@ -1,9 +1,14 @@
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    bufferLogs: true,
+  });
+  app.useLogger(app.get(Logger));
   app.enableCors({
     origin: true, // Accept requests from everywhere
     credentials: true,

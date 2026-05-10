@@ -22,5 +22,21 @@ services:
       retries: 5
       start_period: 30s
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    container_name: launchstack-otel-collector
+    restart: unless-stopped
+    user: "0:0"
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ./logs:/var/log/app:ro
+      - otel_checkpoints:/var/lib/otelcol/checkpoints
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+      GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT}
+      GRAFANA_CLOUD_OTLP_AUTH: ${GRAFANA_CLOUD_OTLP_AUTH}
+
 volumes:
   postgres_data:
+  otel_checkpoints:

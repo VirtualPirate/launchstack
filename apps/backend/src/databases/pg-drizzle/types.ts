@@ -2,9 +2,10 @@ import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import type {
   demo,
   organizations,
-  organizationMembers,
   organizationInvites,
+  organizationMembers,
 } from './schema';
+import type { githubInstallations, githubRepositories } from './github-schema';
 import type { user, session, account, verification } from './auth-schema';
 
 export type DemoSelect = InferSelectModel<typeof demo>;
@@ -37,4 +38,18 @@ export type OrganizationInviteSelect = InferSelectModel<
 >;
 export type OrganizationInviteInsert = InferInsertModel<
   typeof organizationInvites
+>;
+
+export type GithubInstallationSelect = InferSelectModel<
+  typeof githubInstallations
+>;
+export type GithubInstallationInsert = InferInsertModel<
+  typeof githubInstallations
+>;
+
+export type GithubRepositorySelect = InferSelectModel<
+  typeof githubRepositories
+>;
+export type GithubRepositoryInsert = InferInsertModel<
+  typeof githubRepositories
 >;

@@ -97,7 +97,9 @@ describe('buildPinoConfig', () => {
   });
 
   describe('genReqId', () => {
-    const buildReq = (header?: string) => ({ headers: header ? { 'x-request-id': header } : {} });
+    const buildReq = (header?: string) => ({
+      headers: header ? { 'x-request-id': header } : {},
+    });
     const buildRes = () => ({ setHeader: jest.fn() });
 
     it('returns the inbound x-request-id verbatim when present', () => {
@@ -117,5 +119,4 @@ describe('buildPinoConfig', () => {
       expect(res.setHeader).not.toHaveBeenCalled();
     });
   });
-
 });

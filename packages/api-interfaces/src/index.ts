@@ -41,6 +41,8 @@ export interface ApiError {
 }
 
 export * from "./requests/auth.requests";
+export * from "./requests/github.requests";
 export * from "./responses/auth.responses";
+export * from "./responses/github.responses";
 export * from "./requests/organization.requests";
 export * from "./responses/organization.responses";

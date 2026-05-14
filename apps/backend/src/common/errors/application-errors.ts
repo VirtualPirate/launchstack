@@ -160,6 +160,38 @@ export const AppError = sealRegistry({
     message: ({ reason }) => `Failed to send invite email: ${reason}`,
     details: ({ reason }) => ({ reason }),
   }),
+
+  // --- GitHub integration ---
+  GITHUB_APP_NOT_CONFIGURED: defineError({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    message:
+      'GitHub App is not configured on this server. Set GITHUB_APP_ID, GITHUB_APP_SLUG, GITHUB_APP_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET.',
+  }),
+  GITHUB_STATE_INVALID: defineError({
+    status: HttpStatus.BAD_REQUEST,
+    message: 'GitHub install state is invalid or expired',
+  }),
+  GITHUB_STATE_USER_MISMATCH: defineError({
+    status: HttpStatus.FORBIDDEN,
+    message: 'GitHub install state belongs to a different user',
+  }),
+  GITHUB_INSTALLATION_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'GitHub installation not found',
+  }),
+  GITHUB_API_FAILED: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_GATEWAY,
+    message: ({ reason }) => `GitHub API call failed: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+  GITHUB_WEBHOOK_SIGNATURE_MISSING: defineError({
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Missing X-Hub-Signature-256 header',
+  }),
+  GITHUB_WEBHOOK_SIGNATURE_INVALID: defineError({
+    status: HttpStatus.UNAUTHORIZED,
+    message: 'Invalid GitHub webhook signature',
+  }),
 });
 
 export type AppErrorCode = keyof typeof AppError;

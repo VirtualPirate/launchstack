@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DrizzleModule } from './databases/pg-drizzle';
 import { AppAuthModule } from './auth';
 import { OrganizationsModule } from './organizations';
+import { GithubIntegrationsModule } from './integrations/github';
 import { PgBossModule } from './queue';
 import { QueueModule } from './queue/queue.module';
 import { LoggerModule, RequestIdMiddleware } from './logger';
@@ -17,6 +18,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
     PgBossModule.forRoot(),
     AppAuthModule,
     OrganizationsModule,
+    GithubIntegrationsModule,
     QueueModule,
   ],
   controllers: [AppController],

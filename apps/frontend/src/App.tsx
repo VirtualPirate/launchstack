@@ -26,6 +26,7 @@ const navItems = [
   { icon: Settings, label: "Settings", to: "/settings" },
   { icon: Settings, label: "Organization", to: "/settings/organization" },
   { icon: Users, label: "Members", to: "/settings/organization/members" },
+  { icon: Rocket, label: "GitHub", to: "/integrations/github" },
 ] as const;
 
 function App() {

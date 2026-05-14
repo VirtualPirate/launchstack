@@ -1,0 +1,113 @@
+import { relations } from 'drizzle-orm';
+import {
+  bigint,
+  boolean,
+  index,
+  jsonb,
+  pgSchema,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
+import { user } from './auth-schema';
+import { organizations } from './schema';
+
+export const githubSchema = pgSchema('github');
+
+export const githubAccountTypeEnum = githubSchema.enum('account_type', [
+  'User',
+  'Organization',
+]);
+
+export const githubInstallations = githubSchema.table(
+  'installations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    githubInstallationId: bigint('github_installation_id', {
+      mode: 'bigint',
+    }).notNull(),
+    githubAccountId: bigint('github_account_id', { mode: 'bigint' }).notNull(),
+    githubAccountLogin: text('github_account_login').notNull(),
+    githubAccountType: githubAccountTypeEnum('github_account_type').notNull(),
+    githubAccountAvatarUrl: text('github_account_avatar_url'),
+    targetType: text('target_type').notNull(),
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    connectedByUserId: text('connected_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    raw: jsonb('raw'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('installations_github_installation_id_unique').on(
+      table.githubInstallationId,
+    ),
+    index('installations_organization_idx').on(table.organizationId),
+  ],
+);
+
+export const githubRepositories = githubSchema.table(
+  'repositories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    installationId: uuid('installation_id')
+      .notNull()
+      .references(() => githubInstallations.id, { onDelete: 'cascade' }),
+    githubRepoId: bigint('github_repo_id', { mode: 'bigint' }).notNull(),
+    name: text('name').notNull(),
+    fullName: text('full_name').notNull(),
+    private: boolean('private').notNull(),
+    raw: jsonb('raw'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('repositories_installation_repo_unique').on(
+      table.installationId,
+      table.githubRepoId,
+    ),
+    index('repositories_installation_idx').on(table.installationId),
+  ],
+);
+
+export const githubInstallationsRelations = relations(
+  githubInstallations,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [githubInstallations.organizationId],
+      references: [organizations.id],
+    }),
+    connectedBy: one(user, {
+      fields: [githubInstallations.connectedByUserId],
+      references: [user.id],
+    }),
+    repositories: many(githubRepositories),
+  }),
+);
+
+export const githubRepositoriesRelations = relations(
+  githubRepositories,
+  ({ one }) => ({
+    installation: one(githubInstallations, {
+      fields: [githubRepositories.installationId],
+      references: [githubInstallations.id],
+    }),
+  }),
+);

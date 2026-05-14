@@ -13,7 +13,7 @@ export class PgBossService {
     data: z.infer<T>,
     opts: SendOptions = {},
   ): Promise<string> {
-    const parsed = job.schema.parse(data) as z.infer<T>;
+    const parsed = job.schema.parse(data);
     const merged = { ...this.retryOptionsFromJob(job), ...opts };
     const id = await this.boss.send(job.name, parsed as object, merged);
     return id as string;
@@ -34,7 +34,7 @@ export class PgBossService {
     singletonKey: string,
     opts: SendOptions = {},
   ): Promise<string | null> {
-    const parsed = job.schema.parse(data) as z.infer<T>;
+    const parsed = job.schema.parse(data);
     const merged = {
       ...this.retryOptionsFromJob(job),
       ...opts,

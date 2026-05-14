@@ -32,6 +32,9 @@
     "push": { "command": "pnpm db:push", "description": "Push schema directly to database (dev)" },
     "studio": { "command": "pnpm db:studio", "description": "Open Drizzle Studio database browser" }
   },
+  "ngrok": {
+    "start": { "command": "sudo ngrok http 3000 --url https://optimum-endless-pangolin.ngrok-free.app", "description": "Start ngrok tunnel for backend" }
+  },
   "lint": {
     "all": { "command": "pnpm lint", "description": "Lint all packages and apps" }
   }

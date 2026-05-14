@@ -17,6 +17,7 @@ import { ForgotPasswordPage } from "@/routes/forgot-password";
 import { GoogleSignInPage } from "@/routes/google-sign-in";
 import { GoogleSignUpPage } from "@/routes/google-sign-up";
 import { HomePage } from "@/routes/home";
+import { IntegrationsGithubPage } from "@/routes/integrations-github";
 import { OrganizationMembersPage } from "@/routes/organization-members";
 import { OrganizationSettingsPage } from "@/routes/organization-settings";
 import { PendingInvitesPage } from "@/routes/pending-invites";
@@ -50,6 +51,11 @@ type ResetPasswordSearch = { email?: string };
 
 type AcceptInviteSearch = {
   token?: string;
+};
+
+type IntegrationsGithubSearch = {
+  connected?: string;
+  error?: string;
 };
 
 const authSearchSchema = (search: Record<string, unknown>): AuthSearch => ({
@@ -98,6 +104,14 @@ const acceptInviteSearchSchema = (
   search: Record<string, unknown>,
 ): AcceptInviteSearch => ({
   token: typeof search.token === "string" ? search.token : undefined,
+});
+
+const integrationsGithubSearchSchema = (
+  search: Record<string, unknown>,
+): IntegrationsGithubSearch => ({
+  connected:
+    typeof search.connected === "string" ? search.connected : undefined,
+  error: typeof search.error === "string" ? search.error : undefined,
 });
 
 const rootRoute = createRootRoute({
@@ -281,6 +295,13 @@ const organizationMembersRoute = createRoute({
   component: OrganizationMembersPage,
 });
 
+const integrationsGithubRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/integrations/github",
+  validateSearch: integrationsGithubSearchSchema,
+  component: IntegrationsGithubPage,
+});
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
@@ -299,6 +320,7 @@ const routeTree = rootRoute.addChildren([
     pendingInvitesRoute,
     organizationSettingsRoute,
     organizationMembersRoute,
+    integrationsGithubRoute,
   ]),
 ]);
 

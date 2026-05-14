@@ -45,7 +45,8 @@ export const buildPinoConfig = (): Params => {
       level,
       genReqId: (req: IncomingMessage, _res: ServerResponse): string => {
         const existing = req.headers['x-request-id'];
-        if (typeof existing === 'string' && existing.length > 0) return existing;
+        if (typeof existing === 'string' && existing.length > 0)
+          return existing;
         return randomUUID();
       },
       redact: {

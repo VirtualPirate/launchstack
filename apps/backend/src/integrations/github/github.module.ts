@@ -1,11 +1,6 @@
-import {
-  type MiddlewareConsumer,
-  Module,
-  type NestModule,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as express from 'express';
 import { AppError } from '../../common/errors';
 import { DRIZZLE_DB } from '../../databases/pg-drizzle';
 import { GithubInstallationsController } from './controllers/installations.controller';
@@ -14,6 +9,7 @@ import { GithubAppClient } from './github-app.client';
 import { loadGithubAppConfig } from './github-app.config';
 import { GithubInstallationsRepository } from './repositories/installations.repository';
 import { GithubRepositoriesRepository } from './repositories/repositories.repository';
+import { GithubWebhookEventsRepository } from './repositories/webhook-events.repository';
 import { GithubInstallationsService } from './services/installations.service';
 import { StateTokenService } from './services/state-token.service';
 import { WebhookVerifierService } from './services/webhook-verifier.service';
@@ -79,14 +75,8 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
     },
     GithubInstallationsRepository,
     GithubRepositoriesRepository,
+    GithubWebhookEventsRepository,
     WebhookVerifierService,
   ],
 })
-export class GithubIntegrationsModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(express.json()).forRoutes(GithubInstallationsController);
-    consumer
-      .apply(express.raw({ type: 'application/json' }))
-      .forRoutes(GithubWebhooksController);
-  }
-}
+export class GithubIntegrationsModule {}

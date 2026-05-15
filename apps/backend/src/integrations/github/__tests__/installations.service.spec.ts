@@ -65,7 +65,11 @@ function makeRawRepo(id: number, fullName: string, isPrivate: boolean) {
     name: fullName.split('/').pop()!,
     fullName,
     private: isPrivate,
-    raw: { id, full_name: fullName, html_url: `https://github.com/${fullName}` },
+    raw: {
+      id,
+      full_name: fullName,
+      html_url: `https://github.com/${fullName}`,
+    },
   };
 }
 
@@ -287,7 +291,12 @@ describe('GithubInstallationsService', () => {
       // Must still reconcile repos against the existing row id.
       expect(mocks.reposRepo.reconcileForInstallation).toHaveBeenCalledWith(
         'existing-uuid',
-        [expect.objectContaining({ githubRepoId: 10n, raw: expect.anything() })],
+        [
+          expect.objectContaining({
+            githubRepoId: 10n,
+            raw: expect.anything(),
+          }),
+        ],
         expect.anything(),
       );
     });

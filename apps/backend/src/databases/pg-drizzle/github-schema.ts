@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema';
 import { organizations } from './schema';
@@ -86,6 +87,21 @@ export const githubRepositories = githubSchema.table(
     index('repositories_installation_idx').on(table.installationId),
   ],
 );
+
+export const githubWebhookEvents = githubSchema.table('webhook_events', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  event: varchar('event', { length: 64 }),
+  raw: jsonb('raw').notNull(),
+  state: varchar('state', { length: 32 }).notNull().default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
 
 export const githubInstallationsRelations = relations(
   githubInstallations,

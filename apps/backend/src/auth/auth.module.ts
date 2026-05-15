@@ -38,6 +38,7 @@ import { EmailOtpService } from './email-otp.service';
             googleClientId,
             googleClientSecret,
           }),
+          bodyParser: { rawBody: true },
         };
       },
     }),

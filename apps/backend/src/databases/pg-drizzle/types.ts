@@ -5,7 +5,11 @@ import type {
   organizationInvites,
   organizationMembers,
 } from './schema';
-import type { githubInstallations, githubRepositories } from './github-schema';
+import type {
+  githubInstallations,
+  githubRepositories,
+  githubWebhookEvents,
+} from './github-schema';
 import type { user, session, account, verification } from './auth-schema';
 
 export type DemoSelect = InferSelectModel<typeof demo>;
@@ -52,4 +56,11 @@ export type GithubRepositorySelect = InferSelectModel<
 >;
 export type GithubRepositoryInsert = InferInsertModel<
   typeof githubRepositories
+>;
+
+export type GithubWebhookEventSelect = InferSelectModel<
+  typeof githubWebhookEvents
+>;
+export type GithubWebhookEventInsert = InferInsertModel<
+  typeof githubWebhookEvents
 >;

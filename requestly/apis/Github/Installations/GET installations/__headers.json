@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1778957369511,
+    "key": "X-Organization-Id",
+    "value": "{{organizationId}}",
+    "isEnabled": true,
+    "description": ""
+  }
+]

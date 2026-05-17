@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "fcf1fbe8-737d-48f8-aa4b-6c332ed1797e",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/integrations/github/repositories/:repoId/commits/backfill",
+  "method": "POST",
+  "contentType": "raw"
+}

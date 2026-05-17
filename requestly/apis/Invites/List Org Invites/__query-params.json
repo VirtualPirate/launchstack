@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "key": "status",
+    "value": "pending",
+    "isEnabled": true,
+    "description": "pending | accepted | revoked | expired | all"
+  }
+]

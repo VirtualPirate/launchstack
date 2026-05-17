@@ -135,8 +135,23 @@ async function loadGithubAppConstructor(): Promise<GithubAppConstructor> {
     return module.App;
   }
 
-  const module = await import('@octokit/app');
-  return (module as { App: GithubAppConstructor }).App;
+  const [appMod, coreMod, paginateMod] = await Promise.all([
+    import('@octokit/app'),
+    import('@octokit/core'),
+    import('@octokit/plugin-paginate-rest'),
+  ]);
+  const { App } = appMod as unknown as {
+    App: { defaults: (d: { Octokit: unknown }) => GithubAppConstructor };
+  };
+  const { Octokit } = coreMod as unknown as {
+    Octokit: { plugin: (p: unknown) => unknown };
+  };
+  const { paginateRest } = paginateMod as unknown as {
+    paginateRest: unknown;
+  };
+
+  const PaginatedOctokit = Octokit.plugin(paginateRest);
+  return App.defaults({ Octokit: PaginatedOctokit });
 }
 
 export class GithubAppClient {

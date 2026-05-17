@@ -2,7 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull, notInArray, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../databases/pg-drizzle';
-import { githubRepositories } from '../../../databases/pg-drizzle/github-schema';
+import {
+  githubInstallations,
+  githubRepositories,
+} from '../../../databases/pg-drizzle/github-schema';
 import type { GithubRepositorySelect } from '../../../databases/pg-drizzle/types';
 
 type Db = PostgresJsDatabase<Record<string, unknown>>;
@@ -23,6 +26,58 @@ export class GithubRepositoriesRepository {
 
   private exec(tx?: DrizzleExecutor): DrizzleExecutor {
     return tx ?? this.db;
+  }
+
+  async findById(
+    id: string,
+    tx?: DrizzleExecutor,
+  ): Promise<GithubRepositorySelect | null> {
+    const [row] = await this.exec(tx)
+      .select()
+      .from(githubRepositories)
+      .where(
+        and(
+          eq(githubRepositories.id, id),
+          isNull(githubRepositories.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findByIdScopedToOrg(
+    id: string,
+    organizationId: string,
+    tx?: DrizzleExecutor,
+  ): Promise<GithubRepositorySelect | null> {
+    const [row] = await this.exec(tx)
+      .select({
+        id: githubRepositories.id,
+        installationId: githubRepositories.installationId,
+        githubRepoId: githubRepositories.githubRepoId,
+        name: githubRepositories.name,
+        fullName: githubRepositories.fullName,
+        private: githubRepositories.private,
+        raw: githubRepositories.raw,
+        createdAt: githubRepositories.createdAt,
+        updatedAt: githubRepositories.updatedAt,
+        deletedAt: githubRepositories.deletedAt,
+      })
+      .from(githubRepositories)
+      .innerJoin(
+        githubInstallations,
+        eq(githubInstallations.id, githubRepositories.installationId),
+      )
+      .where(
+        and(
+          eq(githubRepositories.id, id),
+          eq(githubInstallations.organizationId, organizationId),
+          isNull(githubRepositories.deletedAt),
+          isNull(githubInstallations.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
   }
 
   async listByInstallation(

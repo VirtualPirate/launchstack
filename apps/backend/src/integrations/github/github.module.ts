@@ -35,6 +35,12 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
               Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
             deleteInstallation: () =>
               Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
+            listCommits: () =>
+              Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
+            getCommit: () =>
+              Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
+            getDefaultBranch: () =>
+              Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
           };
         }
         return new GithubAppClient(cfg);
@@ -77,6 +83,11 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
     GithubRepositoriesRepository,
     GithubWebhookEventsRepository,
     WebhookVerifierService,
+  ],
+  exports: [
+    GithubAppClient,
+    GithubInstallationsRepository,
+    GithubRepositoriesRepository,
   ],
 })
 export class GithubIntegrationsModule {}

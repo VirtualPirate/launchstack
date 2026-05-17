@@ -26,3 +26,12 @@ export interface GithubInstallationWithRepos extends GithubInstallation {
 export interface StartGithubConnectResponse {
   installUrl: string;
 }
+
+export interface CommitBackfillEnqueueResponse {
+  jobId: string;
+}
+
+export interface CommitAnalysisEnqueueResponse {
+  jobId: string;
+  expectedCommitCount: number;
+}

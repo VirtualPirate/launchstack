@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "key": "X-Hub-Signature-256",
+    "value": "sha256=replace-with-real-hmac",
+    "isEnabled": true,
+    "description": "Hex HMAC-SHA256 of raw body using GITHUB_WEBHOOK_SECRET."
+  },
+  {
+    "id": 2,
+    "key": "X-GitHub-Event",
+    "value": "ping",
+    "isEnabled": true,
+    "description": "GitHub event name (e.g. push, installation, pull_request)."
+  },
+  {
+    "id": 3,
+    "key": "X-GitHub-Delivery",
+    "value": "00000000-0000-0000-0000-000000000000",
+    "isEnabled": true,
+    "description": "Delivery uuid set by GitHub for each webhook."
+  }
+]

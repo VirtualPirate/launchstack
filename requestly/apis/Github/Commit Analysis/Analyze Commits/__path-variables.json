@@ -1,0 +1,8 @@
+[
+  {
+    "key": "repoId",
+    "value": "{{repositoryId}}",
+    "description": "Repository uuid (scoped to the current org).",
+    "dataType": "string"
+  }
+]

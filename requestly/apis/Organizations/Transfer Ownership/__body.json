@@ -1,0 +1,8 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/body.json",
+  "contentType": "raw",
+  "raw": "{\n  \"newOwnerUserId\": \"{{newOwnerUserId}}\"\n}",
+  "rawContentType": "application/json",
+  "formData": [],
+  "formUrlEncoded": []
+}

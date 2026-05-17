@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "b58c0250-16c6-46be-bd7f-12b0bd3005ea",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/integrations/github/webhook",
+  "method": "POST",
+  "contentType": "raw"
+}

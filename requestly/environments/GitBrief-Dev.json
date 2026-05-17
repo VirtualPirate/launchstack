@@ -1,0 +1,90 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/environment.json",
+  "id": "9ecd0bf5-836e-4684-b30b-38ba2f30fbb6",
+  "variables": {
+    "apiBaseUrl": {
+      "id": "278e5abb-afac-484e-b303-a55115d1a4ac",
+      "syncValue": "http://localhost:3000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a0"
+    },
+    "authToken": {
+      "id": "8859d89b-e6a3-48b0-a37a-0c013013c588",
+      "syncValue": "a",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a1"
+    },
+    "email": {
+      "id": "08edee0f-e170-445f-a39d-9c6281e05c0f",
+      "syncValue": "artaza.developer@gmail.com",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a2"
+    },
+    "password": {
+      "id": "3926800e-c4ce-4756-b4f4-b4bfb0d5b4e8",
+      "syncValue": "1302013020",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a3"
+    },
+    "organizationId": {
+      "id": "11dbb69a-294e-4815-87d9-e0c13a4d607e",
+      "syncValue": "21d44cdc-cdbb-4a17-8344-5ce492a7377e",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a4"
+    },
+    "internalToken": {
+      "id": "cbddf211-0573-41a5-b59a-c10f7152b412",
+      "syncValue": "replace-with-INTERNAL_API_TOKEN-from-env",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a7"
+    },
+    "memberId": {
+      "id": "94958a22-a75c-42eb-b300-b6a61bc2662c",
+      "syncValue": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a8"
+    },
+    "inviteId": {
+      "id": "1599f008-d5ac-40d6-a2a9-eefb89d04c7f",
+      "syncValue": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a9"
+    },
+    "inviteToken": {
+      "id": "a9d4a417-e53c-417c-acd7-12a19d0c2e6c",
+      "syncValue": "paste-token-from-invite-email",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "aA"
+    },
+    "installationId": {
+      "id": "20430cfa-35a6-4768-acc9-9c5fc2a67a3f",
+      "syncValue": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "aB"
+    },
+    "repositoryId": {
+      "id": "6e8b127b-08dc-4188-9bfb-a99eb277a31f",
+      "syncValue": "1ea12106-35ca-4015-830d-99da0cf3c977",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a5"
+    },
+    "newOwnerUserId": {
+      "id": "5e6d292d-0b41-4b93-ad3b-a859fb7505eb",
+      "syncValue": "paste-target-user-id",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a6"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "key": "installationId",
+    "value": "{{installationId}}",
+    "description": "GitHub installation uuid (this app's id, not GitHub's numeric id).",
+    "dataType": "string"
+  }
+]

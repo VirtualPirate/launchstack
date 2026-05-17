@@ -135,4 +135,106 @@ describe('GithubAppClient', () => {
       status: 502,
     });
   });
+
+  it('paginates commits via installation octokit', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const installationOctokit = {
+      request: jest.fn(),
+      paginate: {
+        iterator: jest.fn(() => ({
+          async *[Symbol.asyncIterator]() {
+            yield {
+              data: [
+                {
+                  sha: 'abc',
+                  parents: [{ sha: 'p1' }],
+                  commit: {
+                    author: {
+                      name: 'A',
+                      email: 'a@x',
+                      date: '2026-05-01T00:00:00Z',
+                    },
+                    committer: {
+                      name: 'C',
+                      email: 'c@x',
+                      date: '2026-05-01T00:00:01Z',
+                    },
+                    message: 'first',
+                  },
+                  author: { id: 1, login: 'a' },
+                  committer: { id: 2, login: 'c' },
+                },
+              ],
+            };
+          },
+        })),
+      },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const commits = await client.listCommits(
+      9n,
+      'acme/api',
+      '2026-04-01T00:00:00Z',
+      'main',
+    );
+    expect(commits).toHaveLength(1);
+    expect(commits[0]).toMatchObject({
+      sha: 'abc',
+      parentCount: 1,
+      authorGithubLogin: 'a',
+      committerName: 'C',
+    });
+    expect(installationOctokit.paginate.iterator).toHaveBeenCalledWith(
+      'GET /repos/{owner}/{repo}/commits',
+      expect.objectContaining({
+        owner: 'acme',
+        repo: 'api',
+        sha: 'main',
+        since: '2026-04-01T00:00:00Z',
+      }),
+    );
+  });
+
+  it('fetches a single commit with file patches', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const installationOctokit = {
+      request: jest.fn(async () => ({
+        data: {
+          sha: 'abc',
+          parents: [{ sha: 'p1' }],
+          commit: {
+            author: { name: 'A', email: 'a@x', date: '2026-05-01T00:00:00Z' },
+            committer: {
+              name: 'A',
+              email: 'a@x',
+              date: '2026-05-01T00:00:00Z',
+            },
+            message: 'm',
+          },
+          author: { id: 1, login: 'a' },
+          committer: { id: 1, login: 'a' },
+          files: [
+            {
+              filename: 'src/a.ts',
+              status: 'modified',
+              additions: 3,
+              deletions: 1,
+              changes: 4,
+              patch: '@@ patch @@',
+            },
+          ],
+        },
+      })),
+      paginate: { iterator: jest.fn() },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const detail = await client.getCommit(9n, 'acme/api', 'abc');
+    expect(detail.files).toEqual([
+      { path: 'src/a.ts', additions: 3, deletions: 1, patch: '@@ patch @@' },
+    ]);
+  });
 });

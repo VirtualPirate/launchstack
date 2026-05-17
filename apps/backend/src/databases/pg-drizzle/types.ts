@@ -6,6 +6,8 @@ import type {
   organizationMembers,
 } from './schema';
 import type {
+  githubCommitAnalyses,
+  githubCommits,
   githubInstallations,
   githubRepositories,
   githubWebhookEvents,
@@ -63,4 +65,14 @@ export type GithubWebhookEventSelect = InferSelectModel<
 >;
 export type GithubWebhookEventInsert = InferInsertModel<
   typeof githubWebhookEvents
+>;
+
+export type GithubCommitSelect = InferSelectModel<typeof githubCommits>;
+export type GithubCommitInsert = InferInsertModel<typeof githubCommits>;
+
+export type GithubCommitAnalysisSelect = InferSelectModel<
+  typeof githubCommitAnalyses
+>;
+export type GithubCommitAnalysisInsert = InferInsertModel<
+  typeof githubCommitAnalyses
 >;

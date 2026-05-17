@@ -17,7 +17,12 @@ export class App {
     this.octokit = { request: jest.fn(() => Promise.resolve({ data: {} })) };
     this.getInstallationOctokit = jest.fn(() =>
       Promise.resolve({
-        request: jest.fn(() => Promise.resolve({ data: [] })),
+        request: jest.fn(() => Promise.resolve({ data: {} })),
+        paginate: {
+          iterator: jest.fn(() => ({
+            async *[Symbol.asyncIterator]() {},
+          })),
+        },
       }),
     );
     this.eachRepository = {

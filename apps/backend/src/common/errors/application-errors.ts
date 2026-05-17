@@ -192,6 +192,31 @@ export const AppError = sealRegistry({
     status: HttpStatus.UNAUTHORIZED,
     message: 'Invalid GitHub webhook signature',
   }),
+
+  // --- Commit analysis ---
+  GITHUB_REPOSITORY_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'GitHub repository not found',
+  }),
+  COMMIT_ANALYSIS_INVALID_WINDOW: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_REQUEST,
+    message: ({ reason }) => reason,
+    details: ({ reason }) => ({ reason }),
+  }),
+  OPENAI_NOT_CONFIGURED: defineError({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    message: 'OpenAI is not configured on this server. Set OPENAI_API_KEY.',
+  }),
+  OPENAI_API_FAILED: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_GATEWAY,
+    message: ({ reason }) => `OpenAI request failed: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+  OPENAI_RESPONSE_INVALID: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_GATEWAY,
+    message: ({ reason }) => `OpenAI response was not valid: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
 });
 
 export type AppErrorCode = keyof typeof AppError;

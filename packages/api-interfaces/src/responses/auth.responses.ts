@@ -65,3 +65,11 @@ export interface AuthClientResult<TData, TError = AuthErrorResponse> {
   data: TData | null;
   error: TError | null;
 }
+
+export interface AuthForgetPasswordResponse {
+  success?: boolean;
+}
+
+export interface AuthResetPasswordResponse {
+  success?: boolean;
+}

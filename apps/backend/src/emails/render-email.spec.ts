@@ -13,8 +13,8 @@ describe('renderOtpEmail', () => {
     expect(result.subject).toBe('Your sign-in code: 123456');
   });
 
-  it('returns correct subject for password-reset', async () => {
-    const result = await renderOtpEmail(otp, 'password-reset');
+  it('returns correct subject for forget-password', async () => {
+    const result = await renderOtpEmail(otp, 'forget-password');
     expect(result.subject).toBe('Reset your password: 123456');
   });
 
@@ -32,7 +32,7 @@ describe('renderOtpEmail', () => {
     expect(result.text.length).toBeGreaterThan(0);
   });
 
-  it.each(['email-verification', 'sign-in', 'password-reset'] as const)(
+  it.each(['email-verification', 'sign-in', 'forget-password'] as const)(
     'returns non-empty html and text for type: %s',
     async (type) => {
       const result = await renderOtpEmail(otp, type);

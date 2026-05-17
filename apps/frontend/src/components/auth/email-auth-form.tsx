@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -83,9 +84,19 @@ export function EmailAuthForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium" htmlFor="password">
-          Password
-        </label>
+        <div className="flex items-baseline justify-between">
+          <label className="text-sm font-medium" htmlFor="password">
+            Password
+          </label>
+          {mode === "sign-in" ? (
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-primary underline"
+            >
+              Forgot password?
+            </Link>
+          ) : null}
+        </div>
         <input
           id="password"
           type="password"

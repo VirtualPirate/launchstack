@@ -37,7 +37,10 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function SignInPage() {
-  const search = useSearch({ strict: false }) as { redirect?: string };
+  const search = useSearch({ strict: false }) as {
+    redirect?: string;
+    reset?: "success";
+  };
   const redirectTo = normalizeRedirectPath(search.redirect);
   const callbackURL = toAbsoluteCallbackURL(redirectTo);
 
@@ -87,6 +90,15 @@ export function SignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {search.reset === "success" ? (
+            <div
+              className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
+              role="status"
+            >
+              Password updated. Sign in with your new password.
+            </div>
+          ) : null}
+
           <EmailAuthForm
             mode="sign-in"
             isPending={signInEmail.isPending}

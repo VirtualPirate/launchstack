@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/auth/password-input";
 
 type EmailAuthMode = "sign-in" | "sign-up";
 
@@ -97,10 +98,8 @@ export function EmailAuthForm({
             </Link>
           ) : null}
         </div>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
-          className={inputClassName}
           placeholder="••••••••"
           value={password}
           onChange={(event) => setPassword(event.target.value)}

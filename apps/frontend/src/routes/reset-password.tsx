@@ -3,6 +3,7 @@ import { KeyRound } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/auth/password-input";
 import {
   Card,
   CardContent,
@@ -181,10 +182,8 @@ export function ResetPasswordPage() {
               <label className="text-sm font-medium" htmlFor="password">
                 New password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
-                className={inputClassName}
                 placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -198,10 +197,8 @@ export function ResetPasswordPage() {
               <label className="text-sm font-medium" htmlFor="confirmPassword">
                 Confirm new password
               </label>
-              <input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
-                className={inputClassName}
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}

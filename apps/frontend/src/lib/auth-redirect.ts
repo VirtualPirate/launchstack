@@ -1,4 +1,4 @@
-export const DEFAULT_AUTH_REDIRECT_PATH = "/dashboard";
+export const DEFAULT_AUTH_REDIRECT_PATH = "/";
 export const GOOGLE_SIGN_IN_ROUTE_PATH = "/google-sign-in";
 export const GOOGLE_SIGN_UP_ROUTE_PATH = "/google-sign-up";
 export const AUTH_ERROR_ROUTE_PATH = "/auth/error";

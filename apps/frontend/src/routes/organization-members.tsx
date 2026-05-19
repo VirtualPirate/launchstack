@@ -1,4 +1,5 @@
 import type { OrganizationRole } from "@launchstack/api-interfaces";
+import { PageHeader } from "@/components/gitbrief/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -63,9 +64,12 @@ export function OrganizationMembersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 py-6">
-      <h1 className="text-2xl font-semibold">Members</h1>
-
+    <>
+      <PageHeader
+        title="Members"
+        description="Invite, manage, and assign roles for organization members."
+      />
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Team</CardTitle>
@@ -201,6 +205,7 @@ export function OrganizationMembersPage() {
           </CardContent>
         </Card>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }

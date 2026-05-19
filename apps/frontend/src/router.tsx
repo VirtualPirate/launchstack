@@ -12,7 +12,16 @@ import { normalizeRedirectPath } from "@/lib/auth-redirect";
 import { AcceptInvitePage } from "@/routes/accept-invite";
 import { AuthErrorPage } from "@/routes/auth-error";
 import { CreateOrganizationPage } from "@/routes/create-organization";
-import { DashboardPage } from "@/routes/dashboard";
+import { BriefDetailPage } from "@/routes/brief-detail";
+import { BriefNewPage } from "@/routes/brief-new";
+import { BriefsPage } from "@/routes/briefs";
+import { BriefsScheduledPage } from "@/routes/briefs-scheduled";
+import { DeveloperDetailPage } from "@/routes/developer-detail";
+import { ProjectDetailPage } from "@/routes/project-detail";
+import { ProjectsPage } from "@/routes/projects";
+import { RepositoriesPage } from "@/routes/repositories";
+import { TeamDetailPage } from "@/routes/team-detail";
+import { TeamsPage } from "@/routes/teams";
 import { ForgotPasswordPage } from "@/routes/forgot-password";
 import { GoogleSignInPage } from "@/routes/google-sign-in";
 import { GoogleSignUpPage } from "@/routes/google-sign-up";
@@ -259,10 +268,64 @@ const homeRoute = createRoute({
   component: HomePage,
 });
 
-const dashboardRoute = createRoute({
+const projectsRoute = createRoute({
   getParentRoute: () => protectedRoute,
-  path: "/dashboard",
-  component: DashboardPage,
+  path: "/projects",
+  component: ProjectsPage,
+});
+
+const projectDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/projects/$projectSlug",
+  component: ProjectDetailPage,
+});
+
+const teamsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/teams",
+  component: TeamsPage,
+});
+
+const teamDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/teams/$teamSlug",
+  component: TeamDetailPage,
+});
+
+const developerDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/people/$devSlug",
+  component: DeveloperDetailPage,
+});
+
+const repositoriesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/repositories",
+  component: RepositoriesPage,
+});
+
+const briefsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/briefs",
+  component: BriefsPage,
+});
+
+const briefNewRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/briefs/new",
+  component: BriefNewPage,
+});
+
+const briefsScheduledRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/briefs/scheduled",
+  component: BriefsScheduledPage,
+});
+
+const briefDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/briefs/$briefId",
+  component: BriefDetailPage,
 });
 
 const settingsRoute = createRoute({
@@ -314,7 +377,16 @@ const routeTree = rootRoute.addChildren([
   acceptInviteRoute,
   protectedRoute.addChildren([
     homeRoute,
-    dashboardRoute,
+    projectsRoute,
+    projectDetailRoute,
+    teamsRoute,
+    teamDetailRoute,
+    developerDetailRoute,
+    repositoriesRoute,
+    briefsRoute,
+    briefNewRoute,
+    briefsScheduledRoute,
+    briefDetailRoute,
     settingsRoute,
     createOrganizationRoute,
     pendingInvitesRoute,

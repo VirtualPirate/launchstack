@@ -2,6 +2,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { KeyRound } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/auth/password-input";
 import {
@@ -71,7 +72,9 @@ export function ResetPasswordPage() {
 
   if (!email) {
     return (
-      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
+      <>
+        <AuthThemeToggle />
+        <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
         <Card className="w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Reset link incomplete</CardTitle>
@@ -87,6 +90,7 @@ export function ResetPasswordPage() {
           </CardContent>
         </Card>
       </div>
+      </>
     );
   }
 
@@ -143,7 +147,9 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
+    <>
+      <AuthThemeToggle />
+      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
       <Card className="w-full">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
@@ -247,5 +253,6 @@ export function ResetPasswordPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

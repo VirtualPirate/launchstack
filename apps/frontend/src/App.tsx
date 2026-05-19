@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrgSwitcher } from "@/components/organization/org-switcher";
 import { PendingInvitesBadge } from "@/components/organization/pending-invites-badge";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useAuthSession, useSignOut } from "@/hooks/api/use-auth";
 import { useBootstrapActiveOrganization } from "@/hooks/use-bootstrap-active-organization";
 
@@ -78,6 +79,7 @@ function App() {
 
         <div className="flex items-center gap-2">
           <PendingInvitesBadge />
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="sm"

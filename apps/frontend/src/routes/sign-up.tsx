@@ -3,6 +3,7 @@ import { Rocket } from "lucide-react";
 import { useState } from "react";
 
 import { EmailAuthForm } from "@/components/auth/email-auth-form";
+import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import {
   Card,
@@ -82,7 +83,9 @@ export function SignUpPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
+    <>
+      <AuthThemeToggle />
+      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
       <Card className="w-full">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
@@ -131,5 +134,6 @@ export function SignUpPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

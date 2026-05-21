@@ -1,0 +1,66 @@
+---
+type Status = "available" | "beta" | "soon";
+
+interface Integration {
+  monogram: string;
+  name: string;
+  role: string;
+  status: Status;
+  statusLabel: string;
+}
+
+const integrations: Integration[] = [
+  { monogram: "Gh", name: "GitHub", role: "Source of truth. Reads PRs, commits, branches, and reviews from your repos.", status: "available", statusLabel: "Available" },
+  { monogram: "Sl", name: "Slack",  role: "Posts weekly briefs and feature progress to any channel or DM.",            status: "available", statusLabel: "Available" },
+  { monogram: "Gm", name: "Gmail",  role: "Delivers Monday-morning briefs as a clean digest to leadership.",            status: "available", statusLabel: "Available" },
+  { monogram: "Ln", name: "Linear", role: "Links shipped PRs back to their issues for feature-progress tracking.",       status: "beta",      statusLabel: "In beta" },
+  { monogram: "Ji", name: "Jira",   role: "Maps branches and PRs to epics for AI feature progress prediction.",          status: "soon",      statusLabel: "Coming soon" },
+];
+
+const dotColor: Record<Status, string> = {
+  available: "oklch(70% 0.14 145)",
+  beta: "oklch(72% 0.14 75)",
+  soon: "var(--color-muted-2)",
+};
+---
+
+<section class="block py-[clamp(72px,9vw,120px)] border-b border-border" id="integrations">
+  <div class="container mx-auto max-w-[1180px] px-5 md:px-10">
+    <div class="section-head max-w-[720px] mb-[clamp(36px,5vw,56px)]">
+      <span class="block mb-3.5 font-mono text-[12px] font-medium tracking-[0.06em] uppercase text-muted">Integrations</span>
+      <h2 class="text-[clamp(28px,3.6vw,40px)]">Reads from GitHub. Writes to wherever your team already is.</h2>
+      <p class="mt-4 text-[clamp(16px,1.3vw,18px)] text-muted max-w-[60ch]">
+        One read-only GitHub install on the source side. On the delivery side, pick the channels
+        your team already lives in — no new tab required.
+      </p>
+    </div>
+
+    <div class="integrations-grid grid grid-cols-5 gap-3.5">
+      {integrations.map((it) => (
+        <article class="integration bg-surface border border-border rounded-[10px] p-[22px_18px] flex flex-col gap-3.5 transition-all hover:border-border-strong hover:-translate-y-px">
+          <span class="w-9 h-9 rounded-lg bg-bg border border-border inline-flex items-center justify-center text-muted font-mono font-semibold text-sm tracking-tight">{it.monogram}</span>
+          <div>
+            <div class="font-display font-semibold text-[15px]">{it.name}</div>
+            <p class="text-[12.5px] text-muted leading-snug mt-1">{it.role}</p>
+          </div>
+          <span class="mt-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-2 uppercase tracking-[0.05em]">
+            <span class="w-1.5 h-1.5 rounded-full" style={`background:${dotColor[it.status]}`}></span>
+            {it.statusLabel}
+          </span>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  @media (max-width: 980px) {
+    .integrations-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 420px) {
+    .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>

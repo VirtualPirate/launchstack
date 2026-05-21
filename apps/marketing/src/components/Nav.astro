@@ -1,0 +1,63 @@
+---
+import BrandMark from "./icons/BrandMark.astro";
+---
+
+<header class="nav sticky top-0 z-50 bg-bg/80 backdrop-blur-md backdrop-saturate-180 border-b border-border">
+  <div class="container mx-auto max-w-[1180px] px-5 md:px-10 flex items-center gap-8 h-[60px]">
+    <a href="#" class="inline-flex items-center gap-2.5 font-display font-semibold text-base tracking-tight">
+      <BrandMark />
+      GitBrief
+    </a>
+    <nav class="nav-links flex items-center gap-6 ml-4 text-sm text-muted" aria-label="Primary">
+      <a href="#how" class="hover:text-fg transition-colors">How it works</a>
+      <a href="#integrations" class="hover:text-fg transition-colors">Integrations</a>
+      <a href="#pricing" class="hover:text-fg transition-colors">Pricing</a>
+    </nav>
+    <span class="flex-1"></span>
+    <button
+      type="button"
+      class="nav-toggle hidden w-9 h-9 bg-transparent border border-border rounded-md items-center justify-center"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="nav-links"
+    >
+      <span class="block w-4 h-[1.5px] bg-fg relative before:content-[''] before:absolute before:w-4 before:h-[1.5px] before:bg-fg before:-top-[5px] before:left-0 after:content-[''] after:absolute after:w-4 after:h-[1.5px] after:bg-fg after:top-[5px] after:left-0"></span>
+    </button>
+    <a
+      href="#waitlist"
+      class="inline-flex items-center gap-2 h-9 px-3.5 bg-fg text-bg border border-fg rounded-md text-sm font-medium transition-transform hover:-translate-y-px"
+    >
+      Join waitlist →
+    </a>
+  </div>
+</header>
+
+<style>
+  @media (max-width: 720px) {
+    .nav-links { display: none; }
+    .nav-toggle { display: inline-flex !important; }
+    .nav-links.is-open {
+      display: flex !important;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 16px 20px;
+      gap: 14px;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>(".nav-toggle");
+  const links = document.querySelector<HTMLElement>(".nav-links");
+  if (toggle && links) {
+    toggle.addEventListener("click", () => {
+      const open = links.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", String(open));
+    });
+  }
+</script>

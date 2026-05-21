@@ -1,0 +1,181 @@
+---
+---
+
+<section class="block py-[clamp(72px,9vw,120px)] border-b border-border" id="how">
+  <div class="container mx-auto max-w-[1180px] px-5 md:px-10">
+    <div class="section-head max-w-[720px] mb-[clamp(36px,5vw,56px)]">
+      <span class="block mb-3.5 font-mono text-[12px] font-medium tracking-[0.06em] uppercase text-muted">Why GitBrief</span>
+      <h2 class="text-[clamp(28px,3.6vw,40px)]">Three things you stop doing manually.</h2>
+      <p class="mt-4 text-[clamp(16px,1.3vw,18px)] text-muted max-w-[60ch]">
+        Engineering leaders spend hours every week translating Git activity into something
+        their stakeholders can actually read. GitBrief does it on Mondays, automatically.
+      </p>
+    </div>
+
+    <div class="benefits-grid grid grid-cols-3 gap-5">
+      <article class="benefit bg-surface border border-border rounded-[14px] p-7 flex flex-col gap-4 transition-all hover:border-border-strong hover:-translate-y-0.5">
+        <span class="font-mono text-[12px] text-muted-2 tracking-[0.04em]">01</span>
+        <div class="benefit-illus illus-1 relative overflow-hidden bg-bg border border-border rounded-[10px]" aria-hidden="true">
+          <span class="skl a"></span>
+          <span class="skl b"></span>
+          <span class="skl c"></span>
+          <span class="skl d"></span>
+          <span class="arrow"></span>
+          <span class="doc"></span>
+        </div>
+        <h3 class="text-[18px]">Clear visibility into what shipped</h3>
+        <p class="text-[14.5px] text-muted leading-[1.55]">
+          Understand engineering progress without reading hundreds of commits or pull requests.
+          GitBrief transforms raw GitHub activity into concise, structured delivery summaries.
+        </p>
+      </article>
+
+      <article class="benefit bg-surface border border-border rounded-[14px] p-7 flex flex-col gap-4 transition-all hover:border-border-strong hover:-translate-y-0.5">
+        <span class="font-mono text-[12px] text-muted-2 tracking-[0.04em]">02</span>
+        <div class="benefit-illus illus-2 relative overflow-hidden bg-bg border border-border rounded-[10px]" aria-hidden="true">
+          <span class="env"></span>
+          <span class="link"></span>
+          <span class="slack">
+            <span class="slack-h"></span>
+            <span class="slack-l"></span>
+            <span class="slack-l short"></span>
+          </span>
+        </div>
+        <h3 class="text-[18px]">Save hours on status reporting</h3>
+        <p class="text-[14.5px] text-muted leading-[1.55]">
+          Automate weekly updates for standups, leadership reviews, and stakeholder communication.
+          Deliver polished engineering briefs directly to Slack or email.
+        </p>
+      </article>
+
+      <article class="benefit bg-surface border border-border rounded-[14px] p-7 flex flex-col gap-4 transition-all hover:border-border-strong hover:-translate-y-0.5">
+        <span class="font-mono text-[12px] text-muted-2 tracking-[0.04em]">03</span>
+        <div class="benefit-illus illus-3 relative overflow-hidden bg-bg border border-border rounded-[10px]" aria-hidden="true">
+          <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <span class="axis"></span>
+        </div>
+        <h3 class="text-[18px]">Measure team contribution &amp; velocity</h3>
+        <p class="text-[14.5px] text-muted leading-[1.55]">
+          Track developer output, team activity, and release momentum across repositories.
+          Identify who shipped what, when, and across which projects.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .benefit-illus { height: 132px; }
+  .benefit-illus .skl { position: absolute; background: var(--color-skeleton); border-radius: 3px; }
+
+  .illus-1 .a { left: 16px; top: 22px; width: 64%; height: 8px; }
+  .illus-1 .b { left: 16px; top: 38px; width: 52%; height: 8px; }
+  .illus-1 .c { left: 16px; top: 54px; width: 70%; height: 8px; opacity: 0.6; }
+  .illus-1 .d { left: 16px; top: 70px; width: 44%; height: 8px; opacity: 0.35; }
+  .illus-1 .arrow {
+    position: absolute;
+    right: 16px; top: 50%;
+    transform: translateY(-50%);
+    width: 36px; height: 4px;
+    background: var(--color-accent);
+    border-radius: 2px;
+  }
+  .illus-1 .arrow::after {
+    content: ""; position: absolute; right: -4px; top: -5px;
+    border-left: 8px solid var(--color-accent);
+    border-top: 7px solid transparent; border-bottom: 7px solid transparent;
+  }
+  .illus-1 .doc {
+    position: absolute; right: 16px; top: 16px;
+    width: 38%; height: 100px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+  }
+  .illus-1 .doc::before, .illus-1 .doc::after {
+    content: ""; position: absolute; left: 10px;
+    height: 5px; background: var(--color-skeleton-2); border-radius: 2px;
+  }
+  .illus-1 .doc::before { top: 14px; width: 70%; }
+  .illus-1 .doc::after { top: 26px; width: 50%; }
+
+  .illus-2 .env {
+    position: absolute; left: 18px; top: 22px;
+    width: 130px; height: 88px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+  .illus-2 .env::before {
+    content: ""; position: absolute;
+    inset: 8px 8px auto 8px;
+    height: 30px;
+    background: var(--color-skeleton);
+    border-radius: 4px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 60%, 0 100%);
+  }
+  .illus-2 .env::after {
+    content: ""; position: absolute;
+    left: 10px; right: 10px; bottom: 12px;
+    height: 6px; background: var(--color-skeleton); border-radius: 2px;
+    box-shadow: 0 12px 0 -2px var(--color-skeleton);
+  }
+  .illus-2 .slack {
+    position: absolute; right: 18px; top: 28px;
+    width: 124px; height: 80px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 10px;
+    display: block;
+  }
+  .illus-2 .slack-h {
+    display: block;
+    width: 60%; height: 6px;
+    background: var(--color-accent);
+    border-radius: 2px;
+  }
+  .illus-2 .slack-l {
+    display: block;
+    width: 80%; height: 5px;
+    background: var(--color-skeleton);
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  .illus-2 .slack-l.short { width: 50%; }
+  .illus-2 .link {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px; height: 2px;
+    background: var(--color-border-strong);
+  }
+
+  .illus-3 { padding: 18px; }
+  .illus-3 .bars {
+    position: absolute; inset: 18px 18px 28px 18px;
+    display: flex; align-items: flex-end; gap: 10px;
+  }
+  .illus-3 .bars i {
+    flex: 1; background: var(--color-skeleton-2);
+    border-radius: 3px 3px 0 0; min-width: 8px;
+  }
+  .illus-3 .bars i:nth-child(1) { height: 38%; }
+  .illus-3 .bars i:nth-child(2) { height: 62%; }
+  .illus-3 .bars i:nth-child(3) { height: 82%; background: var(--color-accent); }
+  .illus-3 .bars i:nth-child(4) { height: 48%; }
+  .illus-3 .bars i:nth-child(5) { height: 70%; }
+  .illus-3 .bars i:nth-child(6) { height: 30%; }
+  .illus-3 .axis {
+    position: absolute; left: 18px; right: 18px; bottom: 16px;
+    height: 1px; background: var(--color-border);
+  }
+
+  @media (max-width: 980px) {
+    .benefits-grid { gap: 14px; }
+    .benefit-illus { height: 108px; }
+  }
+  @media (max-width: 620px) {
+    .benefits-grid { grid-template-columns: 1fr; gap: 18px; }
+    .benefit-illus { height: 124px; }
+  }
+</style>

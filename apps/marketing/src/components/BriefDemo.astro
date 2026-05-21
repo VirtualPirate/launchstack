@@ -1,0 +1,46 @@
+---
+---
+
+<article
+  class="bg-surface border border-border rounded-[14px] overflow-hidden brief-card"
+  aria-label="Sample weekly brief preview"
+>
+  <header class="flex items-center gap-3 px-4 py-3 border-b border-border bg-bg/60">
+    <span class="flex items-center gap-1" aria-hidden="true">
+      <span class="block w-1 h-1 rounded-full bg-accent"></span>
+      <span class="block w-1 h-1 rounded-full bg-muted-2"></span>
+    </span>
+    <span class="font-mono text-[12px] text-muted">Project · Cosmos</span>
+  </header>
+
+  <div class="brief-body px-7 py-7">
+    <h3 class="text-2xl font-semibold tracking-tight text-fg leading-snug">
+      Stripe shipped this week.
+    </h3>
+    <p class="text-sm text-muted mt-1">
+      May 12 – May 19, 2026 · 3 contributors · 24 commits
+    </p>
+
+    <hr class="border-t border-border my-5" />
+
+    <p class="font-mono text-[11px] tracking-[0.08em] uppercase text-muted-2 mb-3">
+      What shipped
+    </p>
+
+    <p class="text-sm text-muted leading-relaxed">
+      Shipped the <strong class="font-medium text-fg">Stripe Payment Gateway</strong> on Thursday — backend by Alex, UI by Sarah. <strong class="font-medium text-fg">Form Validation</strong> also went out.
+    </p>
+  </div>
+</article>
+
+<style>
+  .brief-card {
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, var(--color-fg) 6%, transparent),
+      0 24px 60px -20px oklch(0% 0 0 / 0.55);
+  }
+
+  @media (max-width: 720px) {
+    .brief-body { padding-left: 18px; padding-right: 18px; padding-top: 20px; padding-bottom: 20px; }
+  }
+</style>

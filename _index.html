@@ -1,0 +1,1252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitBrief — Know what shipped.</title>
+  <meta name="description" content="GitBrief turns GitHub activity into weekly engineering briefs delivered to Slack or email. Track shipped work, developer contribution, and feature progress in plain English.">
+
+  <style>
+    /* ───── modern-minimal tokens · DARK ───── */
+    :root {
+      color-scheme: dark;
+      --bg:      oklch(14% 0.008 250);
+      --surface: oklch(18% 0.010 250);
+      --fg:      oklch(96% 0.005 250);
+      --muted:   oklch(68% 0.012 250);
+      --muted-2: oklch(48% 0.014 250);
+      --border:  oklch(26% 0.012 250);
+      --border-strong: oklch(36% 0.014 250);
+      --accent:  oklch(70% 0.18 255);
+      --accent-ink: oklch(14% 0.02 255);
+      --skeleton: oklch(24% 0.012 250);
+      --skeleton-2: oklch(32% 0.014 250);
+
+      --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      --font-mono:    ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-lg: 14px;
+
+      --container: 1180px;
+      --gutter: clamp(20px, 4vw, 40px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+
+    h1, h2, h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      margin: 0;
+      text-wrap: balance;
+    }
+    h1 { font-size: clamp(40px, 6.5vw, 76px); line-height: 1.04; letter-spacing: -0.035em; }
+    h2 { font-size: clamp(28px, 3.6vw, 40px); line-height: 1.12; }
+    h3 { font-size: 17px; line-height: 1.35; letter-spacing: -0.01em; }
+    p  { margin: 0; text-wrap: pretty; }
+
+    .container {
+      max-width: var(--container);
+      margin: 0 auto;
+      padding-left: var(--gutter);
+      padding-right: var(--gutter);
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ───── nav ───── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in oklch, var(--bg) 80%, transparent);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-row {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 60px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .brand-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--fg);
+      position: relative;
+      display: inline-block;
+    }
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      left: 5px; right: 5px; top: 5px; bottom: 5px;
+      border-radius: 2px;
+      background:
+        linear-gradient(var(--bg), var(--bg)) padding-box,
+        linear-gradient(var(--bg), var(--bg)) border-box;
+      box-shadow:
+        inset 0 1.5px 0 var(--bg),
+        inset 0 -1.5px 0 var(--bg);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      margin-left: 18px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .nav-links a:hover { color: var(--fg); }
+    .nav-spacer { flex: 1; }
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 14px;
+      background: var(--fg);
+      color: var(--bg);
+      border: 1px solid var(--fg);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      transition: transform .15s ease, background .15s ease;
+    }
+    .nav-cta:hover { transform: translateY(-1px); }
+    .nav-toggle {
+      display: none;
+      width: 36px; height: 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 16px; height: 1.5px;
+      background: var(--fg);
+      box-shadow: 0 -5px 0 var(--fg), 0 5px 0 var(--fg);
+    }
+
+    /* ───── hero ───── */
+    .hero {
+      padding: clamp(64px, 9vw, 120px) 0 clamp(56px, 8vw, 96px);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: clamp(40px, 6vw, 88px);
+      align-items: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .hero-eyebrow::before {
+      content: "";
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .hero h1 { margin-top: 22px; }
+    .hero h1 .accent { color: var(--accent); }
+    .hero-sub {
+      margin-top: 22px;
+      font-size: clamp(17px, 1.4vw, 19px);
+      line-height: 1.55;
+      color: var(--muted);
+      max-width: 52ch;
+    }
+    .hero-form {
+      margin-top: 32px;
+      display: flex;
+      gap: 8px;
+      max-width: 460px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 6px;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .hero-form:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
+    }
+    .hero-form input {
+      flex: 1;
+      min-width: 0;
+      padding: 0 12px;
+      height: 40px;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      color: var(--fg);
+      outline: none;
+    }
+    .hero-form input::placeholder { color: var(--muted-2); }
+    .hero-form button {
+      height: 40px;
+      padding: 0 16px;
+      background: var(--fg);
+      color: var(--bg);
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .hero-form button:hover { background: var(--accent); }
+    .hero-form.is-success {
+      border-color: var(--accent);
+      background: color-mix(in oklch, var(--accent) 6%, var(--surface));
+    }
+    .hero-meta {
+      margin-top: 14px;
+      display: flex;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+    .hero-meta .dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--muted-2);
+    }
+
+    /* hero visual — weekly brief mock */
+    .brief-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow:
+        inset 0 1px 0 color-mix(in oklch, var(--fg) 6%, transparent),
+        0 24px 60px -20px oklch(0% 0 0 / 0.55);
+    }
+    .brief-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in oklch, var(--bg) 60%, var(--surface));
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .traffic { display: inline-flex; gap: 5px; }
+    .traffic i {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--skeleton-2);
+    }
+    .brief-body { padding: 22px 22px 26px; }
+    .brief-tag {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .brief-title {
+      margin-top: 8px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: -0.015em;
+      line-height: 1.25;
+    }
+    .brief-meta {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .brief-section { margin-top: 20px; }
+    .brief-h {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-2);
+      margin-bottom: 10px;
+    }
+    .brief-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .brief-list li {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      gap: 12px;
+      align-items: start;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .brief-list .pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--skeleton);
+      color: var(--muted);
+      text-transform: uppercase;
+      align-self: center;
+    }
+    .brief-list .pill.feat { background: color-mix(in oklch, var(--accent) 20%, transparent); color: var(--accent); }
+    .brief-list .pill.fix  { background: oklch(30% 0.07 35); color: oklch(82% 0.14 35); }
+    .brief-list .pill.perf { background: oklch(30% 0.07 145); color: oklch(82% 0.13 145); }
+    .brief-list .avatar {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--skeleton-2);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brief-foot {
+      margin-top: 22px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .brief-foot .src {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+    }
+    .brief-foot .src i {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      background: var(--fg);
+    }
+
+    /* ───── section scaffolding ───── */
+    section.block { padding: clamp(72px, 9vw, 120px) 0; border-bottom: 1px solid var(--border); }
+    .section-head { max-width: 720px; margin-bottom: clamp(36px, 5vw, 56px); }
+    .section-head .eyebrow { display: block; margin-bottom: 14px; }
+    .section-head p {
+      margin-top: 16px;
+      font-size: clamp(16px, 1.3vw, 18px);
+      color: var(--muted);
+      max-width: 60ch;
+    }
+
+    /* ───── benefit cards ───── */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .benefit {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color .2s ease, transform .2s ease;
+    }
+    .benefit:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+    .benefit-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted-2);
+      letter-spacing: 0.04em;
+    }
+    .benefit-illus {
+      height: 132px;
+      border-radius: var(--radius);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .benefit-illus .skl {
+      position: absolute;
+      background: var(--skeleton);
+      border-radius: 3px;
+    }
+    .benefit-illus .accent-bar {
+      position: absolute;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* illus 1 — commit stream condensing into a brief */
+    .illus-1 .a { left: 16px; top: 22px; width: 64%; height: 8px; }
+    .illus-1 .b { left: 16px; top: 38px; width: 52%; height: 8px; }
+    .illus-1 .c { left: 16px; top: 54px; width: 70%; height: 8px; opacity: .6; }
+    .illus-1 .d { left: 16px; top: 70px; width: 44%; height: 8px; opacity: .35; }
+    .illus-1 .arrow { right: 16px; top: 50%; transform: translateY(-50%); width: 36px; height: 4px; background: var(--accent); border-radius: 2px; }
+    .illus-1 .arrow::after { content: ""; position: absolute; right: -4px; top: -5px; border-left: 8px solid var(--accent); border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+    .illus-1 .doc {
+      position: absolute;
+      right: 16px; top: 16px;
+      width: 38%; height: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .illus-1 .doc::before, .illus-1 .doc::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      height: 5px;
+      background: var(--skeleton-2);
+      border-radius: 2px;
+    }
+    .illus-1 .doc::before { top: 14px; width: 70%; }
+    .illus-1 .doc::after { top: 26px; width: 50%; }
+
+    /* illus 2 — email + slack */
+    .illus-2 .env {
+      position: absolute;
+      left: 18px; top: 22px;
+      width: 130px; height: 88px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .illus-2 .env::before {
+      content: "";
+      position: absolute;
+      inset: 8px 8px auto 8px;
+      height: 30px;
+      background:
+        linear-gradient(135deg, var(--skeleton) 50%, transparent 50%) right/100% 100% no-repeat,
+        var(--skeleton);
+      border-radius: 4px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 60%, 0 100%);
+    }
+    .illus-2 .env::after {
+      content: "";
+      position: absolute;
+      left: 10px; right: 10px; bottom: 12px;
+      height: 6px;
+      background: var(--skeleton);
+      border-radius: 2px;
+      box-shadow: 0 12px 0 -2px var(--skeleton);
+    }
+    .illus-2 .slack {
+      position: absolute;
+      right: 18px; top: 28px;
+      width: 124px; height: 80px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .illus-2 .slack-h {
+      width: 60%; height: 6px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .illus-2 .slack-l { width: 80%; height: 5px; background: var(--skeleton); border-radius: 2px; margin-top: 8px; }
+    .illus-2 .slack-l.short { width: 50%; }
+    .illus-2 .link {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px; height: 2px;
+      background: var(--border-strong);
+    }
+
+    /* illus 3 — bar chart of devs */
+    .illus-3 { padding: 18px; }
+    .illus-3 .bars {
+      position: absolute;
+      inset: 18px 18px 28px 18px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+    .illus-3 .bars i {
+      flex: 1;
+      background: var(--skeleton-2);
+      border-radius: 3px 3px 0 0;
+      min-width: 8px;
+    }
+    .illus-3 .bars i:nth-child(1) { height: 38%; }
+    .illus-3 .bars i:nth-child(2) { height: 62%; }
+    .illus-3 .bars i:nth-child(3) { height: 82%; background: var(--accent); }
+    .illus-3 .bars i:nth-child(4) { height: 48%; }
+    .illus-3 .bars i:nth-child(5) { height: 70%; }
+    .illus-3 .bars i:nth-child(6) { height: 30%; }
+    .illus-3 .axis {
+      position: absolute;
+      left: 18px; right: 18px; bottom: 16px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .benefit h3 { font-size: 18px; }
+    .benefit p { font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+
+    /* ───── demo video ───── */
+    .demo-wrap {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .demo-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 50%, transparent 0, transparent 30%, color-mix(in oklch, var(--bg) 60%, transparent) 70%),
+        repeating-linear-gradient(45deg, var(--skeleton) 0 12px, transparent 12px 24px);
+      opacity: .55;
+    }
+    .demo-play {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+    }
+    .demo-play .play-btn {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 36px -12px oklch(0% 0 0 / 0.6);
+    }
+    .demo-play .play-btn::after {
+      content: "";
+      width: 0; height: 0;
+      border-left: 18px solid var(--fg);
+      border-top: 11px solid transparent;
+      border-bottom: 11px solid transparent;
+      margin-left: 5px;
+    }
+    .demo-play .label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ───── integrations ───── */
+    .integrations-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .integration {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .integration:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+    .int-logo {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: -0.02em;
+    }
+    .int-name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .int-role {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .int-status {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .int-status .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: oklch(70% 0.14 145);
+    }
+    .int-status.beta .dot { background: oklch(72% 0.14 75); }
+    .int-status.soon .dot { background: var(--muted-2); }
+
+    /* ───── pricing ───── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+      align-items: stretch;
+    }
+    .plan {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .plan.featured {
+      border-color: var(--fg);
+      box-shadow: 0 0 0 1px var(--fg);
+      position: relative;
+    }
+    .plan.featured::before {
+      content: "Most popular";
+      position: absolute;
+      top: -11px;
+      left: 30px;
+      background: var(--fg);
+      color: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .plan-name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .plan-tag {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .plan-price {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-family: var(--font-display);
+      letter-spacing: -0.025em;
+    }
+    .plan-price .amt {
+      font-size: 44px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .plan-price .per {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .plan-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--fg);
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .plan-cta:hover { background: var(--bg); border-color: var(--fg); }
+    .plan.featured .plan-cta { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+    .plan.featured .plan-cta:hover { background: var(--accent); border-color: var(--accent); }
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .plan-features li {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 10px;
+      align-items: start;
+      line-height: 1.45;
+    }
+    .plan-features li::before {
+      content: "";
+      width: 14px; height: 14px;
+      margin-top: 4px;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--accent) 18%, transparent);
+      background-image: linear-gradient(135deg, transparent 45%, var(--accent) 45%, var(--accent) 55%, transparent 55%);
+      background-size: 8px 8px;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .plan-features b { font-weight: 500; color: var(--fg); }
+
+    /* ───── footer CTA ───── */
+    .footer-cta {
+      padding: clamp(80px, 10vw, 130px) 0;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .footer-cta h2 { font-size: clamp(32px, 4.5vw, 52px); }
+    .footer-cta .hero-form { margin-left: auto; margin-right: auto; margin-top: 28px; }
+    .footer-cta .hero-meta { justify-content: center; }
+    .footer-cta .sub {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 50ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ───── footer ───── */
+    footer.site {
+      padding: 40px 0 56px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a:hover { color: var(--fg); }
+
+    /* ───── responsive ───── */
+    @media (max-width: 980px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+      .benefits-grid { gap: 14px; }
+      .benefit { padding: 22px; gap: 14px; }
+      .benefit-illus { height: 108px; }
+      .integrations-grid { grid-template-columns: repeat(3, 1fr); }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .plan.featured::before { left: 28px; }
+    }
+    @media (max-width: 720px) {
+      .nav-links { display: none; }
+      .nav-toggle { display: inline-flex; }
+      .nav-row { gap: 12px; }
+      .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-form { flex-direction: column; padding: 8px; }
+      .hero-form input { height: 44px; padding: 0 8px; }
+      .hero-form button { height: 44px; width: 100%; }
+      .brief-list li { grid-template-columns: 22px 1fr; }
+      .brief-list .pill { grid-column: 2 / 3; justify-self: start; margin-top: 2px; }
+    }
+    @media (max-width: 620px) {
+      .benefits-grid { grid-template-columns: 1fr; gap: 18px; }
+      .benefit { padding: 26px; }
+      .benefit-illus { height: 124px; }
+    }
+    @media (max-width: 420px) {
+      .integrations-grid { grid-template-columns: 1fr 1fr; }
+      .brief-body { padding: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ─────────────── NAV ─────────────── -->
+  <header class="nav">
+    <div class="container nav-row">
+      <a href="#" class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        GitBrief
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#how">How it works</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <span class="nav-spacer"></span>
+      <button class="nav-toggle" aria-label="Open menu"><span></span></button>
+      <a href="#waitlist" class="nav-cta">Join waitlist →</a>
+    </div>
+  </header>
+
+  <!-- ─────────────── HERO ─────────────── -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="hero-eyebrow">Now in private beta · For engineering leaders</span>
+        <h1>Know what shipped. <span class="accent">In plain English.</span></h1>
+        <p class="hero-sub">
+          No need to ask developers what they have been working on. GitBrief connects to your GitHub
+          repos and turns weekly activity into clear delivery briefs — auto-classified, summarized,
+          and delivered to Slack or email every Monday.
+        </p>
+
+        <form class="hero-form" id="waitlist" autocomplete="off" novalidate>
+          <input type="email" name="email" placeholder="you@company.com" aria-label="Work email" required>
+          <button type="submit">Join waitlist</button>
+        </form>
+
+        <div class="hero-meta">
+          <span><span class="dot"></span> Read-only GitHub access</span>
+          <span><span class="dot"></span> SOC 2 in progress</span>
+          <span><span class="dot"></span> Setup in under 5 minutes</span>
+        </div>
+      </div>
+
+      <!-- Weekly brief preview -->
+      <div class="brief-card" aria-hidden="true">
+        <div class="brief-head">
+          <span class="traffic"><i></i><i></i><i></i></span>
+          <span>weekly-brief · acme-platform</span>
+        </div>
+        <div class="brief-body">
+          <span class="brief-tag">Week of May 12 – May 18</span>
+          <h3 class="brief-title">12 things shipped this week across acme-platform</h3>
+          <p class="brief-meta">7 contributors · 38 PRs merged · 2 releases tagged</p>
+
+          <div class="brief-section">
+            <div class="brief-h">Highlights</div>
+            <ul class="brief-list">
+              <li>
+                <span class="avatar">AS</span>
+                <span>Shipped multi-region read replicas behind the <b>--region</b> flag in the SDK. Latency for EU customers should drop materially.</span>
+                <span class="pill feat">Feature</span>
+              </li>
+              <li>
+                <span class="avatar">MR</span>
+                <span>Cut webhook delivery p95 from 1.4s → 280ms by batching retries off the hot path.</span>
+                <span class="pill perf">Perf</span>
+              </li>
+              <li>
+                <span class="avatar">JT</span>
+                <span>Fixed double-charge on Stripe webhook replay reported by 3 enterprise customers.</span>
+                <span class="pill fix">Fix</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="brief-foot">
+            <span class="src"><i></i> Source · 38 PRs, 4 repos</span>
+            <span>Delivered to #eng-weekly</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── BENEFITS ─────────────── -->
+  <section class="block" id="how">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Why GitBrief</span>
+        <h2>Three things you stop doing manually.</h2>
+        <p>
+          Engineering leaders spend hours every week translating Git activity into something
+          their stakeholders can actually read. GitBrief does it on Mondays, automatically.
+        </p>
+      </div>
+
+      <div class="benefits-grid">
+
+        <article class="benefit">
+          <span class="benefit-num">01</span>
+          <div class="benefit-illus illus-1" aria-hidden="true">
+            <span class="skl a"></span>
+            <span class="skl b"></span>
+            <span class="skl c"></span>
+            <span class="skl d"></span>
+            <span class="arrow"></span>
+            <span class="doc"></span>
+          </div>
+          <h3>Clear visibility into what shipped</h3>
+          <p>
+            Understand engineering progress without reading hundreds of commits or pull requests.
+            GitBrief transforms raw GitHub activity into concise, structured delivery summaries.
+          </p>
+        </article>
+
+        <article class="benefit">
+          <span class="benefit-num">02</span>
+          <div class="benefit-illus illus-2" aria-hidden="true">
+            <span class="env"></span>
+            <span class="link"></span>
+            <span class="slack">
+              <span class="slack-h" style="display:block"></span>
+              <span class="slack-l" style="display:block"></span>
+              <span class="slack-l short" style="display:block"></span>
+            </span>
+          </div>
+          <h3>Save hours on status reporting</h3>
+          <p>
+            Automate weekly updates for standups, leadership reviews, and stakeholder communication.
+            Deliver polished engineering briefs directly to Slack or email.
+          </p>
+        </article>
+
+        <article class="benefit">
+          <span class="benefit-num">03</span>
+          <div class="benefit-illus illus-3" aria-hidden="true">
+            <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="axis"></span>
+          </div>
+          <h3>Measure team contribution &amp; velocity</h3>
+          <p>
+            Track developer output, team activity, and release momentum across repositories.
+            Identify who shipped what, when, and across which projects.
+          </p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── DEMO VIDEO ─────────────── -->
+  <section class="block" id="demo">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">See it in action</span>
+        <h2>A two-minute walkthrough.</h2>
+        <p>
+          Connect a repo, pick a delivery channel, and watch GitBrief turn last week's PRs into a
+          brief your CEO will actually read.
+        </p>
+      </div>
+
+      <div class="demo-wrap" role="img" aria-label="Product demo video — coming soon">
+        <span class="demo-play">
+          <span class="play-btn" aria-hidden="true"></span>
+          <span class="label">Demo video — coming soon</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── INTEGRATIONS ─────────────── -->
+  <section class="block" id="integrations">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Integrations</span>
+        <h2>Reads from GitHub. Writes to wherever your team already is.</h2>
+        <p>
+          One read-only GitHub install on the source side. On the delivery side, pick the channels
+          your team already lives in — no new tab required.
+        </p>
+      </div>
+
+      <div class="integrations-grid">
+        <article class="integration">
+          <span class="int-logo">Gh</span>
+          <div>
+            <div class="int-name">GitHub</div>
+            <p class="int-role">Source of truth. Reads PRs, commits, branches, and reviews from your repos.</p>
+          </div>
+          <span class="int-status"><span class="dot"></span> Available</span>
+        </article>
+
+        <article class="integration">
+          <span class="int-logo">Sl</span>
+          <div>
+            <div class="int-name">Slack</div>
+            <p class="int-role">Posts weekly briefs and feature progress to any channel or DM.</p>
+          </div>
+          <span class="int-status"><span class="dot"></span> Available</span>
+        </article>
+
+        <article class="integration">
+          <span class="int-logo">Gm</span>
+          <div>
+            <div class="int-name">Gmail</div>
+            <p class="int-role">Delivers Monday-morning briefs as a clean digest to leadership.</p>
+          </div>
+          <span class="int-status"><span class="dot"></span> Available</span>
+        </article>
+
+        <article class="integration">
+          <span class="int-logo">Ln</span>
+          <div>
+            <div class="int-name">Linear</div>
+            <p class="int-role">Links shipped PRs back to their issues for feature-progress tracking.</p>
+          </div>
+          <span class="int-status beta"><span class="dot"></span> In beta</span>
+        </article>
+
+        <article class="integration">
+          <span class="int-logo">Ji</span>
+          <div>
+            <div class="int-name">Jira</div>
+            <p class="int-role">Maps branches and PRs to epics for AI feature progress prediction.</p>
+          </div>
+          <span class="int-status soon"><span class="dot"></span> Coming soon</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── PRICING ─────────────── -->
+  <section class="block" id="pricing">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Pricing</span>
+        <h2>Pay per active developer. Cancel any time.</h2>
+        <p>
+          We count active developers — people who actually shipped code in the last 30 days. Service
+          accounts and bots are free. Annual billing saves 20%.
+        </p>
+      </div>
+
+      <div class="pricing-grid">
+
+        <article class="plan">
+          <div>
+            <div class="plan-name">Free</div>
+            <p class="plan-tag">For founders &amp; small teams trying GitBrief.</p>
+          </div>
+          <div class="plan-price">
+            <span class="amt">$0</span>
+            <span class="per">forever</span>
+          </div>
+          <a href="#waitlist" class="plan-cta">Join waitlist</a>
+          <ul class="plan-features">
+            <li><span>Up to <b>3 active developers</b></span></li>
+            <li><span>1 repository connected</span></li>
+            <li><span>Weekly brief to <b>Slack or email</b></span></li>
+            <li><span>30-day brief history</span></li>
+          </ul>
+        </article>
+
+        <article class="plan featured">
+          <div>
+            <div class="plan-name">Team</div>
+            <p class="plan-tag">For engineering managers and growing teams.</p>
+          </div>
+          <div class="plan-price">
+            <span class="amt">$8</span>
+            <span class="per">/ active developer / month</span>
+          </div>
+          <a href="#waitlist" class="plan-cta">Join waitlist</a>
+          <ul class="plan-features">
+            <li><span>Unlimited repositories</span></li>
+            <li><span><b>AI branch classification</b> &amp; feature progress prediction</span></li>
+            <li><span>Per-developer &amp; team contribution reports</span></li>
+            <li><span>Work-type breakdown (feature, fix, refactor, perf)</span></li>
+            <li><span>Custom delivery schedule &amp; channels</span></li>
+            <li><span>Unlimited brief history</span></li>
+          </ul>
+        </article>
+
+        <article class="plan">
+          <div>
+            <div class="plan-name">Business</div>
+            <p class="plan-tag">For VPEs running multiple teams &amp; orgs.</p>
+          </div>
+          <div class="plan-price">
+            <span class="amt">$16</span>
+            <span class="per">/ active developer / month</span>
+          </div>
+          <a href="#waitlist" class="plan-cta">Talk to us</a>
+          <ul class="plan-features">
+            <li><span>Everything in Team</span></li>
+            <li><span><b>Org-wide rollups</b> across squads &amp; repos</span></li>
+            <li><span>SSO (Okta, Google, Azure AD)</span></li>
+            <li><span>Audit log &amp; SOC 2 report</span></li>
+            <li><span>Custom retention &amp; data residency</span></li>
+            <li><span>Dedicated onboarding &amp; Slack channel</span></li>
+          </ul>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── FOOTER CTA ─────────────── -->
+  <section class="footer-cta">
+    <div class="container">
+      <h2>Stop asking. Start reading.</h2>
+      <p class="sub">
+        Join the waitlist and we'll send you an invite the week we open up your team size.
+      </p>
+      <form class="hero-form" data-waitlist autocomplete="off" novalidate>
+        <input type="email" name="email" placeholder="you@company.com" aria-label="Work email" required>
+        <button type="submit">Request access</button>
+      </form>
+      <div class="hero-meta">
+        <span><span class="dot"></span> No credit card</span>
+        <span><span class="dot"></span> Unsubscribe any time</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── FOOTER ─────────────── -->
+  <footer class="site">
+    <div class="container footer-row">
+      <span class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        GitBrief
+      </span>
+      <div class="footer-links">
+        <a href="#how">How it works</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+      <span>© 2026 GitBrief</span>
+    </div>
+  </footer>
+
+  <script>
+    // Waitlist form — local-only success state. Real submit hooks in later.
+    const forms = document.querySelectorAll('#waitlist, form[data-waitlist]');
+    forms.forEach(form => {
+      const input = form.querySelector('input[type="email"]');
+      const btn = form.querySelector('button');
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const v = (input.value || '').trim();
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        if (!ok) {
+          input.focus();
+          input.style.color = 'oklch(78% 0.18 25)';
+          input.setAttribute('placeholder', 'Enter a valid work email');
+          input.value = '';
+          setTimeout(() => { input.style.color = ''; input.setAttribute('placeholder', 'you@company.com'); }, 2200);
+          return;
+        }
+        form.classList.add('is-success');
+        const originalBtn = btn.textContent;
+        btn.textContent = 'You\'re in ✓';
+        input.value = '';
+        input.setAttribute('placeholder', `Confirmation sent to ${v}`);
+        input.disabled = true;
+        btn.disabled = true;
+        setTimeout(() => {
+          form.classList.remove('is-success');
+          btn.textContent = originalBtn;
+          input.disabled = false;
+          btn.disabled = false;
+          input.setAttribute('placeholder', 'you@company.com');
+        }, 4200);
+      });
+    });
+
+    // Mobile menu toggle — show/hide the inline nav links.
+    const toggle = document.querySelector('.nav-toggle');
+    const links = document.querySelector('.nav-links');
+    if (toggle && links) {
+      toggle.addEventListener('click', () => {
+        const visible = links.style.display === 'flex';
+        if (visible) {
+          links.style.display = '';
+        } else {
+          Object.assign(links.style, {
+            display: 'flex',
+            position: 'absolute',
+            top: '60px',
+            left: '0',
+            right: '0',
+            flexDirection: 'column',
+            background: 'var(--surface)',
+            borderBottom: '1px solid var(--border)',
+            padding: '16px var(--gutter)',
+            gap: '14px'
+          });
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

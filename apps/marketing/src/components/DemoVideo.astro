@@ -1,0 +1,47 @@
+---
+---
+
+<section class="block py-[clamp(72px,9vw,120px)] border-b border-border" id="demo">
+  <div class="container mx-auto max-w-[1180px] px-5 md:px-10">
+    <div class="section-head max-w-[720px] mb-[clamp(36px,5vw,56px)]">
+      <span class="block mb-3.5 font-mono text-[12px] font-medium tracking-[0.06em] uppercase text-muted">See it in action</span>
+      <h2 class="text-[clamp(28px,3.6vw,40px)]">A two-minute walkthrough.</h2>
+      <p class="mt-4 text-[clamp(16px,1.3vw,18px)] text-muted max-w-[60ch]">
+        Connect a repo, pick a delivery channel, and watch GitBrief turn last week's PRs into a
+        brief your CEO will actually read.
+      </p>
+    </div>
+
+    <div
+      class="demo-wrap relative border border-border rounded-[14px] bg-surface overflow-hidden flex items-center justify-center"
+      role="img"
+      aria-label="Product demo video — coming soon"
+    >
+      <span class="demo-play relative z-10 inline-flex flex-col items-center gap-3.5 text-muted">
+        <span class="play-btn w-[72px] h-[72px] rounded-full bg-surface border border-border-strong inline-flex items-center justify-center"></span>
+        <span class="label font-mono text-[12px] tracking-[0.06em] uppercase">Demo video — coming soon</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .demo-wrap { aspect-ratio: 16 / 9; }
+  .demo-wrap::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 0, transparent 30%, color-mix(in oklch, var(--color-bg) 60%, transparent) 70%),
+      repeating-linear-gradient(45deg, var(--color-skeleton) 0 12px, transparent 12px 24px);
+    opacity: 0.55;
+  }
+  .play-btn { box-shadow: 0 12px 36px -12px oklch(0% 0 0 / 0.6); }
+  .play-btn::after {
+    content: "";
+    width: 0; height: 0;
+    border-left: 18px solid var(--color-fg);
+    border-top: 11px solid transparent;
+    border-bottom: 11px solid transparent;
+    margin-left: 5px;
+  }
+</style>

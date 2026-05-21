@@ -1,0 +1,37 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav.astro";
+import Hero from "../components/Hero.astro";
+import Benefits from "../components/Benefits.astro";
+import DemoVideo from "../components/DemoVideo.astro";
+import Integrations from "../components/Integrations.astro";
+import Pricing from "../components/Pricing.astro";
+import FooterCTA from "../components/FooterCTA.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>GitBrief — Know what shipped.</title>
+    <meta
+      name="description"
+      content="GitBrief turns GitHub activity into weekly engineering briefs delivered to Slack or email. Track shipped work, developer contribution, and feature progress in plain English."
+    />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <Nav />
+    <main id="main">
+      <Hero />
+      <Benefits />
+      <DemoVideo />
+      <Integrations />
+      <Pricing />
+      <FooterCTA />
+    </main>
+    <Footer />
+  </body>
+</html>

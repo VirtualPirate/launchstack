@@ -1,0 +1,122 @@
+---
+interface Plan {
+  name: string;
+  tag: string;
+  price: string;
+  per: string;
+  cta: string;
+  featured?: boolean;
+  features: string[]; // may contain <b>...</b> for emphasis
+}
+
+const plans: Plan[] = [
+  {
+    name: "Free",
+    tag: "For founders &amp; small teams trying GitBrief.",
+    price: "$0",
+    per: "forever",
+    cta: "Join waitlist",
+    features: [
+      "Up to <b>3 active developers</b>",
+      "1 repository connected",
+      "Weekly brief to <b>Slack or email</b>",
+      "30-day brief history",
+    ],
+  },
+  {
+    name: "Team",
+    tag: "For engineering managers and growing teams.",
+    price: "$8",
+    per: "/ active developer / month",
+    cta: "Join waitlist",
+    featured: true,
+    features: [
+      "Unlimited repositories",
+      "<b>AI branch classification</b> &amp; feature progress prediction",
+      "Per-developer &amp; team contribution reports",
+      "Work-type breakdown (feature, fix, refactor, perf)",
+      "Custom delivery schedule &amp; channels",
+      "Unlimited brief history",
+    ],
+  },
+  {
+    name: "Business",
+    tag: "For VPEs running multiple teams &amp; orgs.",
+    price: "$16",
+    per: "/ active developer / month",
+    cta: "Talk to us",
+    features: [
+      "Everything in Team",
+      "<b>Org-wide rollups</b> across squads &amp; repos",
+      "SSO (Okta, Google, Azure AD)",
+      "Audit log &amp; SOC 2 report",
+      "Custom retention &amp; data residency",
+      "Dedicated onboarding &amp; Slack channel",
+    ],
+  },
+];
+---
+
+<section class="block py-[clamp(72px,9vw,120px)] border-b border-border" id="pricing">
+  <div class="container mx-auto max-w-[1180px] px-5 md:px-10">
+    <div class="section-head max-w-[720px] mb-[clamp(36px,5vw,56px)]">
+      <span class="block mb-3.5 font-mono text-[12px] font-medium tracking-[0.06em] uppercase text-muted">Pricing</span>
+      <h2 class="text-[clamp(28px,3.6vw,40px)]">Pay per active developer. Cancel any time.</h2>
+      <p class="mt-4 text-[clamp(16px,1.3vw,18px)] text-muted max-w-[60ch]">
+        We count active developers — people who actually shipped code in the last 30 days. Service
+        accounts and bots are free. Annual billing saves 20%.
+      </p>
+    </div>
+
+    <div class="pricing-grid grid grid-cols-3 gap-5 items-stretch">
+      {plans.map((plan) => (
+        <article class={`plan relative bg-surface border rounded-[14px] p-[30px] flex flex-col gap-[22px] ${plan.featured ? "plan-featured border-fg" : "border-border"}`}>
+          {plan.featured && (
+            <span class="plan-badge absolute -top-[11px] left-[30px] bg-fg text-bg font-mono text-[10.5px] tracking-[0.06em] uppercase px-2.5 py-1 rounded-full">Most popular</span>
+          )}
+          <div>
+            <div class="font-display font-semibold text-base tracking-tight">{plan.name}</div>
+            <p class="text-[13px] text-muted mt-1" set:html={plan.tag}></p>
+          </div>
+          <div class="flex items-baseline gap-1.5 font-display tracking-tight">
+            <span class="text-[44px] font-semibold tabular-nums">{plan.price}</span>
+            <span class="text-sm text-muted">{plan.per}</span>
+          </div>
+          <a
+            href={plan.cta === "Talk to us" ? "mailto:hello@gitbrief.app" : "#waitlist"}
+            class={`plan-cta inline-flex items-center justify-center gap-2 h-[42px] px-[18px] rounded-md text-sm font-medium border transition-colors ${plan.featured ? "bg-fg text-bg border-fg hover:bg-accent hover:border-accent" : "bg-surface text-fg border-border-strong hover:bg-bg hover:border-fg"}`}
+          >
+            {plan.cta}
+          </a>
+          <ul class="plan-features list-none p-0 m-0 grid gap-2.5 text-sm text-muted">
+            {plan.features.map((f) => (
+              <li class="grid grid-cols-[16px_1fr] gap-2.5 items-start leading-snug">
+                <span class="plan-bullet mt-1" aria-hidden="true"></span>
+                <span set:html={f}></span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .plan-featured { box-shadow: 0 0 0 1px var(--color-fg); }
+  .plan-bullet {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: color-mix(in oklch, var(--color-accent) 18%, transparent);
+    background-image: linear-gradient(135deg, transparent 45%, var(--color-accent) 45%, var(--color-accent) 55%, transparent 55%);
+    background-size: 8px 8px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .plan-features b { font-weight: 500; color: var(--color-fg); }
+
+  @media (max-width: 980px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .plan-badge { left: 28px; }
+  }
+</style>

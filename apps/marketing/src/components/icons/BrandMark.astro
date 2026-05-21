@@ -1,0 +1,10 @@
+---
+interface Props { class?: string }
+const { class: className = "" } = Astro.props;
+---
+<span
+  class={`inline-block w-[22px] h-[22px] rounded-[6px] bg-fg relative ${className}`}
+  aria-hidden="true"
+>
+  <span class="absolute inset-[5px] rounded-[2px] bg-bg"></span>
+</span>

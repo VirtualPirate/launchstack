@@ -1,0 +1,263 @@
+---
+import BriefDemo from "./BriefDemo.astro";
+
+const BLUE = "oklch(70% 0.18 255)";
+const YELLOW = "oklch(80% 0.14 90)";
+const GREEN = "oklch(72% 0.14 145)";
+
+const briefs = [
+  {
+    project: "Cosmos · Backend",
+    tint: BLUE,
+    title: "Stripe shipped this week.",
+    dateRange: "May 12 – May 19, 2026",
+    contributors: 3,
+    commits: 24,
+    summary: `Customers can now <strong class="font-medium text-fg">pay, subscribe, and get refunds</strong> without leaving the app — all three flows went live on Thursday. Alex led the work, Sarah built the screens. A long-standing form bug also got fixed along the way.`,
+  },
+  {
+    project: "Cosmos · Frontend",
+    tint: YELLOW,
+    title: "Sign-in went live.",
+    dateRange: "May 5 – May 12, 2026",
+    contributors: 2,
+    commits: 19,
+    summary: `New <strong class="font-medium text-fg">sign-in</strong> is live across the app. Maya added Google and GitHub login, moved everyone over without logging them out, and made password resets safe from abuse.`,
+  },
+  {
+    project: "Cosmos · Admin",
+    tint: GREEN,
+    title: "Onboarding got a refresh.",
+    dateRange: "Apr 28 – May 5, 2026",
+    contributors: 4,
+    commits: 31,
+    summary: `<strong class="font-medium text-fg">New welcome flow</strong> — four short steps that pick up where you left off if you close the tab. Team invites now let you set the new teammate's role when you send the invite.`,
+  },
+  {
+    project: "Cosmos · Backend",
+    tint: BLUE,
+    title: "Site stays up under bursts.",
+    dateRange: "Apr 21 – Apr 28, 2026",
+    contributors: 2,
+    commits: 16,
+    summary: `Added <strong class="font-medium text-fg">traffic protection</strong> so no single customer can overload the system. Alex caught a tricky issue before launch and fixed it the same week — production stayed smooth.`,
+  },
+  {
+    project: "Cosmos · Frontend",
+    tint: YELLOW,
+    title: "Design system refreshed.",
+    dateRange: "Apr 14 – Apr 21, 2026",
+    contributors: 3,
+    commits: 33,
+    summary: `Every <strong class="font-medium text-fg">button, form, and menu</strong> now works smoothly with keyboards and screen readers. 47 reusable pieces are covered, so the UI looks and behaves the same everywhere.`,
+  },
+  {
+    project: "Cosmos · Admin",
+    tint: GREEN,
+    title: "Self-serve billing is live.",
+    dateRange: "Apr 7 – Apr 14, 2026",
+    contributors: 2,
+    commits: 16,
+    summary: `Customers can <strong class="font-medium text-fg">change plans, update cards, and download invoices</strong> on their own. EU and UK taxes get calculated automatically. Devon made sure plan changes charge the right prorated amount.`,
+  },
+  {
+    project: "Cosmos · Backend",
+    tint: BLUE,
+    title: "Dashboards are 22% faster.",
+    dateRange: "Mar 31 – Apr 7, 2026",
+    contributors: 4,
+    commits: 31,
+    summary: `<strong class="font-medium text-fg">Database upgrade</strong> done on Monday with no downtime — customers didn't notice a thing. Dashboards now load <strong class="font-medium text-fg">22% faster</strong> across the board.`,
+  },
+  {
+    project: "Cosmos · Frontend",
+    tint: YELLOW,
+    title: "Dark mode polished.",
+    dateRange: "Mar 24 – Mar 31, 2026",
+    contributors: 2,
+    commits: 12,
+    summary: `Dark mode got a once-over — Sarah fixed <strong class="font-medium text-fg">four spots that were hard to read</strong> and made sure every screen meets accessibility standards. Future theme tweaks are now a one-line change.`,
+  },
+  {
+    project: "Cosmos · Admin",
+    tint: GREEN,
+    title: "Admin activity log.",
+    dateRange: "Mar 17 – Mar 24, 2026",
+    contributors: 2,
+    commits: 9,
+    summary: `Admins can now see <strong class="font-medium text-fg">who did what and when</strong> — searchable by person, action, or date. Big changes like role updates and billing edits are highlighted so nothing slips by.`,
+  },
+  {
+    project: "Cosmos · Backend",
+    tint: BLUE,
+    title: "Background jobs more reliable.",
+    dateRange: "Mar 10 – Mar 17, 2026",
+    contributors: 2,
+    commits: 22,
+    summary: `Behind-the-scenes work — sending emails, generating reports — now <strong class="font-medium text-fg">survives restarts</strong> and can be retried in one click from the admin panel. Better failure tracking ships next.`,
+  },
+];
+---
+
+<div class="brief-stage" role="region" aria-label="Sample weekly briefs">
+  <div class="brief-reel">
+    {briefs.map((b, i) => (
+      <div class="brief-slot" style={`--slot-delay: ${-(i * 5)}s;`}>
+        <BriefDemo
+          project={b.project}
+          title={b.title}
+          dateRange={b.dateRange}
+          contributors={b.contributors}
+          commits={b.commits}
+          tint={b.tint}
+          compact
+        >
+          <Fragment set:html={b.summary} />
+        </BriefDemo>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .brief-stage {
+    position: relative;
+    height: 460px;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+
+  .brief-reel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .brief-slot {
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    transform-origin: center top;
+    will-change: transform, opacity, box-shadow;
+    animation: reel-cycle 50s infinite cubic-bezier(0.65, 0, 0.35, 1);
+    animation-delay: var(--slot-delay);
+  }
+
+  @keyframes reel-cycle {
+    /* TOP dwell (0–3.42%, 1.71s) — back layer, smallest shadow */
+    0%, 3.42% {
+      z-index: 1;
+      opacity: 1;
+      transform: translateY(20px) scale(0.88);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 8px 24px -8px rgba(0, 0, 0, 0.45);
+    }
+
+    /* TOP → MIDDLE (3.42–6.42%, 1.5s) */
+    4.92% {
+      z-index: 1;
+      opacity: 1;
+      transform: translateY(50px) scale(0.91);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 12px 32px -10px rgba(0, 0, 0, 0.48);
+    }
+    /* z-snap to mid layer, masked by motion */
+    4.93% { z-index: 2; }
+    6.42% {
+      z-index: 2;
+      opacity: 1;
+      transform: translateY(80px) scale(0.94);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 16px 40px -12px rgba(0, 0, 0, 0.52);
+    }
+
+    /* MIDDLE dwell (6.42–13.42%, 3.5s) — behind FRONT */
+    13.42% {
+      z-index: 2;
+      opacity: 1;
+      transform: translateY(80px) scale(0.94);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 16px 40px -12px rgba(0, 0, 0, 0.52);
+    }
+
+    /* MIDDLE → BOTTOM (13.42–16.42%, 1.5s) — flows to FRONT */
+    14.92% {
+      z-index: 2;
+      opacity: 1;
+      transform: translateY(110px) scale(0.97);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 22px 56px -16px rgba(0, 0, 0, 0.60);
+    }
+    /* z-flip to FRONT */
+    14.93% { z-index: 3; }
+    16.42% {
+      z-index: 3;
+      opacity: 1;
+      transform: translateY(140px) scale(1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 32px 80px -22px rgba(0, 0, 0, 0.70);
+    }
+
+    /* BOTTOM dwell (16.42–23.42%, 3.5s) — FRONT, on screen */
+    23.42% {
+      z-index: 3;
+      opacity: 1;
+      transform: translateY(140px) scale(1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 32px 80px -22px rgba(0, 0, 0, 0.70);
+    }
+
+    /* BOTTOM → EXIT (23.42–26.42%, 1.5s) — fade down and out */
+    26.42% {
+      z-index: 3;
+      opacity: 0;
+      transform: translateY(200px) scale(1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 8px 24px -8px rgba(0, 0, 0, 0);
+    }
+
+    /* Teleport above stage (invisible) */
+    26.43% {
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(-60px) scale(0.85);
+    }
+
+    /* Wait off-stage until just before next cycle (26.43–96.43%, 35s) */
+    96.43% {
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(-60px) scale(0.85);
+    }
+
+    /* ENTRY → TOP (96.43–99.43%, 1.5s) */
+    99.43% {
+      z-index: 1;
+      opacity: 1;
+      transform: translateY(20px) scale(0.88);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 8px 24px -8px rgba(0, 0, 0, 0.45);
+    }
+
+    100% {
+      z-index: 1;
+      opacity: 1;
+      transform: translateY(20px) scale(0.88);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 8px 24px -8px rgba(0, 0, 0, 0.45);
+    }
+  }
+</style>

@@ -1,34 +1,64 @@
 ---
+interface Props {
+  project: string;
+  title: string;
+  dateRange: string;
+  contributors?: number;
+  commits?: number;
+  compact?: boolean;
+  tint?: string;
+}
+
+const {
+  project,
+  title,
+  dateRange,
+  contributors,
+  commits,
+  compact = false,
+  tint,
+} = Astro.props;
+
+const metaParts = [dateRange];
+if (typeof contributors === "number") metaParts.push(`${contributors} contributors`);
+if (typeof commits === "number") metaParts.push(`${commits} commits`);
+const meta = metaParts.join(" · ");
+
+const bodyPadding = "px-7 py-7";
+const titleSize = "text-2xl";
+const ruleMargin = "my-5";
 ---
 
 <article
-  class="bg-surface border border-border rounded-[14px] overflow-hidden brief-card"
+  class:list={[
+    "bg-surface border border-border rounded-[14px] overflow-hidden brief-card",
+    compact && "brief-card--compact",
+  ]}
+  style={tint ? `--card-tint: ${tint};` : undefined}
   aria-label="Sample weekly brief preview"
 >
   <header class="flex items-center gap-3 px-4 py-3 border-b border-border bg-bg/60">
     <span class="flex items-center gap-1" aria-hidden="true">
-      <span class="block w-1 h-1 rounded-full bg-accent"></span>
+      <span class="block w-1 h-1 rounded-full brief-dot--accent"></span>
       <span class="block w-1 h-1 rounded-full bg-muted-2"></span>
     </span>
-    <span class="font-mono text-[12px] text-muted">Project · Cosmos</span>
+    <span class="font-mono text-[12px] text-muted">{project}</span>
   </header>
 
-  <div class="brief-body px-7 py-7">
-    <h3 class="text-2xl font-semibold tracking-tight text-fg leading-snug">
-      Stripe shipped this week.
+  <div class:list={["brief-body", bodyPadding]}>
+    <h3 class:list={[titleSize, "font-semibold tracking-tight text-fg leading-snug"]}>
+      {title}
     </h3>
-    <p class="text-sm text-muted mt-1">
-      May 12 – May 19, 2026 · 3 contributors · 24 commits
-    </p>
+    <p class="text-sm text-muted mt-1">{meta}</p>
 
-    <hr class="border-t border-border my-5" />
+    <hr class:list={["border-t border-border", ruleMargin]} />
 
     <p class="font-mono text-[11px] tracking-[0.08em] uppercase text-muted-2 mb-3">
       What shipped
     </p>
 
-    <p class="text-sm text-muted leading-relaxed">
-      Shipped the <strong class="font-medium text-fg">Stripe Payment Gateway</strong> on Thursday — backend by Alex, UI by Sarah. <strong class="font-medium text-fg">Form Validation</strong> also went out.
+    <p class="brief-prose text-sm text-muted leading-relaxed">
+      <slot />
     </p>
   </div>
 </article>
@@ -40,7 +70,37 @@
       0 24px 60px -20px oklch(0% 0 0 / 0.55);
   }
 
+  .brief-card--compact {
+    height: 280px;
+    overflow: hidden;
+  }
+  .brief-card--compact .brief-prose {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   @media (max-width: 720px) {
-    .brief-body { padding-left: 18px; padding-right: 18px; padding-top: 20px; padding-bottom: 20px; }
+    .brief-body {
+      padding-left: 18px;
+      padding-right: 18px;
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
+  }
+
+  .brief-dot--accent {
+    background-color: var(--card-tint, var(--color-accent));
+  }
+
+  .brief-card .brief-dot--accent {
+    animation: brief-dot-pulse 2.4s ease-out infinite;
+  }
+
+  @keyframes brief-dot-pulse {
+    0%   { box-shadow: 0 0 0 0   color-mix(in oklch, var(--card-tint, oklch(70% 0.18 255)) 55%, transparent); }
+    70%  { box-shadow: 0 0 0 6px transparent; }
+    100% { box-shadow: 0 0 0 0   transparent; }
   }
 </style>

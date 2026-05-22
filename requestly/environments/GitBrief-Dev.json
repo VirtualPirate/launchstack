@@ -85,6 +85,20 @@
       "type": "string",
       "isEnabled": true,
       "rank": "a6"
+    },
+    "slackInstallationId": {
+      "id": "1877ce2f-8dd3-4adf-9792-c76303b6265f",
+      "syncValue": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "aC"
+    },
+    "slackChannelId": {
+      "id": "f14f7f41-021a-4b20-94c9-84162b31a9c7",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "aD"
     }
   }
 }

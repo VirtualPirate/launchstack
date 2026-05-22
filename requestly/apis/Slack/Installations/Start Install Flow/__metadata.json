@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "a0eb1bb3-f339-4e49-884a-52673da588ae",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/integrations/slack/installations/start",
+  "method": "POST",
+  "contentType": "raw"
+}

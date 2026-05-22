@@ -1,0 +1,8 @@
+[
+  {
+    "key": "installationId",
+    "value": "{{slackInstallationId}}",
+    "description": "Slack installation uuid (this app's id, returned by List Installations).",
+    "dataType": "string"
+  }
+]

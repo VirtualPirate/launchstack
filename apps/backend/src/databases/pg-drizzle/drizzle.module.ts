@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import * as authSchema from './auth-schema';
 import * as githubSchema from './github-schema';
+import * as slackSchema from './slack-schema';
 import { DRIZZLE_DB } from './drizzle.token';
 
 @Global()
@@ -17,7 +18,7 @@ import { DRIZZLE_DB } from './drizzle.token';
         const databaseUrl = configService.getOrThrow<string>('DATABASE_URL');
         const client = postgres(databaseUrl);
         return drizzle(client, {
-          schema: { ...schema, ...authSchema, ...githubSchema },
+          schema: { ...schema, ...authSchema, ...githubSchema, ...slackSchema },
         });
       },
     },

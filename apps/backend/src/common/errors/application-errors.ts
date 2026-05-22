@@ -217,6 +217,40 @@ export const AppError = sealRegistry({
     message: ({ reason }) => `OpenAI response was not valid: ${reason}`,
     details: ({ reason }) => ({ reason }),
   }),
+
+  // --- Slack integration ---
+  SLACK_NOT_CONFIGURED: defineError({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    message:
+      'Slack is not configured on this server. Set SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, SLACK_REDIRECT_URI.',
+  }),
+  SLACK_STATE_INVALID: defineError({
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Slack install state is invalid or expired',
+  }),
+  SLACK_STATE_USER_MISMATCH: defineError({
+    status: HttpStatus.FORBIDDEN,
+    message: 'Slack install state belongs to a different user',
+  }),
+  SLACK_INSTALLATION_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'Slack installation not found',
+  }),
+  SLACK_ORG_ALREADY_CONNECTED: defineError({
+    status: HttpStatus.CONFLICT,
+    message:
+      'This organization already has a Slack workspace connected; disconnect it first',
+  }),
+  SLACK_OAUTH_EXCHANGE_FAILED: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_GATEWAY,
+    message: ({ reason }) => `Slack OAuth code exchange failed: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+  SLACK_API_FAILED: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_GATEWAY,
+    message: ({ reason }) => `Slack API call failed: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
 });
 
 export type AppErrorCode = keyof typeof AppError;

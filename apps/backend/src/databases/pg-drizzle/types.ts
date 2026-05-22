@@ -12,6 +12,7 @@ import type {
   githubRepositories,
   githubWebhookEvents,
 } from './github-schema';
+import type { slackInstallations } from './slack-schema';
 import type { user, session, account, verification } from './auth-schema';
 
 export type DemoSelect = InferSelectModel<typeof demo>;
@@ -76,3 +77,6 @@ export type GithubCommitAnalysisSelect = InferSelectModel<
 export type GithubCommitAnalysisInsert = InferInsertModel<
   typeof githubCommitAnalyses
 >;
+
+export type SlackInstallationSelect = InferSelectModel<typeof slackInstallations>;
+export type SlackInstallationInsert = InferInsertModel<typeof slackInstallations>;

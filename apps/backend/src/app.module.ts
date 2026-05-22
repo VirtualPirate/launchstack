@@ -6,6 +6,7 @@ import { DrizzleModule } from './databases/pg-drizzle';
 import { AppAuthModule } from './auth';
 import { OrganizationsModule } from './organizations';
 import { GithubIntegrationsModule } from './integrations/github';
+import { SlackIntegrationsModule } from './integrations/slack';
 import { CommitAnalysisModule } from './integrations/github/commit-analysis/commit-analysis.module';
 import { PgBossModule } from './queue';
 import { QueueModule } from './queue/queue.module';
@@ -20,6 +21,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
     AppAuthModule,
     OrganizationsModule,
     GithubIntegrationsModule,
+    SlackIntegrationsModule,
     CommitAnalysisModule,
     QueueModule,
   ],

@@ -17,6 +17,7 @@ import { BriefNewPage } from "@/routes/brief-new";
 import { BriefsPage } from "@/routes/briefs";
 import { BriefsScheduledPage } from "@/routes/briefs-scheduled";
 import { DeveloperDetailPage } from "@/routes/developer-detail";
+import { PeoplePage } from "@/routes/people";
 import { ProjectDetailPage } from "@/routes/project-detail";
 import { ProjectsPage } from "@/routes/projects";
 import { RepositoriesPage } from "@/routes/repositories";
@@ -292,6 +293,12 @@ const teamDetailRoute = createRoute({
   component: TeamDetailPage,
 });
 
+const peopleRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/people",
+  component: PeoplePage,
+});
+
 const developerDetailRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/people/$devSlug",
@@ -381,6 +388,7 @@ const routeTree = rootRoute.addChildren([
     projectDetailRoute,
     teamsRoute,
     teamDetailRoute,
+    peopleRoute,
     developerDetailRoute,
     repositoriesRoute,
     briefsRoute,

@@ -3,6 +3,7 @@ import { demoProjects } from "@/lib/demo-data";
 import { getFeaturesForScope, getProjectHealth } from "@/lib/demo-selectors";
 import { useDemoState } from "@/stores/demo-state";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
+import { PinToggle } from "@/components/gitbrief/sidebar/pin-toggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export function ProjectsTable() {
@@ -12,6 +13,7 @@ export function ProjectsTable() {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-8" />
           <TableHead>Project</TableHead>
           <TableHead className="w-[120px]">Health</TableHead>
           <TableHead className="w-[140px]">Active features</TableHead>
@@ -30,7 +32,10 @@ export function ProjectsTable() {
           const health = getProjectHealth(p.id);
 
           return (
-            <TableRow key={p.id} className="cursor-pointer">
+            <TableRow key={p.id} className="group cursor-pointer">
+              <TableCell className="w-8">
+                <PinToggle scope="projects" id={p.id} />
+              </TableCell>
               <TableCell>
                 <Link to="/projects/$projectSlug" params={{ projectSlug: p.slug }} className="flex items-center gap-2 font-medium hover:underline">
                   <EntityDot color={p.color} /> {p.name}

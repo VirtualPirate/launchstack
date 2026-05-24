@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { demoProjects } from "@/lib/demo-data";
 import { getFeaturesForScope, getProjectHealth } from "@/lib/demo-selectors";
 import { useDemoState } from "@/stores/demo-state";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
@@ -8,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export function ProjectsTable() {
   const schedules = useDemoState((s) => s.schedules);
+  const projects = useDemoState((s) => s.projects);
 
   return (
     <Table>
@@ -22,7 +22,7 @@ export function ProjectsTable() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {demoProjects.map((p) => {
+        {projects.map((p) => {
           const features = getFeaturesForScope({ projectId: p.id });
           const active = features.filter((f) => f.status === "in_flight" || f.status === "at_risk").length;
           const last = features

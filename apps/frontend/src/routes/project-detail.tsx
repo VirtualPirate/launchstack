@@ -28,6 +28,7 @@ export function ProjectDetailPage() {
   const project = getProjectBySlug(projectSlug);
   const navigate = useNavigate();
   const allSchedules = useDemoState((s) => s.schedules);
+  useDemoState((s) => s.projects);
 
   if (!project) {
     return <EmptyState title="Project not found" />;

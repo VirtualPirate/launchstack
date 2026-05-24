@@ -4,7 +4,6 @@ import {
   demoBriefs,
   demoFeatures,
   demoPeople,
-  demoProjects,
   demoRepos,
   demoTeams,
   type ActivityKind,
@@ -17,9 +16,10 @@ import {
   type DemoTeam,
   type WorkType,
 } from "./demo-data";
+import { useDemoState } from "@/stores/demo-state";
 
 export function getProjectBySlug(slug: string): DemoProject | undefined {
-  return demoProjects.find((p) => p.slug === slug);
+  return useDemoState.getState().projects.find((p) => p.slug === slug);
 }
 
 export function getTeamBySlug(slug: string): DemoTeam | undefined {
@@ -31,7 +31,7 @@ export function getDeveloperBySlug(slug: string): DemoPerson | undefined {
 }
 
 export function getProjectById(id: string): DemoProject | undefined {
-  return demoProjects.find((p) => p.id === id);
+  return useDemoState.getState().projects.find((p) => p.id === id);
 }
 
 export function getRepoById(id: string): DemoRepo | undefined {
@@ -95,7 +95,9 @@ export function getFeaturesForScope(filter: { projectId?: string; teamId?: strin
 }
 
 export function getReposForProject(projectId: string): DemoRepo[] {
-  return demoRepos.filter((r) => r.projectId === projectId);
+  const project = useDemoState.getState().projects.find((p) => p.id === projectId);
+  if (!project) return [];
+  return demoRepos.filter((r) => project.repoIds.includes(r.id));
 }
 
 export function getWorkDistributionForDev(devId: string, sinceDays = 7): Record<WorkType, number> {

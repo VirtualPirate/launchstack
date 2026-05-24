@@ -1,9 +1,18 @@
 import { create } from "zustand";
-import { demoBriefs, demoSchedules, type DemoBrief, type DemoSchedule } from "@/lib/demo-data";
+import {
+  demoBriefs,
+  demoProjects,
+  demoSchedules,
+  type DemoBrief,
+  type DemoProject,
+  type DemoSchedule,
+} from "@/lib/demo-data";
 
 interface DemoState {
+  projects: DemoProject[];
   schedules: DemoSchedule[];
   briefs: DemoBrief[];
+  addProject: (p: DemoProject) => void;
   addSchedule: (s: DemoSchedule) => void;
   pauseSchedule: (id: string) => void;
   deleteSchedule: (id: string) => void;
@@ -12,8 +21,10 @@ interface DemoState {
 }
 
 export const useDemoState = create<DemoState>((set) => ({
+  projects: [...demoProjects],
   schedules: [...demoSchedules],
   briefs: [...demoBriefs],
+  addProject: (p) => set((state) => ({ projects: [p, ...state.projects] })),
   addSchedule: (s) => set((state) => ({ schedules: [s, ...state.schedules] })),
   pauseSchedule: (id) =>
     set((state) => ({

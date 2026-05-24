@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { demoProjects, demoRepos } from "@/lib/demo-data";
+import { demoRepos } from "@/lib/demo-data";
 import { getProjectById, formatRelative } from "@/lib/demo-selectors";
+import { useDemoState } from "@/stores/demo-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
 
 export function ReposTable() {
+  const projects = useDemoState((s) => s.projects);
   const [filterProject, setFilterProject] = useState<string>("all");
   const repos = filterProject === "all" ? demoRepos : demoRepos.filter((r) => r.projectId === filterProject);
 
@@ -19,7 +21,7 @@ export function ReposTable() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All projects</SelectItem>
-            {demoProjects.map((p) => (
+            {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
           </SelectContent>

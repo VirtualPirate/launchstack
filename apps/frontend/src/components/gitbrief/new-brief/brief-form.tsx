@@ -7,7 +7,6 @@ import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
 import { cn } from "@/lib/utils";
 import {
   demoPeople,
-  demoProjects,
   demoRepos,
   demoTeams,
   type BriefScope,
@@ -24,7 +23,7 @@ type CadenceType = "daily" | "weekly" | "monthly";
 
 function deriveName(scopeType: ScopeType, scopeId: string): string {
   if (scopeType === "project") {
-    const p = demoProjects.find((x) => x.id === scopeId);
+    const p = useDemoState.getState().projects.find((x) => x.id === scopeId);
     return p ? `${p.name} Brief` : "New Brief";
   }
   if (scopeType === "team") {
@@ -44,10 +43,11 @@ export type BriefFormHandle = { save: () => void };
 export function BriefForm({ ref }: { ref?: Ref<BriefFormHandle> }) {
   const navigate = useNavigate();
   const addSchedule = useDemoState((s) => s.addSchedule);
+  const projects = useDemoState((s) => s.projects);
 
   const [scopeType, setScopeType] = useState<ScopeType>("project");
-  const [scopeId, setScopeId] = useState<string>(demoProjects[0]!.id);
-  const [name, setName] = useState<string>(() => deriveName("project", demoProjects[0]!.id));
+  const [scopeId, setScopeId] = useState<string>(() => useDemoState.getState().projects[0]!.id);
+  const [name, setName] = useState<string>(() => deriveName("project", useDemoState.getState().projects[0]!.id));
   const [nameDirty, setNameDirty] = useState(false);
 
 const [cadenceType, setCadenceType] = useState<CadenceType>("weekly");
@@ -61,11 +61,11 @@ const [cadenceType, setCadenceType] = useState<CadenceType>("weekly");
   const [slackChannel, setSlackChannel] = useState(FAKE_SLACK_CHANNELS[0]!);
 
   const entities = useMemo<{ id: string; name: string; color?: string }[]>(() => {
-    if (scopeType === "project") return demoProjects.map((p) => ({ id: p.id, name: p.name, color: p.color }));
+    if (scopeType === "project") return projects.map((p) => ({ id: p.id, name: p.name, color: p.color }));
     if (scopeType === "team")    return demoTeams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
     if (scopeType === "developer") return demoPeople.map((d) => ({ id: d.id, name: d.name, color: d.avatarColor }));
     return demoRepos.map((r) => ({ id: r.id, name: r.name }));
-  }, [scopeType]);
+  }, [scopeType, projects]);
 
   const updateScope = (nextType: ScopeType, nextId: string) => {
     setScopeType(nextType);
@@ -76,7 +76,7 @@ const [cadenceType, setCadenceType] = useState<CadenceType>("weekly");
   const onScopeTypeChange = (v: string) => {
     const nextType = v as ScopeType;
     let nextId = scopeId;
-    if (nextType === "project") nextId = demoProjects[0]!.id;
+    if (nextType === "project") nextId = projects[0]!.id;
     else if (nextType === "team") nextId = demoTeams[0]!.id;
     else if (nextType === "developer") nextId = demoPeople[0]!.id;
     else nextId = demoRepos[0]!.id;

@@ -8,7 +8,7 @@ import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
 import { EmptyState } from "@/components/gitbrief/shared/empty-state";
 import { BriefViewer } from "@/components/gitbrief/briefs/brief-viewer";
 import { ScopeLabel } from "@/components/gitbrief/briefs/scope-label";
-import { demoPeople, demoTeams, type DemoBrief } from "@/lib/demo-data";
+import { demoPeople, type DemoBrief } from "@/lib/demo-data";
 import { useDemoState } from "@/stores/demo-state";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +43,7 @@ function formatPeriod(start: string, end: string): string {
 export function BriefsPage() {
   const briefs = useDemoState((s) => s.briefs);
   const projects = useDemoState((s) => s.projects);
+  const teams = useDemoState((s) => s.teams);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [entityId, setEntityId] = useState<string | null>(null);
 
@@ -57,7 +58,7 @@ export function BriefsPage() {
 
   const entityChips = (() => {
     if (filterType === "project")   return projects.map((p) => ({ id: p.id, name: p.name, color: p.color }));
-    if (filterType === "team")      return demoTeams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
+    if (filterType === "team")      return teams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
     if (filterType === "developer") return demoPeople.map((d) => ({ id: d.id, name: d.name, color: d.avatarColor }));
     return [];
   })();

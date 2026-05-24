@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import {
   demoPeople,
   demoRepos,
-  demoTeams,
   type BriefScope,
   type Cadence,
   type DeliveryChannel,
@@ -27,7 +26,7 @@ function deriveName(scopeType: ScopeType, scopeId: string): string {
     return p ? `${p.name} Brief` : "New Brief";
   }
   if (scopeType === "team") {
-    const t = demoTeams.find((x) => x.id === scopeId);
+    const t = useDemoState.getState().teams.find((x) => x.id === scopeId);
     return t ? `${t.name} Team Brief` : "New Brief";
   }
   if (scopeType === "developer") {
@@ -44,6 +43,7 @@ export function BriefForm({ ref }: { ref?: Ref<BriefFormHandle> }) {
   const navigate = useNavigate();
   const addSchedule = useDemoState((s) => s.addSchedule);
   const projects = useDemoState((s) => s.projects);
+  const teams = useDemoState((s) => s.teams);
 
   const [scopeType, setScopeType] = useState<ScopeType>("project");
   const [scopeId, setScopeId] = useState<string>(() => useDemoState.getState().projects[0]!.id);
@@ -62,10 +62,10 @@ const [cadenceType, setCadenceType] = useState<CadenceType>("weekly");
 
   const entities = useMemo<{ id: string; name: string; color?: string }[]>(() => {
     if (scopeType === "project") return projects.map((p) => ({ id: p.id, name: p.name, color: p.color }));
-    if (scopeType === "team")    return demoTeams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
+    if (scopeType === "team")    return teams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
     if (scopeType === "developer") return demoPeople.map((d) => ({ id: d.id, name: d.name, color: d.avatarColor }));
     return demoRepos.map((r) => ({ id: r.id, name: r.name }));
-  }, [scopeType, projects]);
+  }, [scopeType, projects, teams]);
 
   const updateScope = (nextType: ScopeType, nextId: string) => {
     setScopeType(nextType);
@@ -77,7 +77,7 @@ const [cadenceType, setCadenceType] = useState<CadenceType>("weekly");
     const nextType = v as ScopeType;
     let nextId = scopeId;
     if (nextType === "project") nextId = projects[0]!.id;
-    else if (nextType === "team") nextId = demoTeams[0]!.id;
+    else if (nextType === "team") nextId = teams[0]!.id;
     else if (nextType === "developer") nextId = demoPeople[0]!.id;
     else nextId = demoRepos[0]!.id;
     updateScope(nextType, nextId);

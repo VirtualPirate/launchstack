@@ -3,16 +3,20 @@ import {
   demoBriefs,
   demoProjects,
   demoSchedules,
+  demoTeams,
   type DemoBrief,
   type DemoProject,
   type DemoSchedule,
+  type DemoTeam,
 } from "@/lib/demo-data";
 
 interface DemoState {
   projects: DemoProject[];
+  teams: DemoTeam[];
   schedules: DemoSchedule[];
   briefs: DemoBrief[];
   addProject: (p: DemoProject) => void;
+  addTeam: (t: DemoTeam) => void;
   addSchedule: (s: DemoSchedule) => void;
   pauseSchedule: (id: string) => void;
   deleteSchedule: (id: string) => void;
@@ -22,9 +26,11 @@ interface DemoState {
 
 export const useDemoState = create<DemoState>((set) => ({
   projects: [...demoProjects],
+  teams: [...demoTeams],
   schedules: [...demoSchedules],
   briefs: [...demoBriefs],
   addProject: (p) => set((state) => ({ projects: [p, ...state.projects] })),
+  addTeam: (t) => set((state) => ({ teams: [t, ...state.teams] })),
   addSchedule: (s) => set((state) => ({ schedules: [s, ...state.schedules] })),
   pauseSchedule: (id) =>
     set((state) => ({

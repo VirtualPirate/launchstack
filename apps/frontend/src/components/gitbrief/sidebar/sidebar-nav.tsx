@@ -1,6 +1,6 @@
 import { useLocation } from "@tanstack/react-router";
 import { Bell, ChevronDown, ChevronRight, FileText, GitBranch, Home, Plug, Settings as SettingsIcon } from "lucide-react";
-import { demoPeople, demoTeams } from "@/lib/demo-data";
+import { demoPeople } from "@/lib/demo-data";
 import { useDemoState } from "@/stores/demo-state";
 import { useSidebarPrefs, type SidebarScope } from "@/stores/sidebar-prefs-store";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
@@ -104,11 +104,12 @@ export function SidebarNav() {
   const schedules = useDemoState((s) => s.schedules);
   const briefs = useDemoState((s) => s.briefs);
   const projects = useDemoState((s) => s.projects);
+  const teams = useDemoState((s) => s.teams);
   const briefCount = briefs.length;
   const inboxCount = schedules.filter((s) => !s.paused).length;
 
   const projectRecords = projects.map(toRecord);
-  const teamRecords = demoTeams.map(toRecord);
+  const teamRecords = teams.map(toRecord);
   const peopleRecords = demoPeople.map(toRecord);
 
   return (

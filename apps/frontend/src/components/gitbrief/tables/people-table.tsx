@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { demoPeople, demoTeams } from "@/lib/demo-data";
+import { demoPeople } from "@/lib/demo-data";
+import { useDemoState } from "@/stores/demo-state";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
 import { PinToggle } from "@/components/gitbrief/sidebar/pin-toggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export function PeopleTable() {
-  const teamNameById = new Map(demoTeams.map((t) => [t.id, t.name]));
+  const teams = useDemoState((s) => s.teams);
+  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
 
   return (
     <Table>

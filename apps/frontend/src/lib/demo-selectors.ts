@@ -5,7 +5,6 @@ import {
   demoFeatures,
   demoPeople,
   demoRepos,
-  demoTeams,
   type ActivityKind,
   type DemoActivity,
   type DemoBrief,
@@ -23,7 +22,7 @@ export function getProjectBySlug(slug: string): DemoProject | undefined {
 }
 
 export function getTeamBySlug(slug: string): DemoTeam | undefined {
-  return demoTeams.find((t) => t.slug === slug);
+  return useDemoState.getState().teams.find((t) => t.slug === slug);
 }
 
 export function getDeveloperBySlug(slug: string): DemoPerson | undefined {
@@ -43,7 +42,7 @@ export function getDeveloperById(id: string): DemoPerson | undefined {
 }
 
 export function getTeamById(id: string): DemoTeam | undefined {
-  return demoTeams.find((t) => t.id === id);
+  return useDemoState.getState().teams.find((t) => t.id === id);
 }
 
 export function getFeatureById(id: string): DemoFeature | undefined {

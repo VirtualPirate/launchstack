@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { demoTeams } from "@/lib/demo-data";
 import { getFeaturesForScope } from "@/lib/demo-selectors";
+import { useDemoState } from "@/stores/demo-state";
 import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
 import { PinToggle } from "@/components/gitbrief/sidebar/pin-toggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export function TeamsTable() {
+  const teams = useDemoState((s) => s.teams);
   return (
     <Table>
       <TableHeader>
@@ -17,7 +18,7 @@ export function TeamsTable() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {demoTeams.map((t) => {
+        {teams.map((t) => {
           const features = getFeaturesForScope({ teamId: t.id });
           const active = features.filter((f) => f.status !== "shipped").length;
           return (

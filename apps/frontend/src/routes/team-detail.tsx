@@ -15,9 +15,11 @@ import {
   getWorkDistributionForDev,
   getWorkDistributionForScope,
 } from "@/lib/demo-selectors";
+import { useDemoState } from "@/stores/demo-state";
 
 export function TeamDetailPage() {
   const { teamSlug } = useParams({ strict: false }) as { teamSlug: string };
+  useDemoState((s) => s.teams);
   const team = getTeamBySlug(teamSlug);
   if (!team) return <EmptyState title="Team not found" />;
 

@@ -1,5 +1,6 @@
 import { useSearch } from "@tanstack/react-router"
 import { Rocket } from "lucide-react"
+import { PageHeader } from "@/components/gitbrief/shared/page-header"
 import { ConnectGithubButton } from "@/components/integrations/connect-github-button"
 import { InstallationRow } from "@/components/integrations/installation-row"
 import {
@@ -25,20 +26,18 @@ export function IntegrationsGithubPage() {
   }, 0)
 
   return (
-    <div className="mx-auto max-w-5xl pt-6">
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Connected GitHub accounts
-          </h1>
-          <p className="text-sm text-muted-foreground">
+    <>
+      <PageHeader
+        title="GitHub integration"
+        description={
+          <>
             {installations.length} installation
             {installations.length === 1 ? "" : "s"} · {totalRepos} repositor
-            {totalRepos === 1 ? "y" : "ies"}
-          </p>
-        </div>
-        <ConnectGithubButton />
-      </div>
+            {totalRepos === 1 ? "y" : "ies"} connected
+          </>
+        }
+        actions={<ConnectGithubButton />}
+      />
 
       {search.connected ? (
         <p className="mb-3 text-sm text-emerald-600">GitHub connected.</p>
@@ -93,6 +92,6 @@ export function IntegrationsGithubPage() {
         To add or remove repositories, use &quot;Configure&quot; on an
         installation - it opens GitHub&apos;s settings.
       </p>
-    </div>
+    </>
   )
 }

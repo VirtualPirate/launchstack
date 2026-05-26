@@ -5,15 +5,18 @@ import { RouterProvider } from '@tanstack/react-router'
 import './index.css'
 import { router } from './router.tsx'
 import { ThemeProvider } from './components/theme/theme-provider'
+import { TooltipProvider } from './components/ui/tooltip'
 
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <TooltipProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </TooltipProvider>
     </ThemeProvider>
   </StrictMode>,
 )

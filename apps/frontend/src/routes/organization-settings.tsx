@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { UpdateOrganizationSchema } from "@launchstack/api-interfaces";
+import { PageHeader } from "@/components/gitbrief/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -85,9 +86,12 @@ export function OrganizationSettingsPage() {
   const isOwner = role === "owner";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-6">
-      <h1 className="text-2xl font-semibold">Organization settings</h1>
-
+    <>
+      <PageHeader
+        title="Organization settings"
+        description="Manage organization details, ownership, and danger zone."
+      />
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>
@@ -190,6 +194,7 @@ export function OrganizationSettingsPage() {
           </CardContent>
         </Card>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }

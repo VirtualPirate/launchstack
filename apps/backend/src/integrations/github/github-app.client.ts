@@ -91,6 +91,24 @@ export interface GithubCommitDetail extends GithubCommitListItem {
   files: GithubCommitFile[];
 }
 
+export interface RepoCollaborator {
+  id: number;
+  login: string;
+  node_id?: string;
+  avatar_url?: string | null;
+  html_url?: string | null;
+  type?: string | null;
+  site_admin?: boolean;
+  role_name: string;
+  permissions: {
+    admin: boolean;
+    maintain: boolean;
+    push: boolean;
+    triage: boolean;
+    pull: boolean;
+  };
+}
+
 type InstallationOctokit = {
   request: (
     route: string,
@@ -284,6 +302,35 @@ export class GithubAppClient {
         })),
       };
     } catch (err) {
+      throw AppError.GITHUB_API_FAILED({
+        reason: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  }
+
+  async listRepoCollaborators(
+    installationId: bigint,
+    owner: string,
+    repo: string,
+  ): Promise<RepoCollaborator[]> {
+    try {
+      const app = await this.getApp();
+      const octokit = await app.getInstallationOctokit(Number(installationId));
+      const out: RepoCollaborator[] = [];
+      for await (const page of octokit.paginate.iterator(
+        'GET /repos/{owner}/{repo}/collaborators',
+        { owner, repo, affiliation: 'all', per_page: 100 },
+      )) {
+        for (const row of page.data as RepoCollaborator[]) {
+          out.push(row);
+        }
+      }
+      return out;
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 404 || status === 403) {
+        throw err;
+      }
       throw AppError.GITHUB_API_FAILED({
         reason: err instanceof Error ? err.message : 'Unknown error',
       });

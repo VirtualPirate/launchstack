@@ -5,5 +5,6 @@ describe('GithubWebhookEventsRepository', () => {
     const repo = new GithubWebhookEventsRepository({} as any);
 
     expect(typeof repo.create).toBe('function');
+    expect(typeof repo.markProcessed).toBe('function');
   });
 });

@@ -9,4 +9,5 @@ export const AnalyzeCommitJob = defineJob({
   retryLimit: 3,
   retryDelay: 30,
   retryBackoff: true,
+  workOptions: { localConcurrency: 5 },
 });

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../databases/pg-drizzle';
 import { githubWebhookEvents } from '../../../databases/pg-drizzle/github-schema';
@@ -28,5 +29,12 @@ export class GithubWebhookEventsRepository {
       .values(input)
       .returning();
     return row;
+  }
+
+  async markProcessed(id: string): Promise<void> {
+    await this.db
+      .update(githubWebhookEvents)
+      .set({ state: 'processed', updatedAt: new Date() })
+      .where(eq(githubWebhookEvents.id, id));
   }
 }

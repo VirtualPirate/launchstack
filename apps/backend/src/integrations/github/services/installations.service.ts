@@ -11,6 +11,8 @@ import type {
   GithubInstallationSelect,
   GithubRepositorySelect,
 } from '../../../databases/pg-drizzle/types';
+import { PgBossService } from '../../../queue';
+import { SyncRepoCollaboratorsJob } from '../collaborators/jobs/sync-repo-collaborators.job';
 import type { GithubAppConfig } from '../github-app.config';
 import type { GithubAppClient } from '../github-app.client';
 import { GithubInstallationsRepository } from '../repositories/installations.repository';
@@ -53,6 +55,7 @@ export class GithubInstallationsService {
     private readonly client: GithubAppClient,
     private readonly config: GithubAppConfig | null,
     @Inject(DRIZZLE_DB) private readonly db: Db,
+    private readonly pgBoss: PgBossService,
   ) {}
 
   private requireConfig(): GithubAppConfig {
@@ -114,10 +117,14 @@ export class GithubInstallationsService {
       raw: repo.raw,
     }));
 
-    await this.db.transaction(async (tx) => {
-      let installationRowId = existing?.id;
+    const beforeIds: string[] = existing
+      ? (await this.repos.listByInstallation(existing.id)).map((r) => r.id)
+      : [];
 
-      if (!installationRowId) {
+    const installationRowId = await this.db.transaction(async (tx) => {
+      let rowId = existing?.id;
+
+      if (!rowId) {
         const meta = await this.client.getInstallation(input.installationId);
         const created = await this.installs.create(
           {
@@ -134,7 +141,7 @@ export class GithubInstallationsService {
           },
           tx,
         );
-        installationRowId = created.id;
+        rowId = created.id;
       } else if (existing?.deletedAt) {
         // Re-install of a previously-disconnected app: un-delete the existing
         // row instead of creating a duplicate (the unique index on
@@ -142,12 +149,30 @@ export class GithubInstallationsService {
         await this.installs.undelete(existing.id, tx);
       }
 
-      await this.repos.reconcileForInstallation(
-        installationRowId,
-        repoRows,
-        tx,
-      );
+      await this.repos.reconcileForInstallation(rowId, repoRows, tx);
+      return rowId;
     });
+
+    const afterIds = (
+      await this.repos.listByInstallation(installationRowId)
+    ).map((r) => r.id);
+    const beforeSet = new Set(beforeIds);
+    const afterSet = new Set(afterIds);
+    const connected = afterIds.filter((id) => !beforeSet.has(id));
+    const disconnected = beforeIds.filter((id) => !afterSet.has(id));
+
+    for (const repositoryId of connected) {
+      await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+        repositoryId,
+        trigger: 'connected',
+      });
+    }
+    for (const repositoryId of disconnected) {
+      await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+        repositoryId,
+        trigger: 'disconnected',
+      });
+    }
 
     return { orgId };
   }
@@ -181,6 +206,10 @@ export class GithubInstallationsService {
       throw AppError.GITHUB_INSTALLATION_NOT_FOUND();
     }
 
+    const beforeIds = (
+      await this.repos.listByInstallation(installation.id)
+    ).map((r) => r.id);
+
     const repos = await this.client.listInstallationRepos(
       installation.githubInstallationId,
     );
@@ -197,6 +226,25 @@ export class GithubInstallationsService {
     );
 
     const updatedRepos = await this.repos.listByInstallation(installation.id);
+    const afterIds = updatedRepos.map((r) => r.id);
+    const beforeSet = new Set(beforeIds);
+    const afterSet = new Set(afterIds);
+    const connected = afterIds.filter((id) => !beforeSet.has(id));
+    const disconnected = beforeIds.filter((id) => !afterSet.has(id));
+
+    for (const repositoryId of connected) {
+      await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+        repositoryId,
+        trigger: 'connected',
+      });
+    }
+    for (const repositoryId of disconnected) {
+      await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+        repositoryId,
+        trigger: 'disconnected',
+      });
+    }
+
     return {
       ...serializeInstallation(installation),
       repositories: updatedRepos.map(serializeRepo),
@@ -212,6 +260,10 @@ export class GithubInstallationsService {
       throw AppError.GITHUB_INSTALLATION_NOT_FOUND();
     }
 
+    const reposToDisconnect = await this.repos.listByInstallation(
+      installation.id,
+    );
+
     try {
       await this.client.deleteInstallation(installation.githubInstallationId);
     } catch {
@@ -223,5 +275,12 @@ export class GithubInstallationsService {
       await this.repos.softDeleteAllForInstallation(installation.id, tx);
       await this.installs.softDelete(installation.id, tx);
     });
+
+    for (const repo of reposToDisconnect) {
+      await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+        repositoryId: repo.id,
+        trigger: 'disconnected',
+      });
+    }
   }
 }

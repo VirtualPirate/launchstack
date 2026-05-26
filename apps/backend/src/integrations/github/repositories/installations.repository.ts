@@ -55,6 +55,18 @@ export class GithubInstallationsRepository {
     return row ?? null;
   }
 
+  async findByIdIncludingDeleted(
+    id: string,
+    tx?: DrizzleExecutor,
+  ): Promise<GithubInstallationSelect | null> {
+    const [row] = await this.exec(tx)
+      .select()
+      .from(githubInstallations)
+      .where(eq(githubInstallations.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
   async findByIdScopedToOrg(
     id: string,
     organizationId: string,

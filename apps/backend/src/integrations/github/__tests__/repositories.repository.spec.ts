@@ -7,5 +7,7 @@ describe('GithubRepositoriesRepository', () => {
     expect(typeof repo.listByInstallation).toBe('function');
     expect(typeof repo.reconcileForInstallation).toBe('function');
     expect(typeof repo.softDeleteAllForInstallation).toBe('function');
+    expect(typeof repo.findByGithubRepoId).toBe('function');
+    expect(typeof repo.findByIdIncludingDeleted).toBe('function');
   });
 });

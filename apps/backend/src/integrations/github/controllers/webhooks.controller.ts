@@ -11,8 +11,11 @@ import {
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import type { Request } from 'express';
 import { AppError } from '../../../common/errors';
+import { PgBossService } from '../../../queue';
+import { SyncRepoCollaboratorsJob } from '../collaborators/jobs/sync-repo-collaborators.job';
 import type { GithubAppConfig } from '../github-app.config';
 import { GITHUB_APP_CONFIG_TOKEN } from '../tokens';
+import { GithubRepositoriesRepository } from '../repositories/repositories.repository';
 import { GithubWebhookEventsRepository } from '../repositories/webhook-events.repository';
 import { WebhookVerifierService } from '../services/webhook-verifier.service';
 
@@ -24,6 +27,8 @@ export class GithubWebhooksController {
   constructor(
     private readonly verifier: WebhookVerifierService,
     private readonly webhookEvents: GithubWebhookEventsRepository,
+    private readonly reposRepository: GithubRepositoriesRepository,
+    private readonly pgBoss: PgBossService,
     @Inject(GITHUB_APP_CONFIG_TOKEN)
     private readonly config: GithubAppConfig | null,
   ) {}
@@ -56,10 +61,11 @@ export class GithubWebhooksController {
         ? (req.body as Record<string, unknown>)
         : null;
 
+    let outboxId: string | null = null;
     if (parsed) {
-      const id = typeof deliveryId === 'string' ? deliveryId : randomUUID();
+      outboxId = typeof deliveryId === 'string' ? deliveryId : randomUUID();
       await this.webhookEvents.create({
-        id,
+        id: outboxId,
         event: event ?? null,
         raw: parsed,
       });
@@ -73,6 +79,31 @@ export class GithubWebhooksController {
     this.logger.log(
       `github webhook received event=${event ?? '?'} delivery=${deliveryId ?? '?'} installation=${installationId ?? '?'}`,
     );
+
+    if (
+      parsed &&
+      event === 'member' &&
+      typeof parsed.action === 'string' &&
+      ['added', 'removed', 'edited'].includes(parsed.action)
+    ) {
+      const githubRepoId = (
+        parsed.repository as { id?: number | string } | undefined
+      )?.id;
+      if (githubRepoId != null) {
+        const repo = await this.reposRepository.findByGithubRepoId(
+          BigInt(githubRepoId),
+        );
+        if (repo && !repo.deletedAt) {
+          await this.pgBoss.send(SyncRepoCollaboratorsJob, {
+            repositoryId: repo.id,
+            trigger: 'webhook',
+          });
+          if (outboxId) {
+            await this.webhookEvents.markProcessed(outboxId);
+          }
+        }
+      }
+    }
 
     return { ok: true };
   }

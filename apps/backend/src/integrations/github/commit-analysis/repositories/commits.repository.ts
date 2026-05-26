@@ -1,8 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, gte, isNull, sql } from 'drizzle-orm';
+import { aliasedTable, and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../../databases/pg-drizzle';
-import { githubCommits } from '../../../../databases/pg-drizzle/github-schema';
+import {
+  githubCollaborators,
+  githubCommits,
+} from '../../../../databases/pg-drizzle/github-schema';
 import type {
   GithubCommitInsert,
   GithubCommitSelect,
@@ -87,5 +90,47 @@ export class CommitsRepository {
         ),
       );
     return row?.count ?? 0;
+  }
+
+  async findWithCollaborators(input: {
+    repositoryId: string;
+    limit: number;
+  }): Promise<
+    Array<{
+      commit: typeof githubCommits.$inferSelect;
+      author: typeof githubCollaborators.$inferSelect | null;
+      committer: typeof githubCollaborators.$inferSelect | null;
+    }>
+  > {
+    const committerAlias = aliasedTable(githubCollaborators, 'committer');
+    return this.db
+      .select({
+        commit: githubCommits,
+        author: githubCollaborators,
+        committer: committerAlias,
+      })
+      .from(githubCommits)
+      .leftJoin(
+        githubCollaborators,
+        and(
+          eq(githubCollaborators.githubUserId, githubCommits.authorGithubUserId),
+          isNull(githubCollaborators.deletedAt),
+        ),
+      )
+      .leftJoin(
+        committerAlias,
+        and(
+          eq(committerAlias.githubUserId, githubCommits.committerGithubUserId),
+          isNull(committerAlias.deletedAt),
+        ),
+      )
+      .where(
+        and(
+          eq(githubCommits.repositoryId, input.repositoryId),
+          isNull(githubCommits.deletedAt),
+        ),
+      )
+      .orderBy(desc(githubCommits.authoredAt))
+      .limit(input.limit);
   }
 }

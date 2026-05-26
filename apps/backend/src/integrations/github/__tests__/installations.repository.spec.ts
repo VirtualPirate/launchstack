@@ -11,5 +11,6 @@ describe('GithubInstallationsRepository', () => {
     expect(typeof repo.create).toBe('function');
     expect(typeof repo.softDelete).toBe('function');
     expect(typeof repo.undelete).toBe('function');
+    expect(typeof repo.findByIdIncludingDeleted).toBe('function');
   });
 });

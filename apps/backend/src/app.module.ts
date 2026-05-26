@@ -8,6 +8,7 @@ import { OrganizationsModule } from './organizations';
 import { GithubIntegrationsModule } from './integrations/github';
 import { SlackIntegrationsModule } from './integrations/slack';
 import { CommitAnalysisModule } from './integrations/github/commit-analysis/commit-analysis.module';
+import { GithubCollaboratorsModule } from './integrations/github/collaborators/collaborators.module';
 import { PgBossModule } from './queue';
 import { QueueModule } from './queue/queue.module';
 import { LoggerModule, RequestIdMiddleware } from './logger';
@@ -23,6 +24,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
     GithubIntegrationsModule,
     SlackIntegrationsModule,
     CommitAnalysisModule,
+    GithubCollaboratorsModule,
     QueueModule,
   ],
   controllers: [AppController],

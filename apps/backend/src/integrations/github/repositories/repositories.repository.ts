@@ -45,6 +45,37 @@ export class GithubRepositoriesRepository {
     return row ?? null;
   }
 
+  async findByGithubRepoId(
+    githubRepoId: bigint,
+    opts: { includeDeleted?: boolean } = {},
+    tx?: DrizzleExecutor,
+  ): Promise<GithubRepositorySelect | null> {
+    const condition = opts.includeDeleted
+      ? eq(githubRepositories.githubRepoId, githubRepoId)
+      : and(
+          eq(githubRepositories.githubRepoId, githubRepoId),
+          isNull(githubRepositories.deletedAt),
+        );
+    const [row] = await this.exec(tx)
+      .select()
+      .from(githubRepositories)
+      .where(condition)
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findByIdIncludingDeleted(
+    id: string,
+    tx?: DrizzleExecutor,
+  ): Promise<GithubRepositorySelect | null> {
+    const [row] = await this.exec(tx)
+      .select()
+      .from(githubRepositories)
+      .where(eq(githubRepositories.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
   async findByIdScopedToOrg(
     id: string,
     organizationId: string,

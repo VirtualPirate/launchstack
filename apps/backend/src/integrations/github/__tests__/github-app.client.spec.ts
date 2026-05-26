@@ -197,6 +197,78 @@ describe('GithubAppClient', () => {
     );
   });
 
+  it('paginates collaborators via installation octokit', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const installationOctokit = {
+      request: jest.fn(),
+      paginate: {
+        iterator: jest.fn(() => ({
+          async *[Symbol.asyncIterator]() {
+            yield {
+              data: [
+                {
+                  id: 1,
+                  login: 'alice',
+                  node_id: 'MDQ6VXNlcjE=',
+                  avatar_url: 'https://avatars.example/alice',
+                  html_url: 'https://github.com/alice',
+                  type: 'User',
+                  site_admin: false,
+                  role_name: 'admin',
+                  permissions: {
+                    admin: true,
+                    maintain: true,
+                    push: true,
+                    triage: true,
+                    pull: true,
+                  },
+                },
+              ],
+            };
+            yield {
+              data: [
+                {
+                  id: 2,
+                  login: 'bot',
+                  node_id: 'MDQ6VXNlcjI=',
+                  avatar_url: null,
+                  html_url: 'https://github.com/bot',
+                  type: 'Bot',
+                  site_admin: false,
+                  role_name: 'read',
+                  permissions: {
+                    admin: false,
+                    maintain: false,
+                    push: false,
+                    triage: false,
+                    pull: true,
+                  },
+                },
+              ],
+            };
+          },
+        })),
+      },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const collabs = await client.listRepoCollaborators(9n, 'acme', 'api');
+
+    expect(collabs).toHaveLength(2);
+    expect(collabs[0]).toMatchObject({ id: 1, login: 'alice', role_name: 'admin' });
+    expect(collabs[1]).toMatchObject({ id: 2, login: 'bot', type: 'Bot' });
+    expect(installationOctokit.paginate.iterator).toHaveBeenCalledWith(
+      'GET /repos/{owner}/{repo}/collaborators',
+      expect.objectContaining({
+        owner: 'acme',
+        repo: 'api',
+        affiliation: 'all',
+        per_page: 100,
+      }),
+    );
+  });
+
   it('fetches a single commit with file patches', async () => {
     const client = makeClient();
     const app = await latestApp();

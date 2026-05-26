@@ -7,5 +7,6 @@ describe('CommitsRepository', () => {
     expect(typeof repo.findById).toBe('function');
     expect(typeof repo.findByRepositorySince).toBe('function');
     expect(typeof repo.countByRepositorySince).toBe('function');
+    expect(typeof repo.findWithCollaborators).toBe('function');
   });
 });

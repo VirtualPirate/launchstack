@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { AppError } from '../../common/errors';
 import { DRIZZLE_DB } from '../../databases/pg-drizzle';
+import { PgBossService } from '../../queue';
 import { GithubInstallationsController } from './controllers/installations.controller';
 import { GithubWebhooksController } from './controllers/webhooks.controller';
 import { GithubAppClient } from './github-app.client';
@@ -41,6 +42,8 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
               Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
             getDefaultBranch: () =>
               Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
+            listRepoCollaborators: () =>
+              Promise.reject(AppError.GITHUB_APP_NOT_CONFIGURED()),
           };
         }
         return new GithubAppClient(cfg);
@@ -61,6 +64,7 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
         GithubAppClient,
         GITHUB_APP_CONFIG_TOKEN,
         DRIZZLE_DB,
+        PgBossService,
       ],
       useFactory: (
         installs: GithubInstallationsRepository,
@@ -69,6 +73,7 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
         client: GithubAppClient,
         cfg: ReturnType<typeof loadGithubAppConfig>,
         db: PostgresJsDatabase<Record<string, unknown>>,
+        pgBoss: PgBossService,
       ) =>
         new GithubInstallationsService(
           installs,
@@ -77,6 +82,7 @@ import { GITHUB_APP_CONFIG_TOKEN } from './tokens';
           client,
           cfg,
           db,
+          pgBoss,
         ),
     },
     GithubInstallationsRepository,

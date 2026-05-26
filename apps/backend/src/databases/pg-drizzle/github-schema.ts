@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -236,4 +236,69 @@ export const githubCommitAnalysesRelations = relations(
       references: [githubCommits.id],
     }),
   }),
+);
+
+export const githubCollaborators = githubSchema.table(
+  'collaborators',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    githubUserId: bigint('github_user_id', { mode: 'bigint' }).notNull(),
+    login: text('login').notNull(),
+    nodeId: text('node_id'),
+    avatarUrl: text('avatar_url'),
+    htmlUrl: text('html_url'),
+    type: text('type'),
+    siteAdmin: boolean('site_admin').notNull().default(false),
+    raw: jsonb('raw').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('collaborators_github_user_id_unique').on(table.githubUserId),
+    index('collaborators_login_idx').on(table.login),
+  ],
+);
+
+export const githubRepositoryCollaborators = githubSchema.table(
+  'repository_collaborators',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => githubRepositories.id, { onDelete: 'cascade' }),
+    collaboratorId: uuid('collaborator_id')
+      .notNull()
+      .references(() => githubCollaborators.id, { onDelete: 'cascade' }),
+    roleName: text('role_name').notNull(),
+    permissionAdmin: boolean('permission_admin').notNull(),
+    permissionMaintain: boolean('permission_maintain').notNull(),
+    permissionPush: boolean('permission_push').notNull(),
+    permissionTriage: boolean('permission_triage').notNull(),
+    permissionPull: boolean('permission_pull').notNull(),
+    raw: jsonb('raw').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('repo_collaborators_repo_collab_unique').on(
+      table.repositoryId,
+      table.collaboratorId,
+    ),
+    index('repo_collaborators_collaborator_idx').on(table.collaboratorId),
+    index('repo_collaborators_active_repo_idx')
+      .on(table.repositoryId)
+      .where(sql`${table.deletedAt} IS NULL`),
+  ],
 );

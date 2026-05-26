@@ -1,4 +1,5 @@
 import { GithubInstallationsService } from '../services/installations.service';
+import { SyncRepoCollaboratorsJob } from '../collaborators/jobs/sync-repo-collaborators.job';
 
 function makeMocks() {
   const installsRepo = {
@@ -12,7 +13,7 @@ function makeMocks() {
   } as any;
 
   const reposRepo = {
-    listByInstallation: jest.fn(),
+    listByInstallation: jest.fn(async () => [] as Array<{ id: string }>),
     reconcileForInstallation: jest.fn(),
     softDeleteAllForInstallation: jest.fn(),
   } as any;
@@ -41,7 +42,11 @@ function makeMocks() {
     ),
   } as any;
 
-  return { installsRepo, reposRepo, stateToken, client, config, db };
+  const pgBoss = {
+    send: jest.fn(async () => 'job-id'),
+  } as any;
+
+  return { installsRepo, reposRepo, stateToken, client, config, db, pgBoss };
 }
 
 function makeService(overrides: Partial<ReturnType<typeof makeMocks>> = {}) {
@@ -54,6 +59,7 @@ function makeService(overrides: Partial<ReturnType<typeof makeMocks>> = {}) {
       m.client,
       m.config,
       m.db,
+      m.pgBoss,
     ),
     mocks: m,
   };
@@ -435,6 +441,133 @@ describe('GithubInstallationsService', () => {
         ],
       );
       expect(view.repositories).toHaveLength(1);
+    });
+  });
+
+  describe('collaborator sync job enqueue', () => {
+    it('enqueues trigger:connected for newly connected repos and trigger:disconnected for removed repos after handleCallback', async () => {
+      const { svc, mocks } = makeService();
+      mocks.stateToken.verify.mockReturnValueOnce({ orgId: 'o1', userId: 'u1' });
+      mocks.installsRepo.findByGithubInstallationId.mockResolvedValueOnce({
+        id: 'i1',
+        organizationId: 'o1',
+        deletedAt: null,
+      });
+      // Before: r-existing and r-gone are active
+      mocks.reposRepo.listByInstallation.mockResolvedValueOnce([
+        { id: 'r-existing' },
+        { id: 'r-gone' },
+      ]);
+      mocks.client.listInstallationRepos.mockResolvedValueOnce([
+        {
+          githubRepoId: '1',
+          name: 'a',
+          fullName: 'org/a',
+          private: false,
+          raw: {},
+        },
+      ]);
+      // After: r-existing remains, r-new appears, r-gone vanishes
+      mocks.reposRepo.listByInstallation.mockResolvedValueOnce([
+        { id: 'r-existing' },
+        { id: 'r-new' },
+      ]);
+
+      await svc.handleCallback({
+        installationId: 99n,
+        state: 'tok',
+        setupAction: 'install',
+        sessionUserId: 'u1',
+      });
+
+      expect(mocks.pgBoss.send).toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-new',
+        trigger: 'connected',
+      });
+      expect(mocks.pgBoss.send).toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-gone',
+        trigger: 'disconnected',
+      });
+      expect(mocks.pgBoss.send).not.toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-existing',
+        trigger: 'connected',
+      });
+    });
+
+    it('enqueues the diff produced by sync()', async () => {
+      const { svc, mocks } = makeService();
+      mocks.installsRepo.findByIdScopedToOrg.mockResolvedValueOnce({
+        id: 'i1',
+        githubInstallationId: 99n,
+        organizationId: 'o1',
+        githubAccountLogin: 'acme',
+        githubAccountType: 'Organization',
+        githubAccountAvatarUrl: null,
+        suspendedAt: null,
+        connectedByUserId: 'u1',
+        createdAt: new Date(),
+        deletedAt: null,
+      });
+      const repoA = {
+        id: 'r-a',
+        githubRepoId: 10n,
+        name: 'a',
+        fullName: 'org/a',
+        private: false,
+      };
+      const repoB = {
+        id: 'r-b',
+        githubRepoId: 11n,
+        name: 'b',
+        fullName: 'org/b',
+        private: false,
+      };
+      mocks.reposRepo.listByInstallation
+        .mockResolvedValueOnce([repoA])
+        .mockResolvedValueOnce([repoA, repoB]);
+      mocks.client.listInstallationRepos.mockResolvedValueOnce([
+        {
+          githubRepoId: '1',
+          name: 'b',
+          fullName: 'org/b',
+          private: false,
+          raw: {},
+        },
+      ]);
+
+      await svc.sync('o1', 'i1');
+
+      expect(mocks.pgBoss.send).toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-b',
+        trigger: 'connected',
+      });
+    });
+
+    it('enqueues trigger:disconnected for every repo of an installation being disconnected', async () => {
+      const { svc, mocks } = makeService();
+      mocks.installsRepo.findByIdScopedToOrg.mockResolvedValueOnce({
+        id: 'i1',
+        githubInstallationId: 99n,
+        organizationId: 'o1',
+        deletedAt: null,
+      });
+      mocks.reposRepo.listByInstallation.mockResolvedValueOnce([
+        { id: 'r-a' },
+        { id: 'r-b' },
+      ]);
+      mocks.client.deleteInstallation.mockResolvedValueOnce(undefined);
+
+      await svc.disconnect('o1', 'i1');
+
+      expect(mocks.pgBoss.send).toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-a',
+        trigger: 'disconnected',
+      });
+      expect(mocks.pgBoss.send).toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
+        repositoryId: 'r-b',
+        trigger: 'disconnected',
+      });
+      expect(mocks.pgBoss.send).toHaveBeenCalledTimes(2);
     });
   });
 });

@@ -5,13 +5,13 @@ export const RepositoryIdParamSchema = z.object({
 });
 
 export const BackfillBodySchema = z.object({
-  days: z.number().int().min(1).max(730).optional(),
+  days: z.number().int().min(1).optional(),
 });
 
 export type BackfillBody = z.infer<typeof BackfillBodySchema>;
 
 export const AnalyzeBodySchema = z.object({
-  days: z.number().int().min(1).max(365),
+  days: z.number().int().min(1),
   force: z.boolean().optional(),
 });
 

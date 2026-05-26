@@ -1,5 +1,5 @@
 {
-  "$schema": "https://assets.requestly.com/local/v1.4.0/environment.json",
+  "$schema": "https://assets.requestly.com/local/v1.7.0/environment.json",
   "id": "9ecd0bf5-836e-4684-b30b-38ba2f30fbb6",
   "variables": {
     "apiBaseUrl": {
@@ -74,7 +74,7 @@
     },
     "repositoryId": {
       "id": "6e8b127b-08dc-4188-9bfb-a99eb277a31f",
-      "syncValue": "1ea12106-35ca-4015-830d-99da0cf3c977",
+      "syncValue": "27d0ab98-b6ab-4e27-9dce-5420d2760fa8",
       "type": "string",
       "isEnabled": true,
       "rank": "a5"

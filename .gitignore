@@ -35,3 +35,5 @@ coverage/
 # Turbo
 .turbo/
 docs/superpowers/
+
+.docs/*

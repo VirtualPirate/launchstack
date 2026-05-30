@@ -2,7 +2,7 @@ import { render } from '@react-email/render';
 import { OtpEmail } from './otp-email';
 import { InviteEmail, type InviteEmailProps } from './invite-email';
 
-export type OtpType = 'email-verification' | 'sign-in' | 'password-reset';
+export type OtpType = 'email-verification' | 'sign-in' | 'forget-password';
 
 interface TypeConfig {
   subject: (otp: string) => string;
@@ -21,7 +21,7 @@ const typeConfig: Record<string, TypeConfig> = {
     heading: 'Sign in to LaunchStack',
     description: 'Enter this code to sign in to your account.',
   },
-  'password-reset': {
+  'forget-password': {
     subject: (otp) => `Reset your password: ${otp}`,
     heading: 'Reset your password',
     description: 'Enter this code to reset your password.',

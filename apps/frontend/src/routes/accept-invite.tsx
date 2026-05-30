@@ -1,5 +1,6 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { MailOpen } from "lucide-react";
+import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +29,9 @@ export function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Invalid invite link</CardTitle>
@@ -41,20 +44,26 @@ export function AcceptInvitePage() {
           </CardContent>
         </Card>
       </Centered>
+      </>
     );
   }
 
   if (preview.isLoading || session.isLoading) {
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <p className="text-sm text-muted-foreground">Loading invite…</p>
       </Centered>
+      </>
     );
   }
 
   if (preview.isError || !preview.data?.success || !preview.data.data.organizationName) {
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Invite unavailable</CardTitle>
@@ -69,6 +78,7 @@ export function AcceptInvitePage() {
           </CardContent>
         </Card>
       </Centered>
+      </>
     );
   }
 
@@ -82,7 +92,9 @@ export function AcceptInvitePage() {
   if (!signedIn) {
     const redirectUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <InvitePreviewCard data={data} />
         <div className="flex gap-2">
           <Button asChild>
@@ -100,13 +112,16 @@ export function AcceptInvitePage() {
           </Button>
         </div>
       </Centered>
+      </>
     );
   }
 
   if (!verified) {
     const redirectUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <InvitePreviewCard data={data} />
         <Button asChild>
           <Link
@@ -117,12 +132,15 @@ export function AcceptInvitePage() {
           </Link>
         </Button>
       </Centered>
+      </>
     );
   }
 
   if (!emailMatches) {
     return (
-      <Centered>
+      <>
+        <AuthThemeToggle />
+        <Centered>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Email mismatch</CardTitle>
@@ -138,6 +156,7 @@ export function AcceptInvitePage() {
           </CardContent>
         </Card>
       </Centered>
+      </>
     );
   }
 
@@ -148,7 +167,9 @@ export function AcceptInvitePage() {
   };
 
   return (
-    <Centered>
+    <>
+      <AuthThemeToggle />
+      <Centered>
       <InvitePreviewCard data={data} />
       <div className="flex gap-2">
         <Button onClick={handleAccept} disabled={accept.isPending}>
@@ -163,6 +184,7 @@ export function AcceptInvitePage() {
         </Button>
       </div>
     </Centered>
+    </>
   );
 }
 

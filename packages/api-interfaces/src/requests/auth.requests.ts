@@ -24,7 +24,7 @@ export interface AuthGoogleSignInRequest {
   additionalData?: Record<string, unknown>;
 }
 
-export type AuthOtpVerificationType = "email-verification";
+export type AuthOtpVerificationType = "email-verification" | "forget-password";
 
 export interface AuthSendVerificationOtpRequest {
   email: string;
@@ -34,4 +34,14 @@ export interface AuthSendVerificationOtpRequest {
 export interface AuthVerifyEmailOtpRequest {
   email: string;
   otp: string;
+}
+
+export interface AuthForgetPasswordRequest {
+  email: string;
+}
+
+export interface AuthResetPasswordWithOtpRequest {
+  email: string;
+  otp: string;
+  password: string;
 }

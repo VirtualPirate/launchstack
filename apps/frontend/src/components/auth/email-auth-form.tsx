@@ -1,6 +1,8 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/auth/password-input";
 
 type EmailAuthMode = "sign-in" | "sign-up";
 
@@ -83,13 +85,21 @@ export function EmailAuthForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium" htmlFor="password">
-          Password
-        </label>
-        <input
+        <div className="flex items-baseline justify-between">
+          <label className="text-sm font-medium" htmlFor="password">
+            Password
+          </label>
+          {mode === "sign-in" ? (
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-primary underline"
+            >
+              Forgot password?
+            </Link>
+          ) : null}
+        </div>
+        <PasswordInput
           id="password"
-          type="password"
-          className={inputClassName}
           placeholder="••••••••"
           value={password}
           onChange={(event) => setPassword(event.target.value)}

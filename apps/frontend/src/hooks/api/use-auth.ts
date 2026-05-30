@@ -4,7 +4,11 @@ import {
   type AuthEmailSignInResponse,
   type AuthEmailSignUpRequest,
   type AuthEmailSignUpResponse,
+  type AuthForgetPasswordRequest,
+  type AuthForgetPasswordResponse,
   type AuthGoogleSignInRequest,
+  type AuthResetPasswordResponse,
+  type AuthResetPasswordWithOtpRequest,
   type AuthSendVerificationOtpRequest,
   type AuthSendVerificationOtpResponse,
   type AuthSessionResponse,
@@ -105,5 +109,25 @@ export function useVerifyEmailOtp() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: authSessionQueryKey });
     },
+  });
+}
+
+export function useForgetPassword() {
+  return useMutation<
+    AuthClientResult<AuthForgetPasswordResponse>,
+    Error,
+    AuthForgetPasswordRequest
+  >({
+    mutationFn: (payload) => AuthAPI.forgetPassword(payload),
+  });
+}
+
+export function useResetPasswordWithOtp() {
+  return useMutation<
+    AuthClientResult<AuthResetPasswordResponse>,
+    Error,
+    AuthResetPasswordWithOtpRequest
+  >({
+    mutationFn: (payload) => AuthAPI.resetPasswordWithOtp(payload),
   });
 }

@@ -3,6 +3,7 @@ import { LoaderCircle } from "lucide-react";
 import { useEffect } from "react";
 
 import { AuthAPI } from "@/api/auth.api";
+import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import {
   Card,
   CardContent,
@@ -91,7 +92,9 @@ export function GoogleSignUpPage() {
   }, [redirectTo]);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
+    <>
+      <AuthThemeToggle />
+      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
       <Card className="w-full">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Starting Google sign up</CardTitle>
@@ -104,5 +107,6 @@ export function GoogleSignUpPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

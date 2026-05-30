@@ -3,6 +3,7 @@ import { Rocket } from "lucide-react";
 import { useState } from "react";
 
 import { EmailAuthForm } from "@/components/auth/email-auth-form";
+import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import {
   Card,
@@ -37,7 +38,10 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function SignInPage() {
-  const search = useSearch({ strict: false }) as { redirect?: string };
+  const search = useSearch({ strict: false }) as {
+    redirect?: string;
+    reset?: "success";
+  };
   const redirectTo = normalizeRedirectPath(search.redirect);
   const callbackURL = toAbsoluteCallbackURL(redirectTo);
 
@@ -75,7 +79,9 @@ export function SignInPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
+    <>
+      <AuthThemeToggle />
+      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
       <Card className="w-full">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
@@ -87,6 +93,15 @@ export function SignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {search.reset === "success" ? (
+            <div
+              className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
+              role="status"
+            >
+              Password updated. Sign in with your new password.
+            </div>
+          ) : null}
+
           <EmailAuthForm
             mode="sign-in"
             isPending={signInEmail.isPending}
@@ -123,5 +138,6 @@ export function SignInPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

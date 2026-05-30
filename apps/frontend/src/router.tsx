@@ -13,12 +13,14 @@ import { AcceptInvitePage } from "@/routes/accept-invite";
 import { AuthErrorPage } from "@/routes/auth-error";
 import { CreateOrganizationPage } from "@/routes/create-organization";
 import { DashboardPage } from "@/routes/dashboard";
+import { ForgotPasswordPage } from "@/routes/forgot-password";
 import { GoogleSignInPage } from "@/routes/google-sign-in";
 import { GoogleSignUpPage } from "@/routes/google-sign-up";
 import { HomePage } from "@/routes/home";
 import { OrganizationMembersPage } from "@/routes/organization-members";
 import { OrganizationSettingsPage } from "@/routes/organization-settings";
 import { PendingInvitesPage } from "@/routes/pending-invites";
+import { ResetPasswordPage } from "@/routes/reset-password";
 import { SettingsPage } from "@/routes/settings";
 import { SignInPage } from "@/routes/sign-in";
 import { SignUpPage } from "@/routes/sign-up";
@@ -28,6 +30,8 @@ type AuthSearch = {
   redirect?: string;
   email?: string;
 };
+
+type SignInSearch = AuthSearch & { reset?: "success" };
 
 type VerifyEmailSearch = {
   redirect?: string;
@@ -42,12 +46,28 @@ type AuthErrorSearch = {
   error_description?: string;
 };
 
+type ResetPasswordSearch = { email?: string };
+
 type AcceptInviteSearch = {
   token?: string;
 };
 
 const authSearchSchema = (search: Record<string, unknown>): AuthSearch => ({
   redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  email: typeof search.email === "string" ? search.email : undefined,
+});
+
+const signInSearchSchema = (
+  search: Record<string, unknown>,
+): SignInSearch => ({
+  redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  email: typeof search.email === "string" ? search.email : undefined,
+  reset: search.reset === "success" ? "success" : undefined,
+});
+
+const resetPasswordSearchSchema = (
+  search: Record<string, unknown>,
+): ResetPasswordSearch => ({
   email: typeof search.email === "string" ? search.email : undefined,
 });
 
@@ -111,7 +131,7 @@ async function redirectAuthenticatedUser(search: AuthSearch) {
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/sign-in",
-  validateSearch: authSearchSchema,
+  validateSearch: signInSearchSchema,
   beforeLoad: async ({ search }) => {
     await redirectAuthenticatedUser(search);
   },
@@ -159,6 +179,23 @@ const verifyEmailRoute = createRoute({
     }
   },
   component: VerifyEmailPage,
+});
+
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  validateSearch: authSearchSchema,
+  beforeLoad: async ({ search }) => {
+    await redirectAuthenticatedUser(search);
+  },
+  component: ForgotPasswordPage,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reset-password",
+  validateSearch: resetPasswordSearchSchema,
+  component: ResetPasswordPage,
 });
 
 const authErrorRoute = createRoute({
@@ -250,6 +287,8 @@ const routeTree = rootRoute.addChildren([
   googleSignInRoute,
   googleSignUpRoute,
   verifyEmailRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   authErrorRoute,
   acceptInviteRoute,
   protectedRoute.addChildren([

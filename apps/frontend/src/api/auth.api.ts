@@ -4,7 +4,11 @@ import {
   type AuthEmailSignInResponse,
   type AuthEmailSignUpRequest,
   type AuthEmailSignUpResponse,
+  type AuthForgetPasswordRequest,
+  type AuthForgetPasswordResponse,
   type AuthGoogleSignInRequest,
+  type AuthResetPasswordResponse,
+  type AuthResetPasswordWithOtpRequest,
   type AuthSendVerificationOtpRequest,
   type AuthSendVerificationOtpResponse,
   type AuthSessionResponse,
@@ -74,5 +78,19 @@ export const AuthAPI = {
     });
 
     return response.data as AuthVerifyEmailOtpResponse;
+  },
+
+  forgetPassword: async (
+    payload: AuthForgetPasswordRequest,
+  ): Promise<AuthClientResult<AuthForgetPasswordResponse>> => {
+    const response = await authClient.forgetPassword.emailOtp(payload);
+    return response as AuthClientResult<AuthForgetPasswordResponse>;
+  },
+
+  resetPasswordWithOtp: async (
+    payload: AuthResetPasswordWithOtpRequest,
+  ): Promise<AuthClientResult<AuthResetPasswordResponse>> => {
+    const response = await authClient.emailOtp.resetPassword(payload);
+    return response as AuthClientResult<AuthResetPasswordResponse>;
   },
 };

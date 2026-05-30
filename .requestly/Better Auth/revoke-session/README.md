@@ -1,0 +1,1 @@
+Collection for /revoke-session endpoints

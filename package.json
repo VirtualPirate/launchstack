@@ -1,0 +1,32 @@
+{
+  "name": "launchstack-js",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend start:debug",
+    "dev:dashboard": "pnpm --filter backend dev:dashboard",
+    "dev:packages": "pnpm --filter @launchstack/api-interfaces --filter @launchstack/core --parallel dev",
+    "dev": "pnpm build:packages && pnpm \"/^dev:(frontend|backend|packages)$/\"",
+    "build:packages": "pnpm --filter @launchstack/api-interfaces --filter @launchstack/core build",
+    "build:apps": "pnpm --filter frontend --filter backend build",
+    "build": "pnpm run build:packages && pnpm run build:apps",
+    "lint": "pnpm -r lint",
+    "deploy:frontend": "pnpm run build:packages && pnpm --filter frontend build",
+    "deploy:backend": "pnpm run build:packages && pnpm --filter backend build && pnpm --filter backend deploy ./deploy/backend --prod",
+    "deploy": "pnpm run build:packages && pnpm run build:apps && pnpm --filter backend deploy ./deploy/backend --prod",
+    "start:prod:backend": "node ./deploy/backend/dist/main.js",
+    "preview:frontend": "pnpm --filter frontend preview",
+    "serve:frontend:prod": "pnpm run deploy:frontend && pnpm --filter frontend preview",
+    "db:generate": "pnpm --filter backend db:generate",
+    "db:up": "pnpm --filter backend db:up",
+    "db:down": "pnpm --filter backend db:down",
+    "db:status": "pnpm --filter backend db:status",
+    "db:fresh": "pnpm --filter backend db:fresh",
+    "db:push": "pnpm --filter backend db:push",
+    "db:studio": "pnpm --filter backend db:studio"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

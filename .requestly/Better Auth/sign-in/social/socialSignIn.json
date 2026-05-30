@@ -1,0 +1,31 @@
+{
+  "name": "socialSignIn",
+  "rank": "aw",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/sign-in/social",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"callbackURL\": \"/\",\n  \"provider\": \"google\"\n}",
+    "bodyContainer": {
+      "text": "{\n  \"callbackURL\": null,\n  \"newUserCallbackURL\": null,\n  \"errorCallbackURL\": null,\n  \"provider\": \"\",\n  \"disableRedirect\": null,\n  \"idToken\": null,\n  \"scopes\": null,\n  \"requestSignUp\": null,\n  \"loginHint\": null,\n  \"additionalData\": null\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

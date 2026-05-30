@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: launchstack-postgres
+    restart: unless-stopped
+    ports:
+      - "11753:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-launchstack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-launchstack}
+      POSTGRES_DB: ${POSTGRES_DB:-launchstack}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-launchstack} -d ${POSTGRES_DB:-launchstack}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:

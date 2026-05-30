@@ -1,0 +1,1 @@
+Collection for /list-accounts endpoints

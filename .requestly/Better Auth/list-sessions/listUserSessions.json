@@ -1,0 +1,31 @@
+{
+  "name": "listUserSessions",
+  "rank": "b0H",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/list-sessions",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "GET",
+    "queryParams": [],
+    "headers": [],
+    "body": null,
+    "bodyContainer": {
+      "text": "",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "text/plain",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

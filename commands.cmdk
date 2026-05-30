@@ -1,0 +1,37 @@
+{
+  "dev": {
+    "frontend": { "command": "pnpm dev:frontend", "description": "Start Vite dev server for frontend" },
+    "backend": { "command": "pnpm dev:backend", "description": "Start NestJS dev server for backend" },
+    "all": { "command": "pnpm dev", "description": "Start frontend and backend in parallel" }
+  },
+  "build": {
+    "all": { "command": "pnpm build", "description": "Build packages then all apps for production" },
+    "frontend": { "command": "pnpm deploy:frontend", "description": "Build packages + frontend for production" },
+    "backend": { "command": "pnpm deploy:backend", "description": "Build packages + backend for production" },
+    "packages": { "command": "pnpm build:packages", "description": "Build shared workspace packages" }
+  },
+  "serve": {
+    "frontend preview": { "command": "pnpm preview:frontend", "description": "Preview frontend production build" },
+    "frontend prod": { "command": "pnpm serve:frontend:prod", "description": "Build and serve frontend in production mode" },
+    "backend prod": { "command": "pnpm start:prod:backend", "description": "Start backend from production build" }
+  },
+  "shadcn": {
+    "add component": { "command": "cd apps/frontend && pnpm dlx shadcn@latest add", "description": "Add a shadcn component (append component name)" },
+    "init": { "command": "cd apps/frontend && pnpm dlx shadcn@latest init", "description": "Re-initialize shadcn configuration" }
+  },
+  "db": {
+    "start": { "command": "docker compose up -d postgres", "description": "Start PostgreSQL database (port 11753)" },
+    "stop": { "command": "docker compose down", "description": "Stop PostgreSQL database" },
+    "container status": { "command": "docker compose ps", "description": "Check database container status" },
+    "generate": { "command": "pnpm db:generate", "description": "Generate migration with up/down from schema changes" },
+    "up": { "command": "pnpm db:up", "description": "Apply pending database migrations" },
+    "down": { "command": "pnpm db:down", "description": "Rollback latest migration batch" },
+    "migration status": { "command": "pnpm db:status", "description": "Show migration status and batches" },
+    "fresh": { "command": "pnpm db:fresh", "description": "Rollback ALL migrations (dev reset)" },
+    "push": { "command": "pnpm db:push", "description": "Push schema directly to database (dev)" },
+    "studio": { "command": "pnpm db:studio", "description": "Open Drizzle Studio database browser" }
+  },
+  "lint": {
+    "all": { "command": "pnpm lint", "description": "Lint all packages and apps" }
+  }
+}

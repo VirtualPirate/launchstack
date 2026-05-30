@@ -1,0 +1,1 @@
+Collection for /update-user endpoints

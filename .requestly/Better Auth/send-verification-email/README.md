@@ -1,0 +1,1 @@
+Collection for /send-verification-email endpoints

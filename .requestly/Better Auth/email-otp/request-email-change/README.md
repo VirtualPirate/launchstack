@@ -1,0 +1,1 @@
+Collection for /email-otp/request-email-change endpoints

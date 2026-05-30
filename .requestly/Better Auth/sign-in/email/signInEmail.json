@@ -1,0 +1,31 @@
+{
+  "name": "signInEmail",
+  "rank": "ax",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/sign-in/email",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{\n  \"email\": \"\",\n  \"password\": \"\",\n  \"callbackURL\": null,\n  \"rememberMe\": true\n}",
+    "bodyContainer": {
+      "text": "{\n  \"email\": \"\",\n  \"password\": \"\",\n  \"callbackURL\": null,\n  \"rememberMe\": true\n}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

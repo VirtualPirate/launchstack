@@ -1,0 +1,1 @@
+Collection for /verify-email endpoints

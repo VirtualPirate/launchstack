@@ -1,0 +1,31 @@
+{
+  "name": "getSession1",
+  "rank": "b02",
+  "request": {
+    "type": "http",
+    "url": "{{base_url}}/get-session",
+    "scripts": {
+      "preRequest": "",
+      "postResponse": ""
+    },
+    "method": "POST",
+    "queryParams": [],
+    "headers": [],
+    "body": "{}",
+    "bodyContainer": {
+      "text": "{}",
+      "form": [],
+      "multipartForm": []
+    },
+    "contentType": "application/json",
+    "auth": {
+      "currentAuthType": "BEARER_TOKEN",
+      "authConfigStore": {
+        "BEARER_TOKEN": {
+          "bearer": ""
+        }
+      }
+    },
+    "pathVariables": []
+  }
+}

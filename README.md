@@ -7,6 +7,18 @@ LaunchStack is the SaaS starter you wish existed when you started your last side
 
 ---
 
+## Screenshots
+
+### Sign up & Sign in
+
+![Sign up and sign in](screenshot/signup-signin.png)
+
+### Dashboard
+
+![Dashboard](screenshot/dashboard.png)
+
+---
+
 ## Why LaunchStack?
 
 Most "starter templates" leave you stranded the moment you need something real: organizations, role-based permissions, transactional email, token encryption, type-safe shared contracts. LaunchStack ships with all of it — and the parts you do build inherit the same quality bar.
@@ -26,6 +38,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 ## Features
 
 ### Authentication
+
 - **Email + password** sign-up and sign-in with Better Auth
 - **Email OTP verification** — users must verify their email before signing in (configurable hook in `auth.config.ts`)
 - **Google OAuth** sign-in (optional — set env vars to enable)
@@ -36,6 +49,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **Beautiful transactional emails** built with React Email and sent via Resend
 
 ### Organizations & Multi-Tenancy
+
 - **Create / update / delete organizations** with auto-generated unique slugs
 - **Three-role RBAC**: `owner`, `admin`, `viewer` — enforced server-side via a global guard
 - **Member management**: list members, change roles, remove members, leave organization
@@ -44,6 +58,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **Per-route role requirements** with the `@RequireOrgRole('admin')` decorator
 
 ### Invites
+
 - **Email invites** with secure token-hashed links (raw token never stored)
 - **7-day expiry** with automatic status tracking (`pending`, `accepted`, `revoked`, `expired`)
 - **Resend invite** — rotates the token and re-sends the email
@@ -52,6 +67,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **One-pending-invite-per-email-per-org** enforced via a partial unique index
 
 ### Frontend
+
 - **File-based routing** with **[TanStack Router](https://tanstack.com/router)** — full type safety, including search params
 - **Protected routes** with `beforeLoad` session checks and automatic redirect to sign-in
 - **Server state** with TanStack Query — caching, mutations, optimistic updates
@@ -62,6 +78,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **Geist Variable** font preinstalled for that crisp, modern look
 
 ### Backend
+
 - **NestJS 11** with global `ConfigModule`, global Drizzle DB provider, and modular feature areas (`auth`, `organizations`)
 - **Body parser disabled at root** so Better Auth can handle its own parsing; JSON middleware is applied selectively per controller
 - **Global `OrgContextGuard`** that resolves the active org from the `X-Organization-Id` header and attaches it to every request
@@ -71,6 +88,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **Transactional integrity** — multi-step operations (create org + create owner membership, accept invite + add member) wrapped in DB transactions
 
 ### Database
+
 - **PostgreSQL 18** via Docker Compose (port `11753` to avoid local conflicts)
 - **Drizzle ORM** with full TypeScript schema definitions in `apps/backend/src/databases/pg-drizzle/`
 - **Versioned migrations** with `@drepkovsky/drizzle-migrations` (generate / up / down / status / fresh)
@@ -79,6 +97,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **Indexes that matter** — unique slug, unique owner-per-org, unique pending-invite-per-email-per-org, plus lookup indexes
 
 ### Developer Experience
+
 - **pnpm monorepo** with workspaces — packages build before apps, automatically
 - **Parallel dev servers** — `pnpm dev` runs both Vite (`:5173`) and NestJS (`:3000`) at once
 - **Shared types package** — `@launchstack/api-interfaces` exports request/response types and Zod schemas used by both backend and frontend
@@ -93,6 +112,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 ## Tech Stack
 
 ### Backend
+
 - **[NestJS 11](https://nestjs.com)** — modular Node.js framework with first-class TypeScript and DI
 - **[Better Auth 1.6](https://better-auth.com)** — modern, plugin-based auth (via `@thallesp/nestjs-better-auth`)
 - **[Drizzle ORM](https://orm.drizzle.team)** — type-safe SQL with `postgres` driver
@@ -103,6 +123,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **AES-256-GCM** — token-at-rest encryption (Node `crypto`)
 
 ### Frontend
+
 - **[React 19](https://react.dev)** with **[Vite 7](https://vitejs.dev)** for instant HMR and fast builds
 - **[TanStack Router](https://tanstack.com/router)** — type-safe file-based routing
 - **[TanStack Query 5](https://tanstack.com/query)** — server state, caching, mutations
@@ -114,6 +135,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **[Geist Variable](https://vercel.com/font)** — typeface
 
 ### Tooling
+
 - **[pnpm](https://pnpm.io)** workspaces — fast, disk-efficient package manager
 - **[TypeScript 5.9](https://www.typescriptlang.org)** strict mode, end to end
 - **[Jest 30](https://jestjs.io)** — unit and e2e testing
@@ -126,6 +148,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 ## Getting Started
 
 ### Prerequisites
+
 - **Node.js** ≥ 18
 - **pnpm** ≥ 9
 - **Docker** (for the local Postgres container)
@@ -188,29 +211,31 @@ Sign up with any email, enter the OTP from the email Resend sends you, and you'r
 ## Available Scripts
 
 ### Root
-| Script | What it does |
-|---|---|
-| `pnpm dev` | Run frontend + backend in parallel |
-| `pnpm dev:frontend` | Frontend only |
-| `pnpm dev:backend` | Backend only |
-| `pnpm build` | Build packages, then both apps |
-| `pnpm build:packages` | Build shared packages only |
-| `pnpm lint` | Lint every workspace |
-| `pnpm db:generate` | Generate a new Drizzle migration |
-| `pnpm db:up` | Apply pending migrations |
-| `pnpm db:down` | Roll back the last migration |
-| `pnpm db:status` | Show migration status |
-| `pnpm db:fresh` | Drop everything and re-apply (dev only) |
-| `pnpm db:push` | Push schema directly without a migration file |
-| `pnpm db:studio` | Open Drizzle Studio |
+
+| Script                | What it does                                  |
+| --------------------- | --------------------------------------------- |
+| `pnpm dev`            | Run frontend + backend in parallel            |
+| `pnpm dev:frontend`   | Frontend only                                 |
+| `pnpm dev:backend`    | Backend only                                  |
+| `pnpm build`          | Build packages, then both apps                |
+| `pnpm build:packages` | Build shared packages only                    |
+| `pnpm lint`           | Lint every workspace                          |
+| `pnpm db:generate`    | Generate a new Drizzle migration              |
+| `pnpm db:up`          | Apply pending migrations                      |
+| `pnpm db:down`        | Roll back the last migration                  |
+| `pnpm db:status`      | Show migration status                         |
+| `pnpm db:fresh`       | Drop everything and re-apply (dev only)       |
+| `pnpm db:push`        | Push schema directly without a migration file |
+| `pnpm db:studio`      | Open Drizzle Studio                           |
 
 ### Backend (`cd apps/backend`)
-| Script | What it does |
-|---|---|
-| `pnpm test` | Run unit tests + email render integration test |
-| `pnpm test:watch` | Watch mode |
-| `pnpm test:e2e` | E2E tests |
-| `pnpm test:cov` | Coverage report |
+
+| Script            | What it does                                   |
+| ----------------- | ---------------------------------------------- |
+| `pnpm test`       | Run unit tests + email render integration test |
+| `pnpm test:watch` | Watch mode                                     |
+| `pnpm test:e2e`   | E2E tests                                      |
+| `pnpm test:cov`   | Coverage report                                |
 
 ---
 

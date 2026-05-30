@@ -2,7 +2,8 @@
   "dev": {
     "frontend": { "command": "pnpm dev:frontend", "description": "Start Vite dev server for frontend" },
     "backend": { "command": "pnpm dev:backend", "description": "Start NestJS dev server for backend" },
-    "all": { "command": "pnpm dev", "description": "Start frontend and backend in parallel" }
+    "all": { "command": "pnpm dev", "description": "Start frontend and backend in parallel" },
+    "pg boss": { "command": "pnpm dev:dashboard", "description": "Start pg-boss dashboard (localhost:3210)" }
   },
   "build": {
     "all": { "command": "pnpm build", "description": "Build packages then all apps for production" },

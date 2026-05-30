@@ -327,4 +327,3 @@ This is an open-source template, so the best contribution is to fork it, build s
 ## License
 
 MIT — use it, fork it, ship it.
-# launchstack

@@ -25,6 +25,7 @@ Thumbs.db
 
 # Logs
 *.log
+*.log.*
 npm-debug.log*
 pnpm-debug.log*
 
@@ -36,4 +37,3 @@ coverage/
 docs/superpowers/
 
 .docs/*
-logs/*

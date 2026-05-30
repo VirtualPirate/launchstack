@@ -1,0 +1,72 @@
+receivers:
+  filelog:
+    include:
+      - /var/log/app/*.log
+      - /var/log/app/*.log.*
+    start_at: end
+    storage: file_storage/checkpoints
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout_type: epoch
+          layout: ms
+        severity:
+          parse_from: attributes.level
+          mapping:
+            trace: 10
+            debug: 20
+            info: 30
+            warn: 40
+            error: 50
+            fatal: 60
+      - type: move
+        from: attributes.msg
+        to: body
+
+extensions:
+  file_storage/checkpoints:
+    directory: /var/lib/otelcol/checkpoints
+
+processors:
+  resource:
+    attributes:
+      - key: service.name
+        value: launchstack-backend
+        action: upsert
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV}
+        action: upsert
+      - key: service.instance.id
+        value: ${env:HOSTNAME}
+        action: upsert
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+exporters:
+  otlphttp/grafana:
+    endpoint: ${env:GRAFANA_CLOUD_OTLP_ENDPOINT}
+    headers:
+      authorization: Basic ${env:GRAFANA_CLOUD_OTLP_AUTH}
+    sending_queue:
+      enabled: true
+      storage: file_storage/checkpoints
+      num_consumers: 2
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [file_storage/checkpoints]
+  pipelines:
+    logs:
+      receivers: [filelog]
+      processors: [resource, batch]
+      exporters: [otlphttp/grafana]
+  telemetry:
+    logs:
+      level: info

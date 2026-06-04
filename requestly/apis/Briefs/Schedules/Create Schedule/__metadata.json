@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "13fa0755-b124-4306-8b6c-200fc361018d",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/organizations/current/brief-schedules",
+  "method": "POST",
+  "contentType": "raw"
+}

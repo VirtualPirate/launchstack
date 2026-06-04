@@ -59,5 +59,6 @@ import { COMMIT_ANALYSIS_CONFIG_TOKEN } from './tokens';
     AnalyzeRepoHandler,
     AnalyzeCommitHandler,
   ],
+  exports: [CommitsRepository, CommitAnalysesRepository],
 })
 export class CommitAnalysisModule {}

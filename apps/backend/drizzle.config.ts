@@ -12,6 +12,7 @@ const config: DrizzleKitConfig = defineConfig({
     './src/databases/pg-drizzle/auth-schema.ts',
     './src/databases/pg-drizzle/github-schema.ts',
     './src/databases/pg-drizzle/slack-schema.ts',
+    './src/databases/pg-drizzle/briefs-schema.ts',
   ],
   dialect: 'postgresql',
   dbCredentials: {

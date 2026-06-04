@@ -251,6 +251,68 @@ export const AppError = sealRegistry({
     message: ({ reason }) => `Slack API call failed: ${reason}`,
     details: ({ reason }) => ({ reason }),
   }),
+
+  // --- Briefs: projects ---
+  PROJECT_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'Project not found',
+  }),
+  PROJECT_NAME_CONFLICT: defineError({
+    status: HttpStatus.CONFLICT,
+    message: 'A project with this name already exists in this organization',
+  }),
+
+  // --- Briefs: teams ---
+  TEAM_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'Team not found',
+  }),
+  TEAM_NAME_CONFLICT: defineError({
+    status: HttpStatus.CONFLICT,
+    message: 'A team with this name already exists in this organization',
+  }),
+
+  // --- Briefs: collaborators (general) ---
+  GITHUB_COLLABORATOR_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'GitHub collaborator not found in this organization',
+  }),
+
+  // --- Briefs: schedules ---
+  BRIEF_SCHEDULE_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'Brief schedule not found',
+  }),
+  BRIEF_SCHEDULE_INVALID_SCOPE: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_REQUEST,
+    message: ({ reason }) => `Invalid brief schedule scope: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+  BRIEF_SCHEDULE_INVALID_TIMEZONE: defineError<{ timezone: string }>({
+    status: HttpStatus.BAD_REQUEST,
+    message: ({ timezone }) => `Invalid IANA timezone: ${timezone}`,
+    details: ({ timezone }) => ({ timezone }),
+  }),
+  BRIEF_SCHEDULE_INVALID_CADENCE: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_REQUEST,
+    message: ({ reason }) => `Invalid cadence: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+
+  // --- Briefs: briefs ---
+  BRIEF_NOT_FOUND: defineError({
+    status: HttpStatus.NOT_FOUND,
+    message: 'Brief not found',
+  }),
+  BRIEF_INVALID_PERIOD: defineError<{ reason: string }>({
+    status: HttpStatus.BAD_REQUEST,
+    message: ({ reason }) => `Invalid period: ${reason}`,
+    details: ({ reason }) => ({ reason }),
+  }),
+  SLACK_CHANNEL_REQUIRED: defineError({
+    status: HttpStatus.BAD_REQUEST,
+    message: 'A Slack channel id is required when Slack delivery is configured',
+  }),
 });
 
 export type AppErrorCode = keyof typeof AppError;

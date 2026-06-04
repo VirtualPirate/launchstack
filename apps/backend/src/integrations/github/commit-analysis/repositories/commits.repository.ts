@@ -1,9 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { aliasedTable, and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import {
+  aliasedTable,
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  sql,
+} from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../../databases/pg-drizzle';
 import {
   githubCollaborators,
+  githubCommitAnalyses,
   githubCommits,
 } from '../../../../databases/pg-drizzle/github-schema';
 import type {
@@ -132,5 +143,53 @@ export class CommitsRepository {
       )
       .orderBy(desc(githubCommits.authoredAt))
       .limit(input.limit);
+  }
+
+  async findForBriefScope(input: {
+    repositoryIds: string[];
+    periodStart: Date;
+    periodEnd: Date;
+    collaboratorGithubUserIds?: bigint[];
+    limit?: number;
+    tx?: DrizzleExecutor;
+  }): Promise<
+    Array<{
+      commit: typeof githubCommits.$inferSelect;
+      analysis: typeof githubCommitAnalyses.$inferSelect | null;
+    }>
+  > {
+    if (input.repositoryIds.length === 0) return [];
+    const conditions = [
+      inArray(githubCommits.repositoryId, input.repositoryIds),
+      gte(githubCommits.authoredAt, input.periodStart),
+      lte(githubCommits.authoredAt, input.periodEnd),
+      isNull(githubCommits.deletedAt),
+      eq(githubCommits.parentCount, 1),
+    ];
+    if (
+      input.collaboratorGithubUserIds &&
+      input.collaboratorGithubUserIds.length > 0
+    ) {
+      conditions.push(
+        inArray(
+          githubCommits.authorGithubUserId,
+          input.collaboratorGithubUserIds,
+        ),
+      );
+    }
+    const executor = (input.tx ?? this.db) as DrizzleExecutor;
+    return executor
+      .select({
+        commit: githubCommits,
+        analysis: githubCommitAnalyses,
+      })
+      .from(githubCommits)
+      .leftJoin(
+        githubCommitAnalyses,
+        eq(githubCommitAnalyses.commitId, githubCommits.id),
+      )
+      .where(and(...conditions))
+      .orderBy(desc(githubCommits.authoredAt))
+      .limit(input.limit ?? 5000);
   }
 }

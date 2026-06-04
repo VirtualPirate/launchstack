@@ -1,8 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../../databases/pg-drizzle';
-import { githubCollaborators } from '../../../../databases/pg-drizzle/github-schema';
+import {
+  githubCollaborators,
+  githubInstallations,
+  githubRepositories,
+  githubRepositoryCollaborators,
+} from '../../../../databases/pg-drizzle/github-schema';
 
 type Db = PostgresJsDatabase<Record<string, unknown>>;
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -51,6 +56,38 @@ export class CollaboratorsRepository {
       .where(eq(githubCollaborators.githubUserId, githubUserId))
       .limit(1);
     return row ?? null;
+  }
+
+  async findByIdScopedToOrg(
+    collaboratorId: string,
+    organizationId: string,
+    tx?: DrizzleExecutor,
+  ): Promise<CollaboratorRow | null> {
+    const [row] = await this.exec(tx)
+      .select({ collaborator: githubCollaborators })
+      .from(githubCollaborators)
+      .innerJoin(
+        githubRepositoryCollaborators,
+        eq(githubRepositoryCollaborators.collaboratorId, githubCollaborators.id),
+      )
+      .innerJoin(
+        githubRepositories,
+        eq(githubRepositories.id, githubRepositoryCollaborators.repositoryId),
+      )
+      .innerJoin(
+        githubInstallations,
+        eq(githubInstallations.id, githubRepositories.installationId),
+      )
+      .where(
+        and(
+          eq(githubCollaborators.id, collaboratorId),
+          eq(githubInstallations.organizationId, organizationId),
+          isNull(githubCollaborators.deletedAt),
+          isNull(githubRepositoryCollaborators.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row?.collaborator ?? null;
   }
 
   async upsertByGithubUserId(

@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true,
+    "description": "Page size (1-100, default 50)."
+  },
+  {
+    "id": 2,
+    "key": "scheduleId",
+    "value": "",
+    "isEnabled": false,
+    "description": "Filter by schedule id (UUID)."
+  }
+]

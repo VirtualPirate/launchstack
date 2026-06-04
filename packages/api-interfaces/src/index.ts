@@ -46,3 +46,5 @@ export * from "./responses/auth.responses";
 export * from "./responses/github.responses";
 export * from "./requests/organization.requests";
 export * from "./responses/organization.responses";
+export * from "./requests/briefs.requests";
+export * from "./responses/briefs.responses";

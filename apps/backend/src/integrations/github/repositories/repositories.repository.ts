@@ -201,4 +201,25 @@ export class GithubRepositoriesRepository {
         ),
       );
   }
+
+  async listIdsByOrganization(
+    organizationId: string,
+    tx?: DrizzleExecutor,
+  ): Promise<string[]> {
+    const rows = await this.exec(tx)
+      .select({ id: githubRepositories.id })
+      .from(githubRepositories)
+      .innerJoin(
+        githubInstallations,
+        eq(githubInstallations.id, githubRepositories.installationId),
+      )
+      .where(
+        and(
+          eq(githubInstallations.organizationId, organizationId),
+          isNull(githubRepositories.deletedAt),
+          isNull(githubInstallations.deletedAt),
+        ),
+      );
+    return rows.map((r) => r.id);
+  }
 }

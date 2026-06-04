@@ -14,6 +14,14 @@ import type {
 } from './github-schema';
 import type { slackInstallations } from './slack-schema';
 import type { user, session, account, verification } from './auth-schema';
+import type {
+  projects,
+  projectRepositories,
+  teams,
+  teamCollaborators,
+  briefSchedules,
+  briefs,
+} from './briefs-schema';
 
 export type DemoSelect = InferSelectModel<typeof demo>;
 export type DemoInsert = InferInsertModel<typeof demo>;
@@ -80,3 +88,21 @@ export type GithubCommitAnalysisInsert = InferInsertModel<
 
 export type SlackInstallationSelect = InferSelectModel<typeof slackInstallations>;
 export type SlackInstallationInsert = InferInsertModel<typeof slackInstallations>;
+
+export type ProjectSelect = InferSelectModel<typeof projects>;
+export type ProjectInsert = InferInsertModel<typeof projects>;
+
+export type ProjectRepositorySelect = InferSelectModel<typeof projectRepositories>;
+export type ProjectRepositoryInsert = InferInsertModel<typeof projectRepositories>;
+
+export type TeamSelect = InferSelectModel<typeof teams>;
+export type TeamInsert = InferInsertModel<typeof teams>;
+
+export type TeamCollaboratorSelect = InferSelectModel<typeof teamCollaborators>;
+export type TeamCollaboratorInsert = InferInsertModel<typeof teamCollaborators>;
+
+export type BriefScheduleSelect = InferSelectModel<typeof briefSchedules>;
+export type BriefScheduleInsert = InferInsertModel<typeof briefSchedules>;
+
+export type BriefSelect = InferSelectModel<typeof briefs>;
+export type BriefInsert = InferInsertModel<typeof briefs>;

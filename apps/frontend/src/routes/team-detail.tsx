@@ -33,14 +33,14 @@ import { useGetCollaborators } from "@/hooks/api/use-collaborators";
 import { useGetBriefsFirstPage } from "@/hooks/api/use-briefs";
 
 export function TeamDetailPage() {
-  const params = useParams({ from: "/teams/$teamId" as never }) as { teamId: string };
+  const { teamId } = useParams({ strict: false });
   const navigate = useNavigate();
 
-  const teamQuery = useGetTeam(params.teamId);
+  const teamQuery = useGetTeam(teamId);
   const collaboratorsQuery = useGetCollaborators();
   const briefsQuery = useGetBriefsFirstPage({
     scopeType: "team",
-    scopeTeamId: params.teamId,
+    scopeTeamId: teamId,
     limit: 10,
   });
 

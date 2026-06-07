@@ -1,8 +1,10 @@
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, Moon } from "lucide-react";
 import type { BriefResponse } from "@launchstack/api-interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScopeLabel } from "./scope-label";
 import { StatusBadge } from "./status-badge";
+import { NoActivityBadge } from "./no-activity-badge";
+import { isNoActivityBrief, stripNoActivitySuffix } from "./brief-utils";
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—";
@@ -12,14 +14,15 @@ function formatTimestamp(iso: string | null): string {
 function formatPeriod(startIso: string, endIso: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
-  const startStr = start.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
   const endStr = end.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+  if (start.toDateString() === end.toDateString()) return endStr;
+  const startStr = start.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
   });
   return `${startStr} – ${endStr}`;
 }
@@ -33,6 +36,7 @@ export function BriefViewer({
 }) {
   const isWorking = brief.status === "pending" || brief.status === "generating";
   const isFailed = brief.status === "failed";
+  const noActivity = isNoActivityBrief(brief);
   const hasPartialFailure = brief.status === "delivered" && !!brief.failureReason;
 
   return (
@@ -43,14 +47,17 @@ export function BriefViewer({
             <ScopeLabel scope={brief.scope} />
           </div>
           <h1 className="mt-2.5 text-2xl font-semibold tracking-tight">
-            {brief.title || (isWorking ? "Generating brief…" : "(untitled)")}
+            {noActivity
+              ? stripNoActivitySuffix(brief.title)
+              : brief.title || (isWorking ? "Generating brief…" : "(untitled)")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatPeriod(brief.periodStart, brief.periodEnd)} · {brief.contributorCount}{" "}
-            contributors · {brief.commitCount} commits
+            {noActivity
+              ? formatPeriod(brief.periodStart, brief.periodEnd)
+              : `${formatPeriod(brief.periodStart, brief.periodEnd)} · ${brief.contributorCount} contributors · ${brief.commitCount} commits`}
           </p>
         </div>
-        <StatusBadge status={brief.status} />
+        {noActivity ? <NoActivityBadge /> : <StatusBadge status={brief.status} />}
       </header>
 
       {isWorking ? (
@@ -83,6 +90,11 @@ export function BriefViewer({
             ) : null}
           </CardContent>
         </Card>
+      ) : noActivity ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/40 py-14 text-muted-foreground">
+          <Moon className="size-7" />
+          <p className="text-sm font-medium">No activity this period</p>
+        </div>
       ) : (
         <>
           <p className="text-[15px] leading-relaxed text-foreground/90 whitespace-pre-wrap">

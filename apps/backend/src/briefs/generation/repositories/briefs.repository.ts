@@ -1,5 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  not,
+  or,
+  sql,
+} from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../databases/pg-drizzle';
 import { briefs } from '../../../databases/pg-drizzle/briefs-schema';
@@ -20,6 +32,9 @@ export interface ListBriefsFilters {
   scopeTeamId?: string;
   scopeCollaboratorId?: string;
   scopeRepositoryId?: string;
+  periodEndFrom?: Date;
+  periodEndTo?: Date;
+  excludeNoActivity?: boolean;
   limit: number;
   cursorPeriodEnd?: Date;
   cursorId?: string;
@@ -104,6 +119,19 @@ export class BriefsRepository {
       );
     if (filters.scopeRepositoryId)
       conditions.push(eq(briefs.scopeRepositoryId, filters.scopeRepositoryId));
+    if (filters.periodEndFrom)
+      conditions.push(gte(briefs.periodEnd, filters.periodEndFrom));
+    if (filters.periodEndTo)
+      conditions.push(lte(briefs.periodEnd, filters.periodEndTo));
+    if (filters.excludeNoActivity)
+      conditions.push(
+        not(
+          and(
+            eq(briefs.commitCount, 0),
+            inArray(briefs.status, ['generated', 'delivered']),
+          )!,
+        ),
+      );
     if (filters.cursorPeriodEnd && filters.cursorId) {
       conditions.push(
         or(

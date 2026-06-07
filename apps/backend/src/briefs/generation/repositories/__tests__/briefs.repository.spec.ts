@@ -33,6 +33,19 @@ describe('BriefsRepository.list', () => {
     });
     expect(result).toEqual(rows);
   });
+
+  it('builds query with date range and excludeNoActivity filters', async () => {
+    const rows = [{ id: 'c', createdAt: new Date() }];
+    const repo = new BriefsRepository(makeChain(rows) as never);
+    const result = await repo.list({
+      organizationId: 'org1',
+      limit: 10,
+      periodEndFrom: new Date('2026-06-01T00:00:00Z'),
+      periodEndTo: new Date('2026-06-07T23:59:59Z'),
+      excludeNoActivity: true,
+    });
+    expect(result).toEqual(rows);
+  });
 });
 
 describe('BriefsRepository.findPeriodStartsForSchedule', () => {

@@ -10,11 +10,9 @@ import { BriefViewer } from "@/components/gitbrief/briefs/brief-viewer";
 import { useGenerateBrief, useGetBrief } from "@/hooks/api/use-briefs";
 
 export function BriefDetailPage() {
-  const params = useParams({ from: "/briefs/$briefId" as never }) as {
-    briefId: string;
-  };
+  const { briefId } = useParams({ strict: false });
   const navigate = useNavigate();
-  const briefQuery = useGetBrief(params.briefId);
+  const briefQuery = useGetBrief(briefId);
   const generateMutation = useGenerateBrief();
 
   if (briefQuery.isLoading) {

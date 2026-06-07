@@ -28,12 +28,10 @@ import {
 } from "@/hooks/api/use-brief-schedules";
 
 export function ScheduleDetailPage() {
-  const params = useParams({ from: "/schedules/$scheduleId" as never }) as {
-    scheduleId: string;
-  };
+  const { scheduleId } = useParams({ strict: false });
   const navigate = useNavigate();
 
-  const scheduleQuery = useGetBriefSchedule(params.scheduleId);
+  const scheduleQuery = useGetBriefSchedule(scheduleId);
   const pauseMutation = usePauseBriefSchedule();
   const resumeMutation = useResumeBriefSchedule();
   const deleteMutation = useDeleteBriefSchedule();

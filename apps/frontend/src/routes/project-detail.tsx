@@ -35,16 +35,14 @@ import { useGithubInstallations } from "@/hooks/api/use-github-integrations";
 import { useGetBriefsFirstPage } from "@/hooks/api/use-briefs";
 
 export function ProjectDetailPage() {
-  const params = useParams({ from: "/projects/$projectId" as never }) as {
-    projectId: string;
-  };
+  const { projectId } = useParams({ strict: false });
   const navigate = useNavigate();
 
-  const projectQuery = useGetProject(params.projectId);
+  const projectQuery = useGetProject(projectId);
   const installationsQuery = useGithubInstallations();
   const briefsQuery = useGetBriefsFirstPage({
     scopeType: "project",
-    scopeProjectId: params.projectId,
+    scopeProjectId: projectId,
     limit: 10,
   });
 

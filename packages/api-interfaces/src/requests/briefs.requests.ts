@@ -124,6 +124,12 @@ export const ListBriefsQuerySchema = z.object({
   scopeTeamId: z.string().uuid().optional(),
   scopeCollaboratorId: z.string().uuid().optional(),
   scopeRepositoryId: z.string().uuid().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  excludeNoActivity: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(),
 });

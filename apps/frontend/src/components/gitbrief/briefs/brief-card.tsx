@@ -43,7 +43,7 @@ export function BriefCard({ brief }: { brief: BriefResponse }) {
             ? stripNoActivitySuffix(brief.title)
             : brief.title || "(generating…)"}
         </div>
-        <div className="mt-0.5 text-xs text-muted-foreground">
+        <div className="mt-0.5 font-mono text-[13px] text-muted-foreground">
           {noActivity
             ? formatRange(brief.periodStart, brief.periodEnd)
             : `${formatRange(brief.periodStart, brief.periodEnd)} · ${brief.commitCount} commits`}

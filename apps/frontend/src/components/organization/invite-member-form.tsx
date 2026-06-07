@@ -72,7 +72,7 @@ export function InviteMemberForm() {
         </p>
       ) : null}
       {success ? (
-        <p className="text-sm text-emerald-600 md:basis-full" role="status">
+        <p className="text-sm text-gb-status-shipped md:basis-full" role="status">
           {success}
         </p>
       ) : null}

@@ -101,7 +101,7 @@ export function BriefViewer({
             {brief.summary || "(no summary)"}
           </p>
           {hasPartialFailure ? (
-            <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
+            <div className="mt-4 rounded-md border border-gb-status-at-risk/40 bg-gb-status-at-risk/5 p-3 text-xs text-gb-status-at-risk">
               Some delivery channels failed: {brief.failureReason}
             </div>
           ) : null}

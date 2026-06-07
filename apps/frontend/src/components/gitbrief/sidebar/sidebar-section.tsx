@@ -4,7 +4,7 @@ export function SidebarSection({ label, children }: { label?: string; children: 
   return (
     <div className="mt-3 first:mt-0">
       {label ? (
-        <div className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground/70">
+        <div className="px-2 pb-1 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
           {label}
         </div>
       ) : null}

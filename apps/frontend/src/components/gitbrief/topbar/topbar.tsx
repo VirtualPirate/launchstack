@@ -8,6 +8,7 @@ import { PendingInvitesBadge } from "@/components/organization/pending-invites-b
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useAuthSession, useSignOut } from "@/hooks/api/use-auth";
 import { CommandTrigger } from "./command-trigger";
+import { BrandMark } from "../brand-mark";
 
 export function Topbar() {
   const navigate = useNavigate();
@@ -25,15 +26,10 @@ export function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-12 items-center justify-between border-b bg-background px-4">
+    <header className="sticky top-0 z-20 flex h-12 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md backdrop-saturate-150">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div
-            className="size-6 rounded-md text-white text-[11px] font-bold flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, oklch(0.62 0.22 305), oklch(0.62 0.18 277))" }}
-          >
-            G
-          </div>
+          <BrandMark />
           <span className="text-sm font-semibold tracking-tight">GitBrief</span>
         </div>
         <div className="h-4 w-px bg-border" />

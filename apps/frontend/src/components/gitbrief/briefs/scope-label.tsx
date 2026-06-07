@@ -76,7 +76,7 @@ export function ScopeLabel({ scope }: { scope: Scope }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs">
       <EntityDot color={resolved.dotColor} />
-      <span className="text-muted-foreground">{resolved.prefix}:</span>
+      <span className="font-mono text-xs uppercase tracking-[0.05em] text-muted-foreground">{resolved.prefix}</span>
       <span className="font-medium text-foreground">{resolved.label}</span>
     </span>
   );

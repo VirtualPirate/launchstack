@@ -29,8 +29,12 @@ export function AppShell() {
         {open ? (
           <div className="fixed inset-0 z-[9] bg-black/40 md:hidden" onClick={() => setOpen(false)} />
         ) : null}
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl px-6 py-6">
+        <main className="relative flex-1 overflow-y-auto">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(ellipse_60%_70%_at_50%_-20%,oklch(70%_0.18_255/0.08),transparent_70%)]"
+          />
+          <div className="relative mx-auto w-full max-w-6xl px-6 py-6">
             <Outlet />
           </div>
         </main>

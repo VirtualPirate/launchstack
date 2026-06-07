@@ -6,7 +6,9 @@ import {
   lastDayOfMonth,
   setDate,
   startOfMonth,
+  subDays,
   subMonths,
+  subWeeks,
 } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
@@ -120,6 +122,28 @@ export class CadenceService {
           end: fromZonedTime(this.setLocalTime(monthEnd, 23, 59, 59, 999), tz),
         };
       }
+    }
+  }
+
+  /**
+   * The earliest instant backfill should look back to when discovering a
+   * schedule's commits — `maxWindows` cadence periods before `from`. This
+   * bounds backfill to at most `maxWindows` windows for every cadence and
+   * replaces a fixed one-year floor that silently skipped any repository
+   * whose most recent activity predated the last calendar year.
+   */
+  backfillLookbackStart(
+    schedule: Pick<CadenceScheduleLike, 'cadenceType'>,
+    from: Date,
+    maxWindows: number,
+  ): Date {
+    switch (schedule.cadenceType) {
+      case 'daily':
+        return subDays(from, maxWindows);
+      case 'weekly':
+        return subWeeks(from, maxWindows);
+      case 'monthly':
+        return subMonths(from, maxWindows);
     }
   }
 

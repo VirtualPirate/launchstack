@@ -262,4 +262,37 @@ export class CommitsRepository {
       .limit(1);
     return row?.authoredAt ?? null;
   }
+
+  async findNewestCommitTimestampForScope(input: {
+    repositoryIds: string[];
+    since: Date;
+    collaboratorGithubUserIds?: bigint[];
+    tx?: DrizzleExecutor;
+  }): Promise<Date | null> {
+    if (input.repositoryIds.length === 0) return null;
+    const conditions = [
+      inArray(githubCommits.repositoryId, input.repositoryIds),
+      gte(githubCommits.authoredAt, input.since),
+      isNull(githubCommits.deletedAt),
+      eq(githubCommits.parentCount, 1),
+    ];
+    if (
+      input.collaboratorGithubUserIds &&
+      input.collaboratorGithubUserIds.length > 0
+    ) {
+      conditions.push(
+        inArray(
+          githubCommits.authorGithubUserId,
+          input.collaboratorGithubUserIds,
+        ),
+      );
+    }
+    const [row] = await this.exec(input.tx)
+      .select({ authoredAt: githubCommits.authoredAt })
+      .from(githubCommits)
+      .where(and(...conditions))
+      .orderBy(desc(githubCommits.authoredAt))
+      .limit(1);
+    return row?.authoredAt ?? null;
+  }
 }

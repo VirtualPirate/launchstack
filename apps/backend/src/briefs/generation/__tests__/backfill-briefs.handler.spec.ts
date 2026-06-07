@@ -1,3 +1,4 @@
+import { subDays, subWeeks } from 'date-fns';
 import { BackfillBriefsHandler } from '../handlers/backfill-briefs.handler';
 import { CadenceService } from '../../schedules/services/cadence.service';
 
@@ -31,8 +32,12 @@ function makeHandler(overrides?: {
   backfillMaxBriefs?: number;
   config?: any;
   oldest?: Date | null;
+  newest?: Date | null;
+  schedule?: any;
 }) {
-  const schedules = { findById: jest.fn().mockResolvedValue(baseSchedule) };
+  const schedule =
+    overrides && 'schedule' in overrides ? overrides.schedule : baseSchedule;
+  const schedules = { findById: jest.fn().mockResolvedValue(schedule) };
   const briefs = {
     findPeriodStartsForSchedule: jest.fn().mockResolvedValue(new Set<number>()),
     create: jest.fn().mockImplementation(async (i: any) => ({
@@ -44,8 +49,15 @@ function makeHandler(overrides?: {
     overrides && 'oldest' in overrides
       ? overrides.oldest
       : new Date('2026-06-01T09:00:00Z');
+  // Default newest commit: 2026-06-04T09:00Z — so the active span (oldest →
+  // newest window) reaches the day before the first live period.
+  const newest =
+    overrides && 'newest' in overrides
+      ? overrides.newest
+      : new Date('2026-06-04T09:00:00Z');
   const commits = {
     findOldestCommitTimestampForScope: jest.fn().mockResolvedValue(oldest),
+    findNewestCommitTimestampForScope: jest.fn().mockResolvedValue(newest),
   };
   const scopeResolver = {
     resolve: jest
@@ -87,16 +99,18 @@ describe('BackfillBriefsHandler.handle', () => {
     jest.useRealTimers();
   });
 
-  it('backfills every day from the oldest commit window forward, including no-activity days', async () => {
-    // Fake now: 2026-06-06T10:00Z. Oldest commit: 2026-06-01T09:00Z.
-    // windowContaining(oldest) for daily = 2026-06-01 day → rangeStart = 2026-06-01T00:00Z.
-    // firstLivePeriod for nextRunAt 2026-06-06T16:00 (daily) = 2026-06-05 day.
-    // upperExclusive = 2026-06-05T00:00Z.
-    // windows: 2026-06-01, 06-02, 06-03, 06-04 = 4 days (every day, regardless of commits).
-    const { handler, briefs, pgBoss } = makeHandler();
+  it('backfills every window across the active span (oldest → newest), including in-span no-activity days', async () => {
+    // Fake now: 2026-06-06T10:00Z. Oldest commit 2026-06-01, newest 2026-06-03.
+    // rangeStart = 2026-06-01. Active span stops after the newest commit's
+    // window (06-03), i.e. upperExclusive = 2026-06-04T00:00Z.
+    // windows: 2026-06-01, 06-02, 06-03 = 3 days (06-02 has no commits but is
+    // inside the span, so it is still created).
+    const { handler, briefs, pgBoss } = makeHandler({
+      newest: new Date('2026-06-03T09:00:00Z'),
+    });
     await run(handler);
-    expect(briefs.create).toHaveBeenCalledTimes(4);
-    expect(pgBoss.send).toHaveBeenCalledTimes(4);
+    expect(briefs.create).toHaveBeenCalledTimes(3);
+    expect(pgBoss.send).toHaveBeenCalledTimes(3);
     expect(briefs.create).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'o1',
@@ -106,7 +120,7 @@ describe('BackfillBriefsHandler.handle', () => {
         status: 'pending',
       }),
     );
-    // A day with no commits in the span is still created (e.g. 2026-06-02).
+    // A day with no commits inside the span is still created (2026-06-02).
     expect(briefs.create).toHaveBeenCalledWith(
       expect.objectContaining({
         periodStart: new Date('2026-06-02T00:00:00Z'),
@@ -118,26 +132,98 @@ describe('BackfillBriefsHandler.handle', () => {
     );
   });
 
-  it('queries the oldest commit with a one-year floor and the resolved scope', async () => {
-    const { handler, commits } = makeHandler();
+  it('does not backfill the trailing inactivity after the newest commit', async () => {
+    // Oldest 2026-06-01, newest 2026-06-02. Days 06-03 / 06-04 are after the
+    // last commit and must NOT be backfilled, even though they precede the
+    // first live period (06-05).
+    const { handler, briefs } = makeHandler({
+      oldest: new Date('2026-06-01T09:00:00Z'),
+      newest: new Date('2026-06-02T09:00:00Z'),
+    });
     await run(handler);
-    expect(commits.findOldestCommitTimestampForScope).toHaveBeenCalledWith(
+    expect(briefs.create).toHaveBeenCalledTimes(2);
+    expect(briefs.create).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        repositoryIds: ['r1'],
-        since: new Date('2025-06-06T10:00:00Z'), // subYears(now, 1)
+        periodStart: new Date('2026-06-03T00:00:00Z'),
+      }),
+    );
+    expect(briefs.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodStart: new Date('2026-06-04T00:00:00Z'),
       }),
     );
   });
 
-  it('is a no-op when there are no commits in the last year', async () => {
-    const { handler, briefs, pgBoss } = makeHandler({ oldest: null });
+  it('backfills a repo whose latest activity is older than one year (lookback is not capped at 1 year)', async () => {
+    // Regression: a weekly schedule on a repo whose newest commit is ~15
+    // months old. The old 1-year floor (subYears(now, 1)) excluded all of it,
+    // so backfill produced nothing. The cadence-aware floor reaches back far
+    // enough, and the active span covers the weeks that actually have commits.
+    const weekly = {
+      ...baseSchedule,
+      cadenceType: 'weekly' as const,
+      cadenceTime: '09:00',
+      cadenceDayOfWeek: 2,
+      cadenceDayOfMonth: null,
+      nextRunAt: new Date('2026-06-09T03:30:00Z'),
+    };
+    const { handler, briefs, commits } = makeHandler({
+      schedule: weekly,
+      oldest: new Date('2025-01-06T09:00:00Z'), // Mon 6 Jan 2025
+      newest: new Date('2025-02-24T09:00:00Z'), // Mon 24 Feb 2025
+    });
+    await run(handler);
+
+    // Lookback floor reaches well past one year ago (subWeeks(now, 366)).
+    const now = new Date('2026-06-06T10:00:00Z');
+    expect(commits.findOldestCommitTimestampForScope).toHaveBeenCalledWith(
+      expect.objectContaining({ since: subWeeks(now, 366) }),
+    );
+    // 8 ISO weeks span Mon 6 Jan → Mon 24 Feb 2025 inclusive.
+    expect(briefs.create).toHaveBeenCalledTimes(8);
+    expect(briefs.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodStart: new Date('2025-01-06T00:00:00Z'),
+      }),
+    );
+    // Nothing after the newest commit's week.
+    expect(briefs.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodStart: new Date('2025-03-03T00:00:00Z'),
+      }),
+    );
+  });
+
+  it('queries oldest and newest commit with a cadence-aware lookback floor and the resolved scope', async () => {
+    const { handler, commits } = makeHandler();
+    await run(handler);
+    const now = new Date('2026-06-06T10:00:00Z');
+    // Daily cadence, cap 366 → floor is subDays(now, 366) (not subYears(now, 1)).
+    expect(commits.findOldestCommitTimestampForScope).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repositoryIds: ['r1'],
+        since: subDays(now, 366),
+      }),
+    );
+    expect(commits.findNewestCommitTimestampForScope).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repositoryIds: ['r1'],
+        since: subDays(now, 366),
+      }),
+    );
+  });
+
+  it('is a no-op when there are no commits in the lookback window', async () => {
+    const { handler, briefs, pgBoss, commits } = makeHandler({ oldest: null });
     await run(handler);
     expect(briefs.create).not.toHaveBeenCalled();
     expect(pgBoss.send).not.toHaveBeenCalled();
+    // We short-circuit before even asking for the newest commit.
+    expect(commits.findNewestCommitTimestampForScope).not.toHaveBeenCalled();
   });
 
   it('skips windows that already have a brief', async () => {
-    // 4 windows (06-01..06-04); mark 06-04 existing → 3 creates, none for 06-04.
+    // Default span 06-01..06-04 (4 windows); mark 06-04 existing → 3 creates.
     const { handler, briefs } = makeHandler();
     briefs.findPeriodStartsForSchedule.mockResolvedValue(
       new Set<number>([new Date('2026-06-04T00:00:00Z').getTime()]),
@@ -152,7 +238,7 @@ describe('BackfillBriefsHandler.handle', () => {
   });
 
   it('excludes the period the first live run will generate (no overlap)', async () => {
-    // upperExclusive = 2026-06-05T00:00Z → that period must NOT be backfilled.
+    // firstLivePeriod = 2026-06-05; that period must NOT be backfilled.
     const { handler, briefs } = makeHandler();
     await run(handler);
     expect(briefs.create).not.toHaveBeenCalledWith(

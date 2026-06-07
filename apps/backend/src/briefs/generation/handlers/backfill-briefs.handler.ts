@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { subYears } from 'date-fns';
 import { Handler, PgBossService, type JobContext } from '../../../queue';
 import { BRIEFS_CONFIG_TOKEN } from '../../tokens';
 import type { BriefsConfig } from '../../briefs-config';
@@ -64,16 +63,19 @@ export class BackfillBriefsHandler {
     }
 
     const now = new Date();
-    const yearAgo = subYears(now, 1);
+    const lookbackStart = this.cadence.backfillLookbackStart(
+      schedule,
+      now,
+      this.config.backfillMaxBriefs,
+    );
     const firstLivePeriod = this.cadence.computePeriod(
       schedule,
       schedule.nextRunAt,
     );
-    const upperExclusive = firstLivePeriod.start;
 
     const oldest = await this.commits.findOldestCommitTimestampForScope({
       repositoryIds: resolved.repositoryIds,
-      since: yearAgo,
+      since: lookbackStart,
       collaboratorGithubUserIds: resolved.authorFilter,
     });
     if (!oldest) {
@@ -82,8 +84,25 @@ export class BackfillBriefsHandler {
       );
       return;
     }
+    const newest = await this.commits.findNewestCommitTimestampForScope({
+      repositoryIds: resolved.repositoryIds,
+      since: lookbackStart,
+      collaboratorGithubUserIds: resolved.authorFilter,
+    });
 
     const rangeStart = this.cadence.windowContaining(schedule, oldest).start;
+    // Stop at the window that holds the most recent commit so we don't fill
+    // the trailing stretch of inactivity up to today — but never spill into
+    // the period the first live run will generate.
+    const newestWindowEnd = this.cadence.windowContaining(
+      schedule,
+      newest ?? oldest,
+    ).end;
+    const activeUpper = new Date(newestWindowEnd.getTime() + 1);
+    const upperExclusive =
+      activeUpper.getTime() < firstLivePeriod.start.getTime()
+        ? activeUpper
+        : firstLivePeriod.start;
 
     const existing = await this.briefs.findPeriodStartsForSchedule(
       schedule.id,

@@ -34,6 +34,7 @@ import { SettingsPage } from "@/routes/settings";
 import { SignInPage } from "@/routes/sign-in";
 import { SignUpPage } from "@/routes/sign-up";
 import { VerifyEmailPage } from "@/routes/verify-email";
+import type { BriefScopeType } from "@launchstack/api-interfaces";
 
 type AuthSearch = {
   redirect?: string;
@@ -120,6 +121,43 @@ const integrationsGithubSearchSchema = (
   connected:
     typeof search.connected === "string" ? search.connected : undefined,
   error: typeof search.error === "string" ? search.error : undefined,
+});
+
+type FilterType = "all" | BriefScopeType;
+
+const FILTER_TYPES: FilterType[] = [
+  "all",
+  "project",
+  "team",
+  "collaborator",
+  "repository",
+];
+
+const isFilterType = (v: unknown): v is FilterType =>
+  FILTER_TYPES.includes(v as FilterType);
+
+type BriefsSearch = {
+  filterType: FilterType;
+  from: string;
+  to: string;
+  repositoryId: string;
+  excludeNoActivity: boolean;
+  page: number;
+};
+
+const briefsSearchSchema = (
+  search: Record<string, unknown>,
+): BriefsSearch => ({
+  filterType: isFilterType(search.filterType) ? search.filterType : "all",
+  from: typeof search.from === "string" ? search.from : "",
+  to: typeof search.to === "string" ? search.to : "",
+  repositoryId:
+    typeof search.repositoryId === "string" ? search.repositoryId : "",
+  excludeNoActivity: search.excludeNoActivity === true,
+  page:
+    typeof search.page === "number" && search.page >= 0
+      ? Math.floor(search.page)
+      : 0,
 });
 
 const rootRoute = createRootRoute({
@@ -294,6 +332,7 @@ const teamDetailRoute = createRoute({
 const briefsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/briefs",
+  validateSearch: briefsSearchSchema,
   component: BriefsPage,
 });
 

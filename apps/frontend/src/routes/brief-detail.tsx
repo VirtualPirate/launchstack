@@ -87,6 +87,14 @@ function BackLink() {
     <div className="mb-3">
       <Link
         to="/briefs"
+        search={{
+          filterType: "all",
+          from: "",
+          to: "",
+          repositoryId: "",
+          excludeNoActivity: false,
+          page: 0,
+        }}
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-3" /> Back to briefs

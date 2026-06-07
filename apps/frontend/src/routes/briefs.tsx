@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   CalendarClock,
   ChevronLeft,
@@ -30,6 +30,15 @@ import { cn } from "@/lib/utils";
 
 type FilterType = "all" | BriefScopeType;
 
+type BriefsSearch = {
+  filterType: FilterType;
+  from: string;
+  to: string;
+  repositoryId: string;
+  excludeNoActivity: boolean;
+  page: number;
+};
+
 const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
   { value: "all", label: "All" },
   { value: "project", label: "Projects" },
@@ -46,25 +55,31 @@ const EMPTY_FILTERS: BriefFiltersValue = {
 };
 
 export function BriefsPage() {
-  const [filterType, setFilterType] = useState<FilterType>("all");
-  const [filterValues, setFilterValues] =
-    useState<BriefFiltersValue>(EMPTY_FILTERS);
-  const [pageIndex, setPageIndex] = useState(0);
+  const search = useSearch({ strict: false }) as BriefsSearch;
+  const navigate = useNavigate();
   const [generateOpen, setGenerateOpen] = useState(false);
+
+  const { filterType, page: pageIndex } = search;
+  const filterValues: BriefFiltersValue = {
+    from: search.from,
+    to: search.to,
+    repositoryId: search.repositoryId,
+    excludeNoActivity: search.excludeNoActivity,
+  };
 
   const filters = useMemo<BriefListFilters>(() => {
     const f: BriefListFilters = { limit: 20 };
-    if (filterValues.repositoryId) {
+    if (search.repositoryId) {
       f.scopeType = "repository";
-      f.scopeRepositoryId = filterValues.repositoryId;
-    } else if (filterType !== "all") {
-      f.scopeType = filterType;
+      f.scopeRepositoryId = search.repositoryId;
+    } else if (search.filterType !== "all") {
+      f.scopeType = search.filterType;
     }
-    if (filterValues.from) f.from = `${filterValues.from}T00:00:00.000Z`;
-    if (filterValues.to) f.to = `${filterValues.to}T23:59:59.999Z`;
-    if (filterValues.excludeNoActivity) f.excludeNoActivity = true;
+    if (search.from) f.from = `${search.from}T00:00:00.000Z`;
+    if (search.to) f.to = `${search.to}T23:59:59.999Z`;
+    if (search.excludeNoActivity) f.excludeNoActivity = true;
     return f;
-  }, [filterType, filterValues]);
+  }, [search]);
 
   const briefsQuery = useGetBriefs(filters);
   const pages = briefsQuery.data?.pages ?? [];
@@ -82,23 +97,34 @@ export function BriefsPage() {
     !!filterValues.repositoryId;
 
   const handleScopePill = (value: FilterType) => {
-    setFilterType(value);
-    if (value !== "repository") {
-      setFilterValues((v) => ({ ...v, repositoryId: "" }));
-    }
-    setPageIndex(0);
+    navigate({
+      to: "/briefs",
+      search: {
+        ...search,
+        filterType: value,
+        repositoryId: value === "repository" ? search.repositoryId : "",
+        page: 0,
+      },
+    });
   };
 
   const handleFiltersChange = (next: BriefFiltersValue) => {
-    setFilterValues(next);
-    if (next.repositoryId) setFilterType("repository");
-    setPageIndex(0);
+    navigate({
+      to: "/briefs",
+      search: {
+        ...search,
+        ...next,
+        filterType: next.repositoryId ? "repository" : search.filterType,
+        page: 0,
+      },
+    });
   };
 
   const clearAll = () => {
-    setFilterType("all");
-    setFilterValues(EMPTY_FILTERS);
-    setPageIndex(0);
+    navigate({
+      to: "/briefs",
+      search: { filterType: "all", ...EMPTY_FILTERS, page: 0 },
+    });
   };
 
   const canPrev = pageIndex > 0;
@@ -106,16 +132,26 @@ export function BriefsPage() {
     pageIndex < pages.length - 1 || (briefsQuery.hasNextPage ?? false);
   const showPager = canPrev || canNext;
 
-  const handlePrev = () => setPageIndex((i) => Math.max(0, i - 1));
+  const handlePrev = () =>
+    navigate({
+      to: "/briefs",
+      search: { ...search, page: Math.max(0, search.page - 1) },
+    });
   const handleNext = async () => {
     if (pageIndex < pages.length - 1) {
-      setPageIndex((i) => i + 1);
+      navigate({
+        to: "/briefs",
+        search: { ...search, page: search.page + 1 },
+      });
       return;
     }
     if (briefsQuery.hasNextPage && !briefsQuery.isFetchingNextPage) {
       const res = await briefsQuery.fetchNextPage();
       if (res.data && res.data.pages.length > pageIndex + 1) {
-        setPageIndex((i) => i + 1);
+        navigate({
+          to: "/briefs",
+          search: { ...search, page: search.page + 1 },
+        });
       }
     }
   };

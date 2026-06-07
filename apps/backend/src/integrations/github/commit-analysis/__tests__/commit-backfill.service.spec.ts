@@ -22,6 +22,7 @@ function makeMocks() {
     } as any,
     client: {
       getDefaultBranch: jest.fn(async () => 'main'),
+      getLatestCommitDate: jest.fn(async () => null),
       listCommits: jest.fn(async () => []),
     } as any,
     commitsRepo: {
@@ -109,5 +110,79 @@ describe('CommitBackfillService', () => {
       sinceISO: '2025-05-01T00:00:00Z',
     });
     expect(mocks.commitsRepo.upsertMany).not.toHaveBeenCalled();
+  });
+
+  describe('runFromLatest', () => {
+    it('computes since = latest - lookbackDays, pulls, and returns sinceISO', async () => {
+      const { svc, mocks } = makeService();
+      mocks.client.getLatestCommitDate.mockResolvedValueOnce(
+        new Date('2026-05-10T00:00:00.000Z'),
+      );
+      mocks.client.listCommits.mockResolvedValueOnce([
+        makeCommit('a'),
+        makeCommit('b'),
+      ]);
+
+      const result = await svc.runFromLatest({
+        repositoryId: 'repo-1',
+        lookbackDays: 365,
+      });
+
+      const expectedSince = new Date(
+        Date.parse('2026-05-10T00:00:00.000Z') - 365 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
+      expect(result).toEqual({ inserted: 2, sinceISO: expectedSince });
+      expect(mocks.client.getLatestCommitDate).toHaveBeenCalledWith(
+        42n,
+        'acme/api',
+        'main',
+      );
+      expect(mocks.client.listCommits).toHaveBeenCalledWith(
+        42n,
+        'acme/api',
+        expectedSince,
+        'main',
+      );
+      expect(mocks.commitsRepo.upsertMany).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ repositoryId: 'repo-1', sha: 'a' }),
+          expect.objectContaining({ sha: 'b' }),
+        ]),
+      );
+    });
+
+    it('returns sinceISO=null and pulls nothing for an empty repo', async () => {
+      const { svc, mocks } = makeService();
+      mocks.client.getLatestCommitDate.mockResolvedValueOnce(null);
+
+      const result = await svc.runFromLatest({
+        repositoryId: 'repo-1',
+        lookbackDays: 365,
+      });
+
+      expect(result).toEqual({ inserted: 0, sinceISO: null });
+      expect(mocks.client.listCommits).not.toHaveBeenCalled();
+      expect(mocks.commitsRepo.upsertMany).not.toHaveBeenCalled();
+    });
+
+    it('returns inserted=0 with a real sinceISO when no commits are in the window', async () => {
+      const { svc, mocks } = makeService();
+      mocks.client.getLatestCommitDate.mockResolvedValueOnce(
+        new Date('2026-05-10T00:00:00.000Z'),
+      );
+      mocks.client.listCommits.mockResolvedValueOnce([]);
+
+      const result = await svc.runFromLatest({
+        repositoryId: 'repo-1',
+        lookbackDays: 365,
+      });
+
+      const expectedSince = new Date(
+        Date.parse('2026-05-10T00:00:00.000Z') - 365 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      expect(result).toEqual({ inserted: 0, sinceISO: expectedSince });
+      expect(mocks.commitsRepo.upsertMany).not.toHaveBeenCalled();
+    });
   });
 });

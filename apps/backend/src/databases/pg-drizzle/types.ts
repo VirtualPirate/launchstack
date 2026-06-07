@@ -86,14 +86,22 @@ export type GithubCommitAnalysisInsert = InferInsertModel<
   typeof githubCommitAnalyses
 >;
 
-export type SlackInstallationSelect = InferSelectModel<typeof slackInstallations>;
-export type SlackInstallationInsert = InferInsertModel<typeof slackInstallations>;
+export type SlackInstallationSelect = InferSelectModel<
+  typeof slackInstallations
+>;
+export type SlackInstallationInsert = InferInsertModel<
+  typeof slackInstallations
+>;
 
 export type ProjectSelect = InferSelectModel<typeof projects>;
 export type ProjectInsert = InferInsertModel<typeof projects>;
 
-export type ProjectRepositorySelect = InferSelectModel<typeof projectRepositories>;
-export type ProjectRepositoryInsert = InferInsertModel<typeof projectRepositories>;
+export type ProjectRepositorySelect = InferSelectModel<
+  typeof projectRepositories
+>;
+export type ProjectRepositoryInsert = InferInsertModel<
+  typeof projectRepositories
+>;
 
 export type TeamSelect = InferSelectModel<typeof teams>;
 export type TeamInsert = InferInsertModel<typeof teams>;

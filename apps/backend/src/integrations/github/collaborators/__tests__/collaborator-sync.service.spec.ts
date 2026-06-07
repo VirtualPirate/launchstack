@@ -33,7 +33,14 @@ function makeMocks() {
     ),
   } as any;
 
-  return { collaboratorsRepo, repoCollabRepo, reposRepo, installsRepo, client, db };
+  return {
+    collaboratorsRepo,
+    repoCollabRepo,
+    reposRepo,
+    installsRepo,
+    client,
+    db,
+  };
 }
 
 function makeService(overrides: Partial<ReturnType<typeof makeMocks>> = {}) {
@@ -77,7 +84,9 @@ describe('CollaboratorSyncService', () => {
 
       await svc.syncRepo('r1', 'disconnected');
 
-      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith('r1');
+      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith(
+        'r1',
+      );
       expect(mocks.client.listRepoCollaborators).not.toHaveBeenCalled();
     });
   });
@@ -94,7 +103,9 @@ describe('CollaboratorSyncService', () => {
 
       await svc.syncRepo('r1', 'webhook');
 
-      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith('r1');
+      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith(
+        'r1',
+      );
       expect(mocks.client.listRepoCollaborators).not.toHaveBeenCalled();
     });
   });
@@ -112,7 +123,9 @@ describe('CollaboratorSyncService', () => {
 
       await svc.syncRepo('r1', 'connected');
 
-      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith('r1');
+      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith(
+        'r1',
+      );
       expect(mocks.client.listRepoCollaborators).not.toHaveBeenCalled();
     });
   });
@@ -171,13 +184,21 @@ describe('CollaboratorSyncService', () => {
 
       await svc.syncRepo('r1', 'connected');
 
-      expect(mocks.client.listRepoCollaborators).toHaveBeenCalledWith(99n, 'acme', 'api');
-      expect(mocks.collaboratorsRepo.upsertByGithubUserId).toHaveBeenCalledTimes(2);
+      expect(mocks.client.listRepoCollaborators).toHaveBeenCalledWith(
+        99n,
+        'acme',
+        'api',
+      );
+      expect(
+        mocks.collaboratorsRepo.upsertByGithubUserId,
+      ).toHaveBeenCalledTimes(2);
       expect(mocks.collaboratorsRepo.upsertByGithubUserId).toHaveBeenCalledWith(
         expect.objectContaining({ githubUserId: 1n, login: 'alice' }),
         { __tx: true },
       );
-      expect(mocks.repoCollabRepo.upsertByRepoCollaborator).toHaveBeenCalledWith(
+      expect(
+        mocks.repoCollabRepo.upsertByRepoCollaborator,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           repositoryId: 'r1',
           collaboratorId: 'col-1',
@@ -186,11 +207,9 @@ describe('CollaboratorSyncService', () => {
         }),
         { __tx: true },
       );
-      expect(mocks.repoCollabRepo.softDeleteMissingForRepo).toHaveBeenCalledWith(
-        'r1',
-        ['col-1', 'col-2'],
-        { __tx: true },
-      );
+      expect(
+        mocks.repoCollabRepo.softDeleteMissingForRepo,
+      ).toHaveBeenCalledWith('r1', ['col-1', 'col-2'], { __tx: true });
     });
   });
 
@@ -214,7 +233,9 @@ describe('CollaboratorSyncService', () => {
 
       await svc.syncRepo('r1', 'connected');
 
-      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith('r1');
+      expect(mocks.repoCollabRepo.softDeleteAllForRepo).toHaveBeenCalledWith(
+        'r1',
+      );
     });
   });
 

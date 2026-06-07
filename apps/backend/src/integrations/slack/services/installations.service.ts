@@ -191,6 +191,8 @@ export class SlackInstallationsService {
     }
 
     await this.installs.softDelete(installationId);
-    this.logger.log(`Slack disconnected for org=${orgId} installation=${installationId}`);
+    this.logger.log(
+      `Slack disconnected for org=${orgId} installation=${installationId}`,
+    );
   }
 }

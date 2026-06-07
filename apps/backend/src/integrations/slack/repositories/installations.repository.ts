@@ -31,7 +31,10 @@ export class SlackInstallationsRepository {
       .select()
       .from(slackInstallations)
       .where(
-        and(eq(slackInstallations.id, id), isNull(slackInstallations.deletedAt)),
+        and(
+          eq(slackInstallations.id, id),
+          isNull(slackInstallations.deletedAt),
+        ),
       )
       .limit(1);
     return row ?? null;

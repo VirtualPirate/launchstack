@@ -1,4 +1,8 @@
-import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as express from 'express';
 import { AppError } from '../common/errors';
@@ -27,10 +31,12 @@ import { CadenceService } from './schedules/services/cadence.service';
 import { BriefsController } from './generation/controllers/briefs.controller';
 import { BriefsService } from './generation/services/briefs.service';
 import { BriefsRepository } from './generation/repositories/briefs.repository';
+import { BriefScopeResolver } from './generation/services/brief-scope.resolver';
 import { BriefGeneratorService } from './generation/services/brief-generator.service';
 import { OpenAIBriefClient } from './generation/services/openai-brief.client';
 import { GenerateBriefHandler } from './generation/handlers/generate-brief.handler';
 import { DispatchDueBriefsHandler } from './generation/handlers/dispatch-due-briefs.handler';
+import { BackfillBriefsHandler } from './generation/handlers/backfill-briefs.handler';
 import { BriefDispatcherBootstrap } from './generation/bootstrap/brief-dispatcher.bootstrap';
 
 import { BriefRenderService } from './delivery/services/brief-render.service';
@@ -83,10 +89,12 @@ function makeOpenAIStub(): OpenAIBriefClient {
     BriefSchedulesService,
 
     BriefsRepository,
+    BriefScopeResolver,
     BriefGeneratorService,
     BriefsService,
     GenerateBriefHandler,
     DispatchDueBriefsHandler,
+    BackfillBriefsHandler,
     BriefDispatcherBootstrap,
 
     BriefRenderService,

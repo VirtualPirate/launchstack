@@ -55,7 +55,8 @@ export class BriefsController {
   @HttpCode(202)
   async generate(
     @OrgMembership() m: OrgMembershipContext,
-    @Body(new ZodValidationPipe(GenerateBriefSchema)) body: GenerateBriefRequest,
+    @Body(new ZodValidationPipe(GenerateBriefSchema))
+    body: GenerateBriefRequest,
   ): Promise<ApiResponse<GenerateBriefEnqueueResponse>> {
     const data = await this.briefs.generateAdHoc(m.organizationId, body);
     return { data, message: 'Brief generation enqueued', success: true };

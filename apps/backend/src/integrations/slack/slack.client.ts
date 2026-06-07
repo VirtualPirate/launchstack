@@ -58,7 +58,9 @@ export class SlackClient {
     try {
       const res = await this.webClient.auth.revoke({ token: accessToken });
       if (!res.ok) {
-        throw AppError.SLACK_API_FAILED({ reason: res.error ?? 'revoke failed' });
+        throw AppError.SLACK_API_FAILED({
+          reason: res.error ?? 'revoke failed',
+        });
       }
       return res;
     } catch (err) {
@@ -82,11 +84,13 @@ export class SlackClient {
         token: accessToken,
         channel,
         text,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         blocks: blocks as any,
       });
       if (!res.ok) {
-        throw AppError.SLACK_API_FAILED({ reason: res.error ?? 'postMessage failed' });
+        throw AppError.SLACK_API_FAILED({
+          reason: res.error ?? 'postMessage failed',
+        });
       }
       return res;
     } catch (err) {
@@ -105,13 +109,16 @@ export class SlackClient {
     let cursor: string | undefined = opts?.cursor;
     try {
       do {
-        const res: ConversationsListResponse = await this.webClient.conversations.list({
-          token: accessToken,
-          limit: opts?.limit ?? 100,
-          cursor,
-        });
+        const res: ConversationsListResponse =
+          await this.webClient.conversations.list({
+            token: accessToken,
+            limit: opts?.limit ?? 100,
+            cursor,
+          });
         if (!res.ok) {
-          throw AppError.SLACK_API_FAILED({ reason: res.error ?? 'list failed' });
+          throw AppError.SLACK_API_FAILED({
+            reason: res.error ?? 'list failed',
+          });
         }
         channels.push(...(res.channels ?? []));
         cursor = res.response_metadata?.next_cursor || undefined;
@@ -139,7 +146,9 @@ export class SlackClient {
           cursor,
         });
         if (!res.ok) {
-          throw AppError.SLACK_API_FAILED({ reason: res.error ?? 'list failed' });
+          throw AppError.SLACK_API_FAILED({
+            reason: res.error ?? 'list failed',
+          });
         }
         members.push(...(res.members ?? []));
         cursor = res.response_metadata?.next_cursor || undefined;

@@ -1,5 +1,6 @@
 import { GithubInstallationsService } from '../services/installations.service';
 import { SyncRepoCollaboratorsJob } from '../collaborators/jobs/sync-repo-collaborators.job';
+import { ScanRepositoryJob } from '../commit-analysis/jobs/scan-repository.job';
 
 function makeMocks() {
   const installsRepo = {
@@ -44,6 +45,7 @@ function makeMocks() {
 
   const pgBoss = {
     send: jest.fn(async () => 'job-id'),
+    sendOnce: jest.fn(async () => 'job-id'),
   } as any;
 
   return { installsRepo, reposRepo, stateToken, client, config, db, pgBoss };
@@ -447,7 +449,10 @@ describe('GithubInstallationsService', () => {
   describe('collaborator sync job enqueue', () => {
     it('enqueues trigger:connected for newly connected repos and trigger:disconnected for removed repos after handleCallback', async () => {
       const { svc, mocks } = makeService();
-      mocks.stateToken.verify.mockReturnValueOnce({ orgId: 'o1', userId: 'u1' });
+      mocks.stateToken.verify.mockReturnValueOnce({
+        orgId: 'o1',
+        userId: 'u1',
+      });
       mocks.installsRepo.findByGithubInstallationId.mockResolvedValueOnce({
         id: 'i1',
         organizationId: 'o1',
@@ -488,10 +493,26 @@ describe('GithubInstallationsService', () => {
         repositoryId: 'r-gone',
         trigger: 'disconnected',
       });
-      expect(mocks.pgBoss.send).not.toHaveBeenCalledWith(SyncRepoCollaboratorsJob, {
-        repositoryId: 'r-existing',
-        trigger: 'connected',
-      });
+      expect(mocks.pgBoss.send).not.toHaveBeenCalledWith(
+        SyncRepoCollaboratorsJob,
+        {
+          repositoryId: 'r-existing',
+          trigger: 'connected',
+        },
+      );
+
+      // Scan job fires for the newly connected repo only, via sendOnce (deduped).
+      expect(mocks.pgBoss.sendOnce).toHaveBeenCalledWith(
+        ScanRepositoryJob,
+        { repositoryId: 'r-new', lookbackDays: 365 },
+        'scan:r-new',
+      );
+      expect(mocks.pgBoss.sendOnce).toHaveBeenCalledTimes(1);
+      expect(mocks.pgBoss.sendOnce).not.toHaveBeenCalledWith(
+        ScanRepositoryJob,
+        expect.objectContaining({ repositoryId: 'r-gone' }),
+        expect.anything(),
+      );
     });
 
     it('enqueues the diff produced by sync()', async () => {
@@ -541,6 +562,12 @@ describe('GithubInstallationsService', () => {
         repositoryId: 'r-b',
         trigger: 'connected',
       });
+
+      expect(mocks.pgBoss.sendOnce).toHaveBeenCalledWith(
+        ScanRepositoryJob,
+        { repositoryId: 'r-b', lookbackDays: 365 },
+        'scan:r-b',
+      );
     });
 
     it('enqueues trigger:disconnected for every repo of an installation being disconnected', async () => {

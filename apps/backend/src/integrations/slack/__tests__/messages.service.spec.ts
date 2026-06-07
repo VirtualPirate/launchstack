@@ -29,7 +29,11 @@ describe('SlackMessagesService', () => {
 
       const res = await svc.postMessage('o1', 'C1', 'hello');
 
-      expect(client.postMessage).toHaveBeenCalledWith('xoxb-tok', 'C1', 'hello');
+      expect(client.postMessage).toHaveBeenCalledWith(
+        'xoxb-tok',
+        'C1',
+        'hello',
+      );
       expect(res).toEqual({ success: true, ts: '12345.6' });
     });
 

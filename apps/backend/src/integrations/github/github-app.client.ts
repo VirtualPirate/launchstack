@@ -358,6 +358,31 @@ export class GithubAppClient {
       });
     }
   }
+
+  async getLatestCommitDate(
+    installationId: bigint,
+    repoFullName: string,
+    branch: string,
+  ): Promise<Date | null> {
+    const [owner, repo] = repoFullName.split('/');
+    try {
+      const app = await this.getApp();
+      const octokit = await app.getInstallationOctokit(Number(installationId));
+      const { data } = await octokit.request(
+        'GET /repos/{owner}/{repo}/commits',
+        { owner, repo, sha: branch, per_page: 1 },
+      );
+      const list = data as RawCommitListItem[];
+      if (!list || list.length === 0) return null;
+      return new Date(list[0].commit.committer.date);
+    } catch (err) {
+      // GitHub returns 409 for an empty repository's commits endpoint.
+      if ((err as { status?: number })?.status === 409) return null;
+      throw AppError.GITHUB_API_FAILED({
+        reason: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  }
 }
 
 function toCommitListItem(raw: RawCommitListItem): GithubCommitListItem {

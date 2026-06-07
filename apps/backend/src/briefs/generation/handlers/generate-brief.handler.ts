@@ -95,6 +95,13 @@ export class GenerateBriefHandler {
       });
     }
 
+    if (data.deliver === false) {
+      this.logger.log(
+        `[generate-brief ${id}] brief ${brief.id} generated; delivery suppressed (backfill)`,
+      );
+      return;
+    }
+
     await this.deliverer.deliver(brief.id);
   }
 
@@ -110,7 +117,10 @@ export class GenerateBriefHandler {
     if (brief.scopeType === 'team')
       return { type: 'team', teamId: brief.scopeTeamId! };
     if (brief.scopeType === 'collaborator')
-      return { type: 'collaborator', collaboratorId: brief.scopeCollaboratorId! };
+      return {
+        type: 'collaborator',
+        collaboratorId: brief.scopeCollaboratorId!,
+      };
     return { type: 'repository', repositoryId: brief.scopeRepositoryId! };
   }
 }

@@ -26,15 +26,17 @@ export class DispatchDueBriefsHandler {
   ) {}
 
   @Handler(DispatchDueBriefsJob)
-  async handle({
-    id,
-  }: JobContext<typeof DispatchDueBriefsJob>): Promise<void> {
+  async handle({ id }: JobContext<typeof DispatchDueBriefsJob>): Promise<void> {
     const intervalSeconds = this.config?.dispatcherIntervalSeconds ?? 60;
 
-    const bucket = Math.floor(Date.now() / 1000 / intervalSeconds) + 1;
+    // Throttle the self-reschedule to one tick per interval slot. pg-boss only
+    // honours singletonKey dedup when a throttle window (singletonSeconds) sets
+    // singleton_on — without it, on the default `standard` queue policy the key
+    // is inert and duplicate ticks pile up, so concurrent chains never collapse.
     try {
       await this.pgBoss.sendAfter(DispatchDueBriefsJob, {}, intervalSeconds, {
-        singletonKey: `briefs.dispatch-due:${bucket}`,
+        singletonKey: 'briefs.dispatch-due',
+        singletonSeconds: intervalSeconds,
       });
     } catch (err) {
       this.logger.error(

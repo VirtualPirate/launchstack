@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { Team } from "@launchstack/api-interfaces";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,188 +12,144 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { SectionLabel } from "@/components/gitbrief/shared/section-label";
-import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
-import { demoPeople, type DemoTeam } from "@/lib/demo-data";
-import { useDemoState } from "@/stores/demo-state";
-import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateTeam, useUpdateTeam } from "@/hooks/api/use-teams";
+import { extractErrorMessage } from "@/components/gitbrief/shared/error-state";
 
-const TEAM_COLORS = [
-  "oklch(0.62 0.18 277)",
-  "oklch(0.75 0.16 70)",
-  "oklch(0.72 0.18 145)",
+const COLORS = [
   "oklch(0.62 0.22 305)",
-  "oklch(0.68 0.22 25)",
-  "oklch(0.66 0.16 200)",
-  "oklch(0.70 0.15 330)",
-  "oklch(0.70 0.15 180)",
+  "oklch(0.62 0.18 277)",
+  "oklch(0.6 0.16 200)",
+  "oklch(0.65 0.18 140)",
+  "oklch(0.7 0.18 85)",
+  "oklch(0.68 0.2 30)",
 ];
 
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-export function NewTeamDialog({
+export function TeamDialog({
   open,
   onOpenChange,
+  team,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  team?: Team;
+  onSaved?: (t: Team) => void;
 }) {
-  const teams = useDemoState((s) => s.teams);
-  const addTeam = useDemoState((s) => s.addTeam);
+  const isEdit = !!team;
+  const [name, setName] = useState(team?.name ?? "");
+  const [description, setDescription] = useState(team?.description ?? "");
+  const [color, setColor] = useState(team?.color ?? COLORS[0]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(TEAM_COLORS[0]!);
-  const [memberIds, setMemberIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(team?.name ?? "");
+    setDescription(team?.description ?? "");
+    setColor(team?.color ?? COLORS[0]);
+    setSubmitError(null);
+  }, [open, team]);
 
-  const slug = useMemo(() => toSlug(name), [name]);
-  const trimmedName = name.trim();
-  const slugCollision = useMemo(
-    () => slug.length > 0 && teams.some((t) => t.slug === slug),
-    [slug, teams],
-  );
+  const createMutation = useCreateTeam();
+  const updateMutation = useUpdateTeam(team?.id ?? "");
+  const submitting = createMutation.isPending || updateMutation.isPending;
 
-  const canSubmit = trimmedName.length > 0 && trimmedName.length <= 60 && !slugCollision;
-
-  const resetForm = () => {
-    setName("");
-    setColor(TEAM_COLORS[0]!);
-    setMemberIds([]);
-  };
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) resetForm();
-    onOpenChange(next);
-  };
-
-  const toggleMember = (id: string) => {
-    setMemberIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
-
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    const newTeam: DemoTeam = {
-      id: `team_${Date.now()}`,
-      slug,
-      name: trimmedName,
-      color,
-      memberIds,
-    };
-    addTeam(newTeam);
-    resetForm();
-    onOpenChange(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    try {
+      if (isEdit && team) {
+        const res = await updateMutation.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || null,
+          color,
+        });
+        toast.success("Team updated");
+        onSaved?.(res.data);
+      } else {
+        const res = await createMutation.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          color,
+          collaboratorIds: [],
+        });
+        toast.success("Team created");
+        onSaved?.(res.data);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      setSubmitError(extractErrorMessage(err));
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>New team</DialogTitle>
-          <DialogDescription>
-            Group developers you want to track and brief together.
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? "Edit team" : "New team"}</DialogTitle>
+            <DialogDescription>
+              Group collaborators so briefs can summarize their work.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="-mx-1 max-h-[60vh] space-y-5 overflow-y-auto px-1.5 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="team-name">Name</Label>
             <Input
               id="team-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Backend"
-              maxLength={60}
+              maxLength={120}
+              required
               autoFocus
             />
-            {slugCollision ? (
-              <p className="text-xs text-destructive" role="alert">
-                A team with this name already exists.
-              </p>
-            ) : null}
           </div>
 
-          <div className="border-t pt-4">
-            <SectionLabel>Color</SectionLabel>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {TEAM_COLORS.map((c) => (
+          <div className="space-y-1.5">
+            <Label htmlFor="team-description">Description</Label>
+            <Textarea
+              id="team-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Optional"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={cn(
-                    "inline-flex size-6 items-center justify-center rounded-full transition-transform",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                      : "hover:scale-110",
-                  )}
-                  style={{ background: c }}
+                  className="size-6 rounded-full border-2 transition-transform"
+                  style={{
+                    background: c,
+                    borderColor: color === c ? "var(--foreground)" : "transparent",
+                  }}
                   aria-label={`Color ${c}`}
-                  aria-pressed={color === c}
                 />
               ))}
             </div>
           </div>
 
-          <div className="border-t pt-4">
-            <div className="flex items-baseline justify-between">
-              <SectionLabel>Members</SectionLabel>
-              <span className="text-[10px] text-muted-foreground">
-                {memberIds.length} of {demoPeople.length} selected
-              </span>
-            </div>
-            <div className="mt-2 max-h-64 overflow-y-auto rounded border bg-background">
-              {demoPeople.map((person) => {
-                const checked = memberIds.includes(person.id);
-                return (
-                  <button
-                    key={person.id}
-                    type="button"
-                    onClick={() => toggleMember(person.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent/50",
-                      checked && "bg-accent/30",
-                    )}
-                    aria-pressed={checked}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex size-4 items-center justify-center rounded border",
-                          checked
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-muted-foreground/40",
-                        )}
-                      >
-                        {checked ? <Check className="size-3" /> : null}
-                      </span>
-                      <EntityDot color={person.avatarColor} />
-                      {person.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {person.role}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+          {submitError ? (
+            <p className="text-xs text-destructive">{submitError}</p>
+          ) : null}
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            Create
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || !name.trim()}>
+              {isEdit ? "Save" : "Create team"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -64,7 +64,8 @@ export class BriefSchedulesController {
   @RequireOrgRole('member')
   async get(
     @OrgMembership() m: OrgMembershipContext,
-    @Param(new ZodValidationPipe(ScheduleIdParamSchema)) params: ScheduleIdParam,
+    @Param(new ZodValidationPipe(ScheduleIdParamSchema))
+    params: ScheduleIdParam,
   ): Promise<ApiResponse<BriefScheduleResponse>> {
     const data = await this.schedules.get(m.organizationId, params.id);
     return { data, message: 'OK', success: true };
@@ -74,7 +75,8 @@ export class BriefSchedulesController {
   @RequireOrgRole('admin')
   async update(
     @OrgMembership() m: OrgMembershipContext,
-    @Param(new ZodValidationPipe(ScheduleIdParamSchema)) params: ScheduleIdParam,
+    @Param(new ZodValidationPipe(ScheduleIdParamSchema))
+    params: ScheduleIdParam,
     @Body(new ZodValidationPipe(UpdateBriefScheduleSchema))
     body: UpdateBriefScheduleRequest,
   ): Promise<ApiResponse<BriefScheduleResponse>> {
@@ -86,7 +88,8 @@ export class BriefSchedulesController {
   @RequireOrgRole('admin')
   async pause(
     @OrgMembership() m: OrgMembershipContext,
-    @Param(new ZodValidationPipe(ScheduleIdParamSchema)) params: ScheduleIdParam,
+    @Param(new ZodValidationPipe(ScheduleIdParamSchema))
+    params: ScheduleIdParam,
   ): Promise<ApiResponse<BriefScheduleResponse>> {
     const data = await this.schedules.pause(m.organizationId, params.id);
     return { data, message: 'Paused', success: true };
@@ -96,7 +99,8 @@ export class BriefSchedulesController {
   @RequireOrgRole('admin')
   async resume(
     @OrgMembership() m: OrgMembershipContext,
-    @Param(new ZodValidationPipe(ScheduleIdParamSchema)) params: ScheduleIdParam,
+    @Param(new ZodValidationPipe(ScheduleIdParamSchema))
+    params: ScheduleIdParam,
   ): Promise<ApiResponse<BriefScheduleResponse>> {
     const data = await this.schedules.resume(m.organizationId, params.id);
     return { data, message: 'Resumed', success: true };
@@ -107,7 +111,8 @@ export class BriefSchedulesController {
   @HttpCode(204)
   async delete(
     @OrgMembership() m: OrgMembershipContext,
-    @Param(new ZodValidationPipe(ScheduleIdParamSchema)) params: ScheduleIdParam,
+    @Param(new ZodValidationPipe(ScheduleIdParamSchema))
+    params: ScheduleIdParam,
   ): Promise<void> {
     await this.schedules.delete(m.organizationId, params.id);
   }

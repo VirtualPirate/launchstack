@@ -19,8 +19,7 @@ function makeMocks() {
 
   const client = {
     generateAuthUri: jest.fn(
-      (state: string) =>
-        `https://slack.com/oauth/v2/authorize?state=${state}`,
+      (state: string) => `https://slack.com/oauth/v2/authorize?state=${state}`,
     ),
     exchangeCodeForToken: jest.fn(),
     revokeToken: jest.fn(),
@@ -86,7 +85,9 @@ describe('SlackInstallationsService', () => {
         userId: 'u1',
       });
       expect(mocks.client.generateAuthUri).toHaveBeenCalledWith('signed-token');
-      expect(url).toBe('https://slack.com/oauth/v2/authorize?state=signed-token');
+      expect(url).toBe(
+        'https://slack.com/oauth/v2/authorize?state=signed-token',
+      );
     });
   });
 
@@ -94,7 +95,9 @@ describe('SlackInstallationsService', () => {
     it('inserts a new installation when none exists for the org', async () => {
       const { svc, mocks } = makeService();
       mocks.stateToken.verify.mockReturnValue({ orgId: 'o1', userId: 'u1' });
-      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue(null);
+      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue(
+        null,
+      );
       mocks.client.exchangeCodeForToken.mockResolvedValue(makeOauthResponse());
       mocks.installsRepo.create.mockResolvedValue({ id: 'inst-uuid' });
 
@@ -126,11 +129,13 @@ describe('SlackInstallationsService', () => {
     it('un-deletes a soft-deleted installation on re-install', async () => {
       const { svc, mocks } = makeService();
       mocks.stateToken.verify.mockReturnValue({ orgId: 'o1', userId: 'u1' });
-      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue({
-        id: 'existing-uuid',
-        organizationId: 'o1',
-        deletedAt: new Date('2026-05-10T00:00:00Z'),
-      });
+      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue(
+        {
+          id: 'existing-uuid',
+          organizationId: 'o1',
+          deletedAt: new Date('2026-05-10T00:00:00Z'),
+        },
+      );
       mocks.client.exchangeCodeForToken.mockResolvedValue(makeOauthResponse());
 
       await svc.handleCallback({
@@ -151,11 +156,13 @@ describe('SlackInstallationsService', () => {
     it('rejects when an active installation already exists for the org', async () => {
       const { svc, mocks } = makeService();
       mocks.stateToken.verify.mockReturnValue({ orgId: 'o1', userId: 'u1' });
-      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue({
-        id: 'existing-uuid',
-        organizationId: 'o1',
-        deletedAt: null,
-      });
+      mocks.installsRepo.findByOrganizationIdIncludingDeleted.mockResolvedValue(
+        {
+          id: 'existing-uuid',
+          organizationId: 'o1',
+          deletedAt: null,
+        },
+      );
       mocks.client.exchangeCodeForToken.mockResolvedValue(makeOauthResponse());
 
       await expect(
@@ -168,7 +175,10 @@ describe('SlackInstallationsService', () => {
 
     it('rejects when state user does not match session user', async () => {
       const { svc, mocks } = makeService();
-      mocks.stateToken.verify.mockReturnValue({ orgId: 'o1', userId: 'someone-else' });
+      mocks.stateToken.verify.mockReturnValue({
+        orgId: 'o1',
+        userId: 'someone-else',
+      });
 
       await expect(
         svc.handleCallback({ state: 't', code: 'c', sessionUserId: 'u1' }),

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type SidebarScope = "projects" | "teams" | "people";
+export type SidebarScope = "projects" | "teams";
 
 interface SidebarPrefsState {
   pinned: Record<SidebarScope, string[]>;
@@ -14,8 +14,8 @@ interface SidebarPrefsState {
 export const useSidebarPrefs = create<SidebarPrefsState>()(
   persist(
     (set, get) => ({
-      pinned: { projects: [], teams: [], people: [] },
-      collapsed: { projects: false, teams: false, people: false },
+      pinned: { projects: [], teams: [] },
+      collapsed: { projects: false, teams: false },
       togglePin: (scope, id) =>
         set((s) => {
           const list = s.pinned[scope];
@@ -30,6 +30,24 @@ export const useSidebarPrefs = create<SidebarPrefsState>()(
         })),
       isPinned: (scope, id) => get().pinned[scope].includes(id),
     }),
-    { name: "gitbrief-sidebar-prefs-v1" },
+    {
+      name: "gitbrief-sidebar-prefs-v2",
+      version: 2,
+      migrate: (state) => {
+        const legacy = state as
+          | { pinned?: Record<string, string[]>; collapsed?: Record<string, boolean> }
+          | undefined;
+        if (!legacy) return state;
+        const pinned = legacy.pinned ?? {};
+        const collapsed = legacy.collapsed ?? {};
+        return {
+          pinned: { projects: pinned.projects ?? [], teams: pinned.teams ?? [] },
+          collapsed: {
+            projects: collapsed.projects ?? false,
+            teams: collapsed.teams ?? false,
+          },
+        } as unknown as SidebarPrefsState;
+      },
+    },
   ),
 );

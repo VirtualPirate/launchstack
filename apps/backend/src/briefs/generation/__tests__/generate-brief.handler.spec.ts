@@ -124,6 +124,56 @@ describe('GenerateBriefHandler.handle', () => {
     expect(deliverer.deliver).toHaveBeenCalledWith('b1');
   });
 
+  it('skips delivery and stays at status "generated" when deliver=false', async () => {
+    const { handler, briefs, generator, deliverer } = makeHandler();
+    briefs.findById.mockResolvedValue(briefRow);
+    generator.generate.mockResolvedValue({
+      kind: 'generated',
+      scopeLabel: 'Project: P',
+      title: 'T',
+      summary: 'S',
+      contributorCount: 2,
+      commitCount: 5,
+      model: 'gpt-x',
+      promptTokens: 100,
+      completionTokens: 30,
+    });
+    await handler.handle({
+      id: 'job1',
+      data: { briefId: 'b1', deliver: false },
+      attempts: 1,
+      raw: {} as any,
+    });
+    expect(briefs.update).toHaveBeenCalledWith(
+      'b1',
+      expect.objectContaining({ status: 'generated', title: 'T' }),
+    );
+    expect(deliverer.deliver).not.toHaveBeenCalled();
+  });
+
+  it('delivers by default when deliver is omitted', async () => {
+    const { handler, briefs, generator, deliverer } = makeHandler();
+    briefs.findById.mockResolvedValue(briefRow);
+    generator.generate.mockResolvedValue({
+      kind: 'generated',
+      scopeLabel: 'Project: P',
+      title: 'T',
+      summary: 'S',
+      contributorCount: 1,
+      commitCount: 1,
+      model: 'gpt-x',
+      promptTokens: 10,
+      completionTokens: 5,
+    });
+    await handler.handle({
+      id: 'job1',
+      data: { briefId: 'b1' },
+      attempts: 1,
+      raw: {} as any,
+    });
+    expect(deliverer.deliver).toHaveBeenCalledWith('b1');
+  });
+
   it('rethrows when LLM fails (pg-boss retries handle the rest)', async () => {
     const { handler, briefs, generator } = makeHandler();
     briefs.findById.mockResolvedValue(briefRow);

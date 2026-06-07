@@ -1,157 +1,223 @@
-import { useParams, useNavigate, Link } from "@tanstack/react-router";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { ArrowLeft, GitBranch, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageHeader } from "@/components/gitbrief/shared/page-header";
-import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
-import { EmptyState } from "@/components/gitbrief/shared/empty-state";
-import { ActivityFeed } from "@/components/gitbrief/feed/activity-feed";
-import { FeatureProgressRow } from "@/components/gitbrief/features/feature-progress-row";
-import { FeatureKanban } from "@/components/gitbrief/features/feature-kanban";
-import { WorkDistributionDonut } from "@/components/gitbrief/charts/work-distribution-donut";
-import { BriefCard } from "@/components/gitbrief/briefs/brief-card";
-import { ScheduledBriefRow } from "@/components/gitbrief/briefs/scheduled-brief-row";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  getBriefsForScope,
-  getDeveloperById,
-  getFeaturesForScope,
-  getProjectBySlug,
-  getReposForProject,
-  getWorkDistributionForDev,
-  formatRelative,
-} from "@/lib/demo-selectors";
-import { useDemoState } from "@/stores/demo-state";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/gitbrief/shared/page-header";
+import { SectionLabel } from "@/components/gitbrief/shared/section-label";
+import { EmptyState } from "@/components/gitbrief/shared/empty-state";
+import { EntityDot } from "@/components/gitbrief/shared/entity-dot";
+import {
+  ErrorState,
+  extractErrorMessage,
+} from "@/components/gitbrief/shared/error-state";
+import { SkeletonList } from "@/components/gitbrief/shared/skeleton-list";
+import { ProjectDialog } from "@/components/gitbrief/new-project/project-dialog";
+import { RepositoryPicker } from "@/components/gitbrief/new-project/repository-picker";
+import { ScopeLabel } from "@/components/gitbrief/briefs/scope-label";
+import { StatusBadge } from "@/components/gitbrief/briefs/status-badge";
+import {
+  useDeleteProject,
+  useGetProject,
+} from "@/hooks/api/use-projects";
+import { useGithubInstallations } from "@/hooks/api/use-github-integrations";
+import { useGetBriefsFirstPage } from "@/hooks/api/use-briefs";
 
 export function ProjectDetailPage() {
-  const { projectSlug } = useParams({ strict: false }) as { projectSlug: string };
-  const project = getProjectBySlug(projectSlug);
+  const params = useParams({ from: "/projects/$projectId" as never }) as {
+    projectId: string;
+  };
   const navigate = useNavigate();
-  const allSchedules = useDemoState((s) => s.schedules);
-  useDemoState((s) => s.projects);
 
-  if (!project) {
-    return <EmptyState title="Project not found" />;
+  const projectQuery = useGetProject(params.projectId);
+  const installationsQuery = useGithubInstallations();
+  const briefsQuery = useGetBriefsFirstPage({
+    scopeType: "project",
+    scopeProjectId: params.projectId,
+    limit: 10,
+  });
+
+  const deleteMutation = useDeleteProject();
+  const [editOpen, setEditOpen] = useState(false);
+  const [repoPickerOpen, setRepoPickerOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  if (projectQuery.isLoading) {
+    return (
+      <>
+        <PageHeader title="…" />
+        <SkeletonList rows={3} rowHeight={80} />
+      </>
+    );
+  }
+  if (projectQuery.isError || !projectQuery.data?.data) {
+    return (
+      <>
+        <PageHeader title="Project" />
+        <ErrorState
+          message={extractErrorMessage(projectQuery.error)}
+          onRetry={() => projectQuery.refetch()}
+        />
+      </>
+    );
   }
 
-  const features = getFeaturesForScope({ projectId: project.id });
-  const repos = getReposForProject(project.id);
-  const briefs = getBriefsForScope({ projectId: project.id });
-  const scheduled = allSchedules.filter(
-    (s) => s.scope.type === "project" && s.scope.projectId === project.id,
-  );
+  const project = projectQuery.data.data;
+
+  const allRepos = (installationsQuery.data?.data ?? []).flatMap((i) => i.repositories);
+  const linkedRepos = project.repositoryIds
+    .map((id) => {
+      const repo = allRepos.find((r) => r.id === id);
+      return repo
+        ? { id: repo.id, name: repo.fullName ?? repo.name }
+        : { id, name: "(unavailable)" };
+    });
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync(project.id);
+      toast.success("Project deleted");
+      await navigate({ to: "/projects" });
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
 
   return (
     <>
+      <div className="mb-3">
+        <Link
+          to="/projects"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-3" /> Back to projects
+        </Link>
+      </div>
+
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><EntityDot color={project.color} /> {project.name}</span>}
-        description={project.description}
-        actions={<Button size="sm" onClick={() => navigate({ to: "/briefs/new" })}>+ Generate brief</Button>}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <EntityDot color={project.color ?? "var(--muted-foreground)"} />
+            {project.name}
+          </span>
+        }
+        description={project.description ?? undefined}
+        actions={
+          <>
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3.5" /> Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setConfirmDeleteOpen(true)}
+            >
+              <Trash2 className="size-3.5" /> Delete
+            </Button>
+          </>
+        }
       />
 
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="contributors">Contributors</TabsTrigger>
-          <TabsTrigger value="repos">Repos</TabsTrigger>
-          <TabsTrigger value="briefs">Briefs</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-5">
-          <div className="grid gap-5 md:grid-cols-[1fr_320px]">
-            <ActivityFeed scope={{ projectId: project.id }} />
-            <div className="rounded-lg border bg-card p-4">
-              <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Feature progress</div>
-              <div className="mt-3">
-                {features.filter((f) => f.status !== "shipped").map((f) => <FeatureProgressRow key={f.id} feature={f} />)}
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="features" className="mt-5">
-          <FeatureKanban features={features} />
-        </TabsContent>
-
-        <TabsContent value="contributors" className="mt-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            {project.memberIds.map((id) => {
-              const dev = getDeveloperById(id);
-              if (!dev) return null;
-              const dist = getWorkDistributionForDev(dev.id, 7);
-              return (
-                <div key={id} className="rounded-lg border bg-card p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-9"><AvatarFallback style={{ background: dev.avatarColor }}>{dev.name.charAt(0)}</AvatarFallback></Avatar>
-                    <div>
-                      <div className="text-sm font-medium">{dev.name}</div>
-                      <div className="text-xs text-muted-foreground">{dev.role}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <WorkDistributionDonut distribution={dist} size={100} />
-                  </div>
+      <section className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <SectionLabel>Linked repositories</SectionLabel>
+          <Button size="sm" variant="outline" onClick={() => setRepoPickerOpen(true)}>
+            Manage repositories
+          </Button>
+        </div>
+        {linkedRepos.length === 0 ? (
+          <EmptyState
+            icon={<GitBranch className="size-5" />}
+            title="No repositories linked"
+            description="Link at least one repository so briefs have commit data."
+            action={
+              <Button size="sm" onClick={() => setRepoPickerOpen(true)}>
+                Manage repositories
+              </Button>
+            }
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-0 divide-y">
+              {linkedRepos.map((r) => (
+                <div key={r.id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                  <GitBranch className="size-3.5 text-muted-foreground" />
+                  <span>{r.name}</span>
                 </div>
-              );
-            })}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="repos" className="mt-5">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Repository</TableHead>
-                <TableHead className="w-[140px]">Last commit</TableHead>
-                <TableHead className="w-[100px]">Open PRs</TableHead>
-                <TableHead className="w-[140px]">Language</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {repos.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium text-sm">{r.name}</TableCell>
-                  <TableCell className="text-sm">{formatRelative(r.lastCommitAt)}</TableCell>
-                  <TableCell className="text-sm tabular-nums">{r.openPrCount}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{r.primaryLanguage}</TableCell>
-                </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </TabsContent>
+            </CardContent>
+          </Card>
+        )}
+      </section>
 
-        <TabsContent value="briefs" className="mt-5 space-y-6">
-          {scheduled.length > 0 ? (
-            <div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground mb-2">Scheduled</div>
-              <div className="rounded-lg border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead><TableHead>Cadence</TableHead><TableHead>Next run</TableHead><TableHead>Delivery</TableHead><TableHead>Last sent</TableHead><TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {scheduled.map((s) => <ScheduledBriefRow key={s.id} schedule={s} />)}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          ) : null}
+      <section>
+        <SectionLabel className="mb-3">Recent briefs for this project</SectionLabel>
+        {briefsQuery.isLoading ? (
+          <SkeletonList rows={3} />
+        ) : briefsQuery.data?.data.items.length ? (
+          <Card>
+            <CardContent className="p-0 divide-y">
+              {briefsQuery.data.data.items.map((brief) => (
+                <Link
+                  key={brief.id}
+                  to="/briefs/$briefId"
+                  params={{ briefId: brief.id }}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent/30"
+                >
+                  <ScopeLabel scope={brief.scope} />
+                  <div className="min-w-0 flex-1 text-sm font-medium truncate">
+                    {brief.title || "(no title yet)"}
+                  </div>
+                  <StatusBadge status={brief.status} />
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState title="No briefs for this project yet" />
+        )}
+      </section>
 
-          <div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground mb-2">Recent</div>
-            {briefs.length === 0 ? (
-              <EmptyState title="No briefs yet for this project" action={<Button asChild size="sm"><Link to="/briefs/new">Create one</Link></Button>} />
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {briefs.map((b) => <BriefCard key={b.id} brief={b} />)}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+      <ProjectDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        project={project}
+      />
+      <RepositoryPicker
+        open={repoPickerOpen}
+        onOpenChange={setRepoPickerOpen}
+        project={project}
+      />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Existing briefs for this project will keep rendering but lose their scope label.
+              This action can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

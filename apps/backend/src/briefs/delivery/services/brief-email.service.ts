@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
-import { BriefRenderService, type RenderableBrief } from './brief-render.service';
+import {
+  BriefRenderService,
+  type RenderableBrief,
+} from './brief-render.service';
 
 @Injectable()
 export class BriefEmailService {

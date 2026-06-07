@@ -48,3 +48,4 @@ export * from "./requests/organization.requests";
 export * from "./responses/organization.responses";
 export * from "./requests/briefs.requests";
 export * from "./responses/briefs.responses";
+export * from "./responses/collaborators.responses";

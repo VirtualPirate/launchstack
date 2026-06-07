@@ -64,7 +64,7 @@ export class RepositoryCollaboratorsRepository {
         permissionPush: input.permissionPush,
         permissionTriage: input.permissionTriage,
         permissionPull: input.permissionPull,
-        raw: input.raw as object,
+        raw: input.raw,
       })
       .onConflictDoUpdate({
         target: [
@@ -78,7 +78,7 @@ export class RepositoryCollaboratorsRepository {
           permissionPush: input.permissionPush,
           permissionTriage: input.permissionTriage,
           permissionPull: input.permissionPull,
-          raw: input.raw as object,
+          raw: input.raw,
           deletedAt: null,
         },
       });

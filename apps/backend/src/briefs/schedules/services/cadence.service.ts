@@ -58,8 +58,14 @@ export class CadenceService {
         const lastWeekMonday = addDays(thisWeekMonday, -7);
         const lastWeekSunday = addDays(thisWeekMonday, -1);
         return {
-          start: fromZonedTime(this.setLocalTime(lastWeekMonday, 0, 0, 0, 0), tz),
-          end: fromZonedTime(this.setLocalTime(lastWeekSunday, 23, 59, 59, 999), tz),
+          start: fromZonedTime(
+            this.setLocalTime(lastWeekMonday, 0, 0, 0, 0),
+            tz,
+          ),
+          end: fromZonedTime(
+            this.setLocalTime(lastWeekSunday, 23, 59, 59, 999),
+            tz,
+          ),
         };
       }
       case 'monthly': {
@@ -67,8 +73,51 @@ export class CadenceService {
         const prevMonthStart = startOfMonth(subMonths(local, 1));
         const prevMonthEnd = lastDayOfMonth(prevMonthStart);
         return {
-          start: fromZonedTime(this.setLocalTime(prevMonthStart, 0, 0, 0, 0), tz),
-          end: fromZonedTime(this.setLocalTime(prevMonthEnd, 23, 59, 59, 999), tz),
+          start: fromZonedTime(
+            this.setLocalTime(prevMonthStart, 0, 0, 0, 0),
+            tz,
+          ),
+          end: fromZonedTime(
+            this.setLocalTime(prevMonthEnd, 23, 59, 59, 999),
+            tz,
+          ),
+        };
+      }
+    }
+  }
+
+  /**
+   * The aligned period window (day / Mon–Sun week / calendar month) that
+   * CONTAINS the given instant — used for backfilling historical briefs.
+   * Alignment mirrors computePeriod and is independent of cadenceTime /
+   * cadenceDayOfWeek / cadenceDayOfMonth (those only affect firing time).
+   */
+  windowContaining(schedule: CadenceScheduleLike, instant: Date): PeriodWindow {
+    const tz = schedule.timezone;
+    const local = toZonedTime(instant, tz);
+    switch (schedule.cadenceType) {
+      case 'daily': {
+        return {
+          start: fromZonedTime(this.setLocalTime(local, 0, 0, 0, 0), tz),
+          end: fromZonedTime(this.setLocalTime(local, 23, 59, 59, 999), tz),
+        };
+      }
+      case 'weekly': {
+        const jsDay = local.getDay();
+        const isoDay = jsDay === 0 ? 7 : jsDay;
+        const monday = addDays(local, -(isoDay - 1));
+        const sunday = addDays(monday, 6);
+        return {
+          start: fromZonedTime(this.setLocalTime(monday, 0, 0, 0, 0), tz),
+          end: fromZonedTime(this.setLocalTime(sunday, 23, 59, 59, 999), tz),
+        };
+      }
+      case 'monthly': {
+        const monthStart = startOfMonth(local);
+        const monthEnd = lastDayOfMonth(local);
+        return {
+          start: fromZonedTime(this.setLocalTime(monthStart, 0, 0, 0, 0), tz),
+          end: fromZonedTime(this.setLocalTime(monthEnd, 23, 59, 59, 999), tz),
         };
       }
     }
@@ -85,7 +134,13 @@ export class CadenceService {
     return { h, m };
   }
 
-  private setLocalTime(d: Date, h: number, m: number, s: number, ms: number): Date {
+  private setLocalTime(
+    d: Date,
+    h: number,
+    m: number,
+    s: number,
+    ms: number,
+  ): Date {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, s, ms);
   }
 
@@ -128,10 +183,22 @@ export class CadenceService {
     const localFrom = toZonedTime(from, tz);
     const currentDow = localFrom.getDay();
     const daysAhead = (targetDow - currentDow + 7) % 7;
-    let candidateLocal = this.setLocalTime(addDays(localFrom, daysAhead), h, m, 0, 0);
+    let candidateLocal = this.setLocalTime(
+      addDays(localFrom, daysAhead),
+      h,
+      m,
+      0,
+      0,
+    );
     let candidateUtc = this.resolveLocalToUtc(candidateLocal, tz);
     if (candidateUtc.getTime() <= from.getTime()) {
-      candidateLocal = this.setLocalTime(addDays(localFrom, daysAhead + 7), h, m, 0, 0);
+      candidateLocal = this.setLocalTime(
+        addDays(localFrom, daysAhead + 7),
+        h,
+        m,
+        0,
+        0,
+      );
       candidateUtc = this.resolveLocalToUtc(candidateLocal, tz);
     }
     return candidateUtc;

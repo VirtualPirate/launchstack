@@ -16,7 +16,11 @@ function makeMocks() {
 function makeCtrl(overrides: Partial<ReturnType<typeof makeMocks>> = {}) {
   const m = { ...makeMocks(), ...overrides };
   return {
-    ctrl: new GithubCollaboratorsController(m.repoCollabRepo, m.reposRepo, m.pgBoss),
+    ctrl: new GithubCollaboratorsController(
+      m.repoCollabRepo,
+      m.reposRepo,
+      m.pgBoss,
+    ),
     mocks: m,
   };
 }

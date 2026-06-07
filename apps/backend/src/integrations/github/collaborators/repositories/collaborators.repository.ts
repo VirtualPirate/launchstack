@@ -68,7 +68,10 @@ export class CollaboratorsRepository {
       .from(githubCollaborators)
       .innerJoin(
         githubRepositoryCollaborators,
-        eq(githubRepositoryCollaborators.collaboratorId, githubCollaborators.id),
+        eq(
+          githubRepositoryCollaborators.collaboratorId,
+          githubCollaborators.id,
+        ),
       )
       .innerJoin(
         githubRepositories,
@@ -90,6 +93,51 @@ export class CollaboratorsRepository {
     return row?.collaborator ?? null;
   }
 
+  async listByOrganization(
+    organizationId: string,
+    tx?: DrizzleExecutor,
+  ): Promise<CollaboratorRow[]> {
+    const rows = await this.exec(tx)
+      .selectDistinct({
+        id: githubCollaborators.id,
+        githubUserId: githubCollaborators.githubUserId,
+        login: githubCollaborators.login,
+        nodeId: githubCollaborators.nodeId,
+        avatarUrl: githubCollaborators.avatarUrl,
+        htmlUrl: githubCollaborators.htmlUrl,
+        type: githubCollaborators.type,
+        siteAdmin: githubCollaborators.siteAdmin,
+        raw: githubCollaborators.raw,
+        createdAt: githubCollaborators.createdAt,
+        updatedAt: githubCollaborators.updatedAt,
+        deletedAt: githubCollaborators.deletedAt,
+      })
+      .from(githubCollaborators)
+      .innerJoin(
+        githubRepositoryCollaborators,
+        eq(
+          githubRepositoryCollaborators.collaboratorId,
+          githubCollaborators.id,
+        ),
+      )
+      .innerJoin(
+        githubRepositories,
+        eq(githubRepositories.id, githubRepositoryCollaborators.repositoryId),
+      )
+      .innerJoin(
+        githubInstallations,
+        eq(githubInstallations.id, githubRepositories.installationId),
+      )
+      .where(
+        and(
+          eq(githubInstallations.organizationId, organizationId),
+          isNull(githubCollaborators.deletedAt),
+          isNull(githubRepositoryCollaborators.deletedAt),
+        ),
+      );
+    return rows;
+  }
+
   async upsertByGithubUserId(
     input: UpsertCollaboratorInput,
     tx?: DrizzleExecutor,
@@ -104,7 +152,7 @@ export class CollaboratorsRepository {
         htmlUrl: input.htmlUrl,
         type: input.type,
         siteAdmin: input.siteAdmin,
-        raw: input.raw as object,
+        raw: input.raw,
       })
       .onConflictDoUpdate({
         target: githubCollaborators.githubUserId,
@@ -115,7 +163,7 @@ export class CollaboratorsRepository {
           htmlUrl: input.htmlUrl,
           type: input.type,
           siteAdmin: input.siteAdmin,
-          raw: input.raw as object,
+          raw: input.raw,
           deletedAt: null,
         },
       })

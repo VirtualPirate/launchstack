@@ -15,6 +15,7 @@ function makeService() {
   const repos = { findByIdScopedToOrg: jest.fn() };
   const slack = { findActiveByOrganizationId: jest.fn() };
   const cadence = new CadenceService();
+  const pgBoss = { send: jest.fn().mockResolvedValue('job-id') };
   const svc = new BriefSchedulesService(
     schedules as any,
     projects as any,
@@ -23,8 +24,18 @@ function makeService() {
     repos as any,
     slack as any,
     cadence,
+    pgBoss as any,
   );
-  return { svc, schedules, projects, teams, collaborators, repos, slack };
+  return {
+    svc,
+    schedules,
+    projects,
+    teams,
+    collaborators,
+    repos,
+    slack,
+    pgBoss,
+  };
 }
 
 describe('BriefSchedulesService', () => {
@@ -110,6 +121,35 @@ describe('BriefSchedulesService', () => {
       });
       expect(out.nextRunAt).toBe('2026-05-26T16:00:00.000Z');
       jest.useRealTimers();
+    });
+
+    it('enqueues a backfill job for the new schedule', async () => {
+      const { svc, projects, schedules, pgBoss } = makeService();
+      projects.findByIdScopedToOrg.mockResolvedValue({ id: 'p1' });
+      schedules.create.mockImplementation(async (input: any) => ({
+        ...input,
+        id: 'sch-new',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        lastSentAt: null,
+        paused: false,
+        slackInstallationId: null,
+        slackChannelId: null,
+      }));
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-26T10:00:00Z'));
+      await svc.create('org-1', 'user-1', {
+        name: 'Test',
+        cadence: { type: 'daily', time: '16:00' },
+        timezone: 'UTC',
+        scope: { type: 'project', projectId: 'p1' },
+        delivery: {},
+      });
+      jest.useRealTimers();
+      expect(pgBoss.send).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'briefs.backfill' }),
+        { scheduleId: 'sch-new' },
+      );
     });
   });
 

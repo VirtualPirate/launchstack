@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { Project } from "@launchstack/api-interfaces";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,114 +13,100 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { SectionLabel } from "@/components/gitbrief/shared/section-label";
-import { demoRepos, type DemoProject } from "@/lib/demo-data";
-import { useDemoState } from "@/stores/demo-state";
-import { cn } from "@/lib/utils";
+import {
+  useCreateProject,
+  useUpdateProject,
+} from "@/hooks/api/use-projects";
+import { extractErrorMessage } from "@/components/gitbrief/shared/error-state";
 
-const PROJECT_COLORS = [
-  "oklch(0.62 0.18 277)",
-  "oklch(0.75 0.16 70)",
-  "oklch(0.72 0.18 145)",
+const COLORS = [
   "oklch(0.62 0.22 305)",
-  "oklch(0.68 0.22 25)",
-  "oklch(0.66 0.16 200)",
-  "oklch(0.70 0.15 330)",
-  "oklch(0.70 0.15 180)",
+  "oklch(0.62 0.18 277)",
+  "oklch(0.6 0.16 200)",
+  "oklch(0.65 0.18 140)",
+  "oklch(0.7 0.18 85)",
+  "oklch(0.68 0.2 30)",
 ];
 
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-export function NewProjectDialog({
+export function ProjectDialog({
   open,
   onOpenChange,
+  project,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  project?: Project;
+  onSaved?: (p: Project) => void;
 }) {
-  const projects = useDemoState((s) => s.projects);
-  const addProject = useDemoState((s) => s.addProject);
+  const isEdit = !!project;
+  const [name, setName] = useState(project?.name ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
+  const [color, setColor] = useState(project?.color ?? COLORS[0]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [color, setColor] = useState(PROJECT_COLORS[0]!);
-  const [repoIds, setRepoIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(project?.name ?? "");
+    setDescription(project?.description ?? "");
+    setColor(project?.color ?? COLORS[0]);
+    setSubmitError(null);
+  }, [open, project]);
 
-  const slug = useMemo(() => toSlug(name), [name]);
-  const trimmedName = name.trim();
-  const slugCollision = useMemo(
-    () => slug.length > 0 && projects.some((p) => p.slug === slug),
-    [slug, projects],
-  );
+  const createMutation = useCreateProject();
+  const updateMutation = useUpdateProject(project?.id ?? "");
+  const submitting = createMutation.isPending || updateMutation.isPending;
 
-  const canSubmit = trimmedName.length > 0 && trimmedName.length <= 60 && !slugCollision;
-
-  const resetForm = () => {
-    setName("");
-    setDescription("");
-    setColor(PROJECT_COLORS[0]!);
-    setRepoIds([]);
-  };
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) resetForm();
-    onOpenChange(next);
-  };
-
-  const toggleRepo = (id: string) => {
-    setRepoIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
-
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    const newProject: DemoProject = {
-      id: `proj_${Date.now()}`,
-      slug,
-      name: trimmedName,
-      description: description.trim(),
-      color,
-      repoIds,
-      memberIds: [],
-    };
-    addProject(newProject);
-    resetForm();
-    onOpenChange(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    try {
+      if (isEdit && project) {
+        const res = await updateMutation.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || null,
+          color,
+        });
+        toast.success("Project updated");
+        onSaved?.(res.data);
+      } else {
+        const res = await createMutation.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          color,
+          repositoryIds: [],
+        });
+        toast.success("Project created");
+        onSaved?.(res.data);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      setSubmitError(extractErrorMessage(err));
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
-          <DialogDescription>
-            Spin up a virtual grouping of repositories.
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? "Edit project" : "New project"}</DialogTitle>
+            <DialogDescription>
+              Group repositories so briefs cover the right scope.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="-mx-1 max-h-[60vh] space-y-5 overflow-y-auto px-1.5 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="project-name">Name</Label>
             <Input
               id="project-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Cosmos"
-              maxLength={60}
+              maxLength={120}
+              required
               autoFocus
             />
-            {slugCollision ? (
-              <p className="text-xs text-destructive" role="alert">
-                A project with this name already exists.
-              </p>
-            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -126,87 +114,45 @@ export function NewProjectDialog({
             <Textarea
               id="project-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 200))}
-              placeholder="What does this project do?"
-              rows={2}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Optional"
             />
           </div>
 
-          <div className="border-t pt-4">
-            <SectionLabel>Color</SectionLabel>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
+          <div className="space-y-1.5">
+            <Label>Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={cn(
-                    "inline-flex size-6 items-center justify-center rounded-full transition-transform",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                      : "hover:scale-110",
-                  )}
-                  style={{ background: c }}
+                  className="size-6 rounded-full border-2 transition-transform"
+                  style={{
+                    background: c,
+                    borderColor: color === c ? "var(--foreground)" : "transparent",
+                  }}
                   aria-label={`Color ${c}`}
-                  aria-pressed={color === c}
                 />
               ))}
             </div>
           </div>
 
-          <div className="border-t pt-4">
-            <div className="flex items-baseline justify-between">
-              <SectionLabel>Repositories</SectionLabel>
-              <span className="text-[10px] text-muted-foreground">
-                {repoIds.length} of {demoRepos.length} selected
-              </span>
-            </div>
-            <div className="mt-2 max-h-48 overflow-y-auto rounded border bg-background">
-              {demoRepos.map((r) => {
-                const checked = repoIds.includes(r.id);
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => toggleRepo(r.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent/50",
-                      checked && "bg-accent/30",
-                    )}
-                    aria-pressed={checked}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex size-4 items-center justify-center rounded border",
-                          checked
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-muted-foreground/40",
-                        )}
-                      >
-                        {checked ? <Check className="size-3" /> : null}
-                      </span>
-                      {r.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {r.primaryLanguage}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {submitError ? (
+            <p className="text-xs text-destructive">{submitError}</p>
+          ) : null}
 
-        </div>
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            Create
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || !name.trim()}>
+              {isEdit ? "Save" : "Create project"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

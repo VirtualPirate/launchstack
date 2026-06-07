@@ -49,7 +49,8 @@ export class ProjectsController {
   async create(
     @OrgMembership() m: OrgMembershipContext,
     @Session() session: SessionPayload,
-    @Body(new ZodValidationPipe(CreateProjectSchema)) body: CreateProjectRequest,
+    @Body(new ZodValidationPipe(CreateProjectSchema))
+    body: CreateProjectRequest,
   ): Promise<ApiResponse<Project>> {
     const data = await this.projects.create(
       m.organizationId,
@@ -74,7 +75,8 @@ export class ProjectsController {
   async update(
     @OrgMembership() m: OrgMembershipContext,
     @Param(new ZodValidationPipe(ProjectIdParamSchema)) params: ProjectIdParam,
-    @Body(new ZodValidationPipe(UpdateProjectSchema)) body: UpdateProjectRequest,
+    @Body(new ZodValidationPipe(UpdateProjectSchema))
+    body: UpdateProjectRequest,
   ): Promise<ApiResponse<Project>> {
     const data = await this.projects.update(
       m.organizationId,

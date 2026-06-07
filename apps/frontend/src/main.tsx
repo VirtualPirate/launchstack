@@ -6,6 +6,7 @@ import './index.css'
 import { router } from './router.tsx'
 import { ThemeProvider } from './components/theme/theme-provider'
 import { TooltipProvider } from './components/ui/tooltip'
+import { Toaster } from './components/ui/sonner'
 
 const queryClient = new QueryClient()
 
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
       <TooltipProvider>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
+          <Toaster position="bottom-right" />
         </QueryClientProvider>
       </TooltipProvider>
     </ThemeProvider>

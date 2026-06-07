@@ -124,7 +124,10 @@ export class CommitsRepository {
       .leftJoin(
         githubCollaborators,
         and(
-          eq(githubCollaborators.githubUserId, githubCommits.authorGithubUserId),
+          eq(
+            githubCollaborators.githubUserId,
+            githubCommits.authorGithubUserId,
+          ),
           isNull(githubCollaborators.deletedAt),
         ),
       )
@@ -177,7 +180,7 @@ export class CommitsRepository {
         ),
       );
     }
-    const executor = (input.tx ?? this.db) as DrizzleExecutor;
+    const executor = input.tx ?? this.db;
     return executor
       .select({
         commit: githubCommits,
@@ -191,5 +194,38 @@ export class CommitsRepository {
       .where(and(...conditions))
       .orderBy(desc(githubCommits.authoredAt))
       .limit(input.limit ?? 5000);
+  }
+
+  async findCommitTimestampsForScope(input: {
+    repositoryIds: string[];
+    periodStart: Date;
+    periodEnd: Date;
+    collaboratorGithubUserIds?: bigint[];
+    tx?: DrizzleExecutor;
+  }): Promise<Date[]> {
+    if (input.repositoryIds.length === 0) return [];
+    const conditions = [
+      inArray(githubCommits.repositoryId, input.repositoryIds),
+      gte(githubCommits.authoredAt, input.periodStart),
+      lte(githubCommits.authoredAt, input.periodEnd),
+      isNull(githubCommits.deletedAt),
+      eq(githubCommits.parentCount, 1),
+    ];
+    if (
+      input.collaboratorGithubUserIds &&
+      input.collaboratorGithubUserIds.length > 0
+    ) {
+      conditions.push(
+        inArray(
+          githubCommits.authorGithubUserId,
+          input.collaboratorGithubUserIds,
+        ),
+      );
+    }
+    const rows = await this.exec(input.tx)
+      .select({ authoredAt: githubCommits.authoredAt })
+      .from(githubCommits)
+      .where(and(...conditions));
+    return rows.map((r) => r.authoredAt);
   }
 }

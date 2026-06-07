@@ -11,6 +11,18 @@ export interface BackfillArgs {
   sinceISO: string;
 }
 
+export interface BackfillFromLatestArgs {
+  repositoryId: string;
+  lookbackDays: number;
+}
+
+interface RepoContext {
+  installationGithubId: bigint;
+  repoId: string;
+  fullName: string;
+  defaultBranch: string;
+}
+
 @Injectable()
 export class CommitBackfillService {
   constructor(
@@ -21,7 +33,33 @@ export class CommitBackfillService {
   ) {}
 
   async run(args: BackfillArgs): Promise<{ inserted: number }> {
-    const repo = await this.repos.findById(args.repositoryId);
+    const ctx = await this.resolveContext(args.repositoryId);
+    const inserted = await this.pullAndUpsert(ctx, args.sinceISO);
+    return { inserted };
+  }
+
+  async runFromLatest(
+    args: BackfillFromLatestArgs,
+  ): Promise<{ inserted: number; sinceISO: string | null }> {
+    const ctx = await this.resolveContext(args.repositoryId);
+
+    const latest = await this.client.getLatestCommitDate(
+      ctx.installationGithubId,
+      ctx.fullName,
+      ctx.defaultBranch,
+    );
+    if (!latest) return { inserted: 0, sinceISO: null };
+
+    const sinceISO = new Date(
+      latest.getTime() - args.lookbackDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const inserted = await this.pullAndUpsert(ctx, sinceISO);
+    return { inserted, sinceISO };
+  }
+
+  private async resolveContext(repositoryId: string): Promise<RepoContext> {
+    const repo = await this.repos.findById(repositoryId);
     if (!repo) throw AppError.GITHUB_REPOSITORY_NOT_FOUND();
 
     const installation = await this.installs.findById(repo.installationId);
@@ -32,17 +70,29 @@ export class CommitBackfillService {
       repo.fullName,
     );
 
-    const items = await this.client.listCommits(
-      installation.githubInstallationId,
-      repo.fullName,
-      args.sinceISO,
+    return {
+      installationGithubId: installation.githubInstallationId,
+      repoId: repo.id,
+      fullName: repo.fullName,
       defaultBranch,
+    };
+  }
+
+  private async pullAndUpsert(
+    ctx: RepoContext,
+    sinceISO: string,
+  ): Promise<number> {
+    const items = await this.client.listCommits(
+      ctx.installationGithubId,
+      ctx.fullName,
+      sinceISO,
+      ctx.defaultBranch,
     );
 
-    if (items.length === 0) return { inserted: 0 };
+    if (items.length === 0) return 0;
 
     const rows: GithubCommitInsert[] = items.map((c) => ({
-      repositoryId: repo.id,
+      repositoryId: ctx.repoId,
       sha: c.sha,
       parentCount: c.parentCount,
       message: c.message,
@@ -60,6 +110,6 @@ export class CommitBackfillService {
     }));
 
     await this.commits.upsertMany(rows);
-    return { inserted: rows.length };
+    return rows.length;
   }
 }

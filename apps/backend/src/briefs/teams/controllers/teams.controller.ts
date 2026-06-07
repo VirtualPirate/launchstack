@@ -51,7 +51,11 @@ export class TeamsController {
     @Session() session: SessionPayload,
     @Body(new ZodValidationPipe(CreateTeamSchema)) body: CreateTeamRequest,
   ): Promise<ApiResponse<Team>> {
-    const data = await this.teams.create(m.organizationId, session.user.id, body);
+    const data = await this.teams.create(
+      m.organizationId,
+      session.user.id,
+      body,
+    );
     return { data, message: 'Team created', success: true };
   }
 

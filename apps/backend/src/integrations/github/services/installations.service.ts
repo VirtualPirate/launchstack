@@ -13,11 +13,14 @@ import type {
 } from '../../../databases/pg-drizzle/types';
 import { PgBossService } from '../../../queue';
 import { SyncRepoCollaboratorsJob } from '../collaborators/jobs/sync-repo-collaborators.job';
+import { ScanRepositoryJob } from '../commit-analysis/jobs/scan-repository.job';
 import type { GithubAppConfig } from '../github-app.config';
 import type { GithubAppClient } from '../github-app.client';
 import { GithubInstallationsRepository } from '../repositories/installations.repository';
 import { GithubRepositoriesRepository } from '../repositories/repositories.repository';
 import { StateTokenService } from './state-token.service';
+
+const SCAN_LOOKBACK_DAYS = 365;
 
 type Db = PostgresJsDatabase<Record<string, unknown>>;
 
@@ -166,6 +169,11 @@ export class GithubInstallationsService {
         repositoryId,
         trigger: 'connected',
       });
+      await this.pgBoss.sendOnce(
+        ScanRepositoryJob,
+        { repositoryId, lookbackDays: SCAN_LOOKBACK_DAYS },
+        `scan:${repositoryId}`,
+      );
     }
     for (const repositoryId of disconnected) {
       await this.pgBoss.send(SyncRepoCollaboratorsJob, {
@@ -237,6 +245,11 @@ export class GithubInstallationsService {
         repositoryId,
         trigger: 'connected',
       });
+      await this.pgBoss.sendOnce(
+        ScanRepositoryJob,
+        { repositoryId, lookbackDays: SCAN_LOOKBACK_DAYS },
+        `scan:${repositoryId}`,
+      );
     }
     for (const repositoryId of disconnected) {
       await this.pgBoss.send(SyncRepoCollaboratorsJob, {

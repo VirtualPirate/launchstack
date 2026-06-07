@@ -1,6 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PgBossService } from '../../../queue';
+import { BRIEFS_CONFIG_TOKEN } from '../../tokens';
+import type { BriefsConfig } from '../../briefs-config';
 import { DispatchDueBriefsJob } from '../jobs/dispatch-due-briefs.job';
 
 @Injectable()
@@ -10,6 +12,8 @@ export class BriefDispatcherBootstrap implements OnModuleInit {
   constructor(
     private readonly pgBoss: PgBossService,
     private readonly config: ConfigService,
+    @Inject(BRIEFS_CONFIG_TOKEN)
+    private readonly briefsConfig: BriefsConfig | null,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -18,11 +22,15 @@ export class BriefDispatcherBootstrap implements OnModuleInit {
       this.logger.log(`WORKER_ROLE=${role} — not enqueuing dispatcher`);
       return;
     }
+    const intervalSeconds = this.briefsConfig?.dispatcherIntervalSeconds ?? 60;
     try {
+      // Throttle the boot tick to one per interval slot so repeated restarts
+      // (e.g. dev watch reloads) can't each spawn a fresh dispatcher chain.
       const id = await this.pgBoss.sendOnce(
         DispatchDueBriefsJob,
         {},
         'briefs.dispatch-due-bootstrap',
+        { singletonSeconds: intervalSeconds },
       );
       this.logger.log(
         `Dispatcher tick enqueued (sendOnce id=${id ?? 'duplicate'})`,

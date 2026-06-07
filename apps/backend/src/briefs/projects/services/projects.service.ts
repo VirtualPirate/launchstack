@@ -32,7 +32,10 @@ export class ProjectsService {
   }
 
   async get(organizationId: string, projectId: string): Promise<Project> {
-    const row = await this.projects.findByIdScopedToOrg(projectId, organizationId);
+    const row = await this.projects.findByIdScopedToOrg(
+      projectId,
+      organizationId,
+    );
     if (!row) throw AppError.PROJECT_NOT_FOUND();
     const repoLinks = await this.links.listByProject(projectId);
     return this.toResponse(
@@ -47,7 +50,10 @@ export class ProjectsService {
     body: CreateProjectRequest,
   ): Promise<Project> {
     await this.assertRepositoriesInOrg(organizationId, body.repositoryIds);
-    const existing = await this.projects.findByNameInOrg(organizationId, body.name);
+    const existing = await this.projects.findByNameInOrg(
+      organizationId,
+      body.name,
+    );
     if (existing) throw AppError.PROJECT_NAME_CONFLICT();
 
     return this.db.transaction(async (tx) => {
@@ -70,22 +76,33 @@ export class ProjectsService {
     projectId: string,
     body: UpdateProjectRequest,
   ): Promise<Project> {
-    const row = await this.projects.findByIdScopedToOrg(projectId, organizationId);
+    const row = await this.projects.findByIdScopedToOrg(
+      projectId,
+      organizationId,
+    );
     if (!row) throw AppError.PROJECT_NOT_FOUND();
     if (body.name && body.name !== row.name) {
-      const collision = await this.projects.findByNameInOrg(organizationId, body.name);
+      const collision = await this.projects.findByNameInOrg(
+        organizationId,
+        body.name,
+      );
       if (collision && collision.id !== row.id) {
         throw AppError.PROJECT_NAME_CONFLICT();
       }
     }
     const updated = await this.projects.update(projectId, {
       ...(body.name !== undefined ? { name: body.name } : {}),
-      ...(body.description !== undefined ? { description: body.description } : {}),
+      ...(body.description !== undefined
+        ? { description: body.description }
+        : {}),
       ...(body.color !== undefined ? { color: body.color } : {}),
     });
     if (!updated) throw AppError.PROJECT_NOT_FOUND();
     const repoLinks = await this.links.listByProject(projectId);
-    return this.toResponse(updated, repoLinks.map((l) => l.repositoryId));
+    return this.toResponse(
+      updated,
+      repoLinks.map((l) => l.repositoryId),
+    );
   }
 
   async setRepositories(
@@ -93,7 +110,10 @@ export class ProjectsService {
     projectId: string,
     body: SetProjectRepositoriesRequest,
   ): Promise<Project> {
-    const row = await this.projects.findByIdScopedToOrg(projectId, organizationId);
+    const row = await this.projects.findByIdScopedToOrg(
+      projectId,
+      organizationId,
+    );
     if (!row) throw AppError.PROJECT_NOT_FOUND();
     await this.assertRepositoriesInOrg(organizationId, body.repositoryIds);
     await this.db.transaction((tx) =>
@@ -103,7 +123,10 @@ export class ProjectsService {
   }
 
   async delete(organizationId: string, projectId: string): Promise<void> {
-    const row = await this.projects.findByIdScopedToOrg(projectId, organizationId);
+    const row = await this.projects.findByIdScopedToOrg(
+      projectId,
+      organizationId,
+    );
     if (!row) throw AppError.PROJECT_NOT_FOUND();
     await this.projects.softDelete(projectId);
   }

@@ -1,7 +1,10 @@
 import { createRequire } from 'node:module';
 import { AppError } from '../../../common/errors';
 import type { BriefsConfig } from '../../briefs-config';
-import { BriefOutputSchema, type BriefOutput } from '../schemas/brief-output.schema';
+import {
+  BriefOutputSchema,
+  type BriefOutput,
+} from '../schemas/brief-output.schema';
 
 type ResponsesParseArgs = {
   model: string;

@@ -28,7 +28,10 @@ export class ProjectsRepository {
       .select()
       .from(projects)
       .where(
-        and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt)),
+        and(
+          eq(projects.organizationId, organizationId),
+          isNull(projects.deletedAt),
+        ),
       )
       .orderBy(desc(projects.createdAt));
   }
@@ -71,8 +74,14 @@ export class ProjectsRepository {
     return row ?? null;
   }
 
-  async create(input: ProjectInsert, tx?: DrizzleExecutor): Promise<ProjectSelect> {
-    const [row] = await this.exec(tx).insert(projects).values(input).returning();
+  async create(
+    input: ProjectInsert,
+    tx?: DrizzleExecutor,
+  ): Promise<ProjectSelect> {
+    const [row] = await this.exec(tx)
+      .insert(projects)
+      .values(input)
+      .returning();
     return row;
   }
 

@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type {
   BriefScheduleResponse,
   CreateBriefScheduleRequest,
   UpdateBriefScheduleRequest,
 } from '@launchstack/api-interfaces';
 import { AppError } from '../../../common/errors';
+import { PgBossService } from '../../../queue';
+import { BackfillBriefsJob } from '../../generation/jobs/backfill-briefs.job';
 import { GithubRepositoriesRepository } from '../../../integrations/github/repositories/repositories.repository';
 import { CollaboratorsRepository } from '../../../integrations/github/collaborators/repositories/collaborators.repository';
 import { SlackInstallationsRepository } from '../../../integrations/slack/repositories/installations.repository';
@@ -16,6 +18,8 @@ import type { BriefScheduleSelect } from '../../../databases/pg-drizzle/types';
 
 @Injectable()
 export class BriefSchedulesService {
+  private readonly logger = new Logger(BriefSchedulesService.name);
+
   constructor(
     private readonly schedules: BriefSchedulesRepository,
     private readonly projects: ProjectsRepository,
@@ -24,6 +28,7 @@ export class BriefSchedulesService {
     private readonly repos: GithubRepositoriesRepository,
     private readonly slack: SlackInstallationsRepository,
     private readonly cadence: CadenceService,
+    private readonly pgBoss: PgBossService,
   ) {}
 
   async list(organizationId: string): Promise<BriefScheduleResponse[]> {
@@ -31,7 +36,10 @@ export class BriefSchedulesService {
     return rows.map((r) => this.toResponse(r));
   }
 
-  async get(organizationId: string, id: string): Promise<BriefScheduleResponse> {
+  async get(
+    organizationId: string,
+    id: string,
+  ): Promise<BriefScheduleResponse> {
     const row = await this.schedules.findByIdScopedToOrg(id, organizationId);
     if (!row) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
     return this.toResponse(row);
@@ -71,6 +79,16 @@ export class BriefSchedulesService {
       nextRunAt,
     );
     const row = await this.schedules.create(insertable);
+
+    try {
+      await this.pgBoss.send(BackfillBriefsJob, { scheduleId: row.id });
+    } catch (err) {
+      this.logger.error(
+        `Failed to enqueue backfill for schedule ${row.id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+
     return this.toResponse(row);
   }
 
@@ -79,7 +97,10 @@ export class BriefSchedulesService {
     id: string,
     body: UpdateBriefScheduleRequest,
   ): Promise<BriefScheduleResponse> {
-    const existing = await this.schedules.findByIdScopedToOrg(id, organizationId);
+    const existing = await this.schedules.findByIdScopedToOrg(
+      id,
+      organizationId,
+    );
     if (!existing) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
 
     if (body.timezone) this.assertValidTimezone(body.timezone);
@@ -99,7 +120,8 @@ export class BriefSchedulesService {
         : existing.cadenceDayOfMonth;
 
     const cadenceChanged =
-      !!body.cadence || (!!body.timezone && body.timezone !== existing.timezone);
+      !!body.cadence ||
+      (!!body.timezone && body.timezone !== existing.timezone);
     const nextRunAt = cadenceChanged
       ? this.cadence.computeNextRunAt(
           {
@@ -150,8 +172,14 @@ export class BriefSchedulesService {
     return this.toResponse(updated);
   }
 
-  async pause(organizationId: string, id: string): Promise<BriefScheduleResponse> {
-    const existing = await this.schedules.findByIdScopedToOrg(id, organizationId);
+  async pause(
+    organizationId: string,
+    id: string,
+  ): Promise<BriefScheduleResponse> {
+    const existing = await this.schedules.findByIdScopedToOrg(
+      id,
+      organizationId,
+    );
     if (!existing) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
     const updated = await this.schedules.update(id, { paused: true });
     if (!updated) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
@@ -162,7 +190,10 @@ export class BriefSchedulesService {
     organizationId: string,
     id: string,
   ): Promise<BriefScheduleResponse> {
-    const existing = await this.schedules.findByIdScopedToOrg(id, organizationId);
+    const existing = await this.schedules.findByIdScopedToOrg(
+      id,
+      organizationId,
+    );
     if (!existing) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
     const nextRunAt = this.cadence.computeNextRunAt(
       {
@@ -174,13 +205,19 @@ export class BriefSchedulesService {
       },
       new Date(),
     );
-    const updated = await this.schedules.update(id, { paused: false, nextRunAt });
+    const updated = await this.schedules.update(id, {
+      paused: false,
+      nextRunAt,
+    });
     if (!updated) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
     return this.toResponse(updated);
   }
 
   async delete(organizationId: string, id: string): Promise<void> {
-    const existing = await this.schedules.findByIdScopedToOrg(id, organizationId);
+    const existing = await this.schedules.findByIdScopedToOrg(
+      id,
+      organizationId,
+    );
     if (!existing) throw AppError.BRIEF_SCHEDULE_NOT_FOUND();
     await this.schedules.softDelete(id);
   }
@@ -263,13 +300,18 @@ export class BriefSchedulesService {
     }
   }
 
-  private assertValidCadence(cadence: CreateBriefScheduleRequest['cadence']): void {
+  private assertValidCadence(
+    cadence: CreateBriefScheduleRequest['cadence'],
+  ): void {
     if (cadence.type === 'weekly' && (cadence as any).dayOfWeek === undefined) {
       throw AppError.BRIEF_SCHEDULE_INVALID_CADENCE({
         reason: 'weekly cadence requires dayOfWeek',
       });
     }
-    if (cadence.type === 'monthly' && (cadence as any).dayOfMonth === undefined) {
+    if (
+      cadence.type === 'monthly' &&
+      (cadence as any).dayOfMonth === undefined
+    ) {
       throw AppError.BRIEF_SCHEDULE_INVALID_CADENCE({
         reason: 'monthly cadence requires dayOfMonth',
       });

@@ -256,7 +256,11 @@ describe('GithubAppClient', () => {
     const collabs = await client.listRepoCollaborators(9n, 'acme', 'api');
 
     expect(collabs).toHaveLength(2);
-    expect(collabs[0]).toMatchObject({ id: 1, login: 'alice', role_name: 'admin' });
+    expect(collabs[0]).toMatchObject({
+      id: 1,
+      login: 'alice',
+      role_name: 'admin',
+    });
     expect(collabs[1]).toMatchObject({ id: 2, login: 'bot', type: 'Bot' });
     expect(installationOctokit.paginate.iterator).toHaveBeenCalledWith(
       'GET /repos/{owner}/{repo}/collaborators',
@@ -308,5 +312,77 @@ describe('GithubAppClient', () => {
     expect(detail.files).toEqual([
       { path: 'src/a.ts', additions: 3, deletions: 1, patch: '@@ patch @@' },
     ]);
+  });
+
+  it('returns the latest commit date (committer date) from the branch head', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const installationOctokit = {
+      request: jest.fn(async () => ({
+        data: [
+          {
+            sha: 'head',
+            parents: [],
+            commit: {
+              author: { name: 'A', email: 'a@x', date: '2026-05-01T00:00:00Z' },
+              committer: {
+                name: 'C',
+                email: 'c@x',
+                date: '2026-05-02T00:00:00Z',
+              },
+              message: 'latest',
+            },
+            author: { id: 1, login: 'a' },
+            committer: { id: 2, login: 'c' },
+          },
+        ],
+      })),
+      paginate: { iterator: jest.fn() },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const date = await client.getLatestCommitDate(9n, 'acme/api', 'main');
+
+    expect(date).toEqual(new Date('2026-05-02T00:00:00Z'));
+    expect(installationOctokit.request).toHaveBeenCalledWith(
+      'GET /repos/{owner}/{repo}/commits',
+      expect.objectContaining({
+        owner: 'acme',
+        repo: 'api',
+        sha: 'main',
+        per_page: 1,
+      }),
+    );
+  });
+
+  it('returns null when the branch has no commits', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const installationOctokit = {
+      request: jest.fn(async () => ({ data: [] })),
+      paginate: { iterator: jest.fn() },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const date = await client.getLatestCommitDate(9n, 'acme/api', 'main');
+    expect(date).toBeNull();
+  });
+
+  it('returns null for an empty repository (409 from GitHub)', async () => {
+    const client = makeClient();
+    const app = await latestApp();
+    const err = Object.assign(new Error('Git Repository is empty.'), {
+      status: 409,
+    });
+    const installationOctokit = {
+      request: jest.fn(async () => {
+        throw err;
+      }),
+      paginate: { iterator: jest.fn() },
+    };
+    app.getInstallationOctokit.mockResolvedValue(installationOctokit);
+
+    const date = await client.getLatestCommitDate(9n, 'acme/api', 'main');
+    expect(date).toBeNull();
   });
 });

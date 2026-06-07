@@ -83,7 +83,8 @@ export class BriefsService {
 
     await this.assertScopeInOrg(organizationId, body.scope);
     if (body.delivery?.slackChannelId) {
-      const install = await this.slack.findActiveByOrganizationId(organizationId);
+      const install =
+        await this.slack.findActiveByOrganizationId(organizationId);
       if (!install) throw AppError.SLACK_INSTALLATION_NOT_FOUND();
     }
 
@@ -91,7 +92,8 @@ export class BriefsService {
       organizationId,
       briefScheduleId: null,
       scopeType: body.scope.type,
-      scopeProjectId: body.scope.type === 'project' ? body.scope.projectId : null,
+      scopeProjectId:
+        body.scope.type === 'project' ? body.scope.projectId : null,
       scopeTeamId: body.scope.type === 'team' ? body.scope.teamId : null,
       scopeCollaboratorId:
         body.scope.type === 'collaborator' ? body.scope.collaboratorId : null,
@@ -158,9 +160,10 @@ export class BriefsService {
 
   private decodeCursor(s: string): { createdAt: Date; id: string } {
     try {
-      const obj = JSON.parse(
-        Buffer.from(s, 'base64url').toString('utf8'),
-      ) as { createdAt: string; id: string };
+      const obj = JSON.parse(Buffer.from(s, 'base64url').toString('utf8')) as {
+        createdAt: string;
+        id: string;
+      };
       return { createdAt: new Date(obj.createdAt), id: obj.id };
     } catch {
       throw AppError.BAD_REQUEST({ message: 'Invalid cursor' });
@@ -178,7 +181,10 @@ export class BriefsService {
           : row.scopeType === 'team'
             ? { type: 'team', teamId: row.scopeTeamId }
             : row.scopeType === 'collaborator'
-              ? { type: 'collaborator', collaboratorId: row.scopeCollaboratorId }
+              ? {
+                  type: 'collaborator',
+                  collaboratorId: row.scopeCollaboratorId,
+                }
               : { type: 'repository', repositoryId: row.scopeRepositoryId },
       title: row.title,
       briefInfoTitle: row.briefInfoTitle,

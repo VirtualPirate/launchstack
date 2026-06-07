@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SlackMessagesService } from '../../../integrations/slack/services/messages.service';
-import { BriefRenderService, type RenderableBrief } from './brief-render.service';
+import {
+  BriefRenderService,
+  type RenderableBrief,
+} from './brief-render.service';
 
 @Injectable()
 export class BriefSlackService {

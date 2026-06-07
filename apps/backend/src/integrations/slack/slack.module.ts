@@ -62,8 +62,7 @@ function makeNotConfiguredStub(): SlackClient {
         client: SlackClient,
         cfg: SlackConfig | null,
         db: PostgresJsDatabase<Record<string, unknown>>,
-      ) =>
-        new SlackInstallationsService(installs, stateToken, client, cfg, db),
+      ) => new SlackInstallationsService(installs, stateToken, client, cfg, db),
     },
     SlackInstallationsRepository,
     SlackMessagesService,

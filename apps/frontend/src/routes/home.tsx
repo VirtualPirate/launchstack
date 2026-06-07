@@ -1,80 +1,112 @@
-import { Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { CalendarClock, Plus, Zap } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/gitbrief/shared/page-header";
 import { SectionLabel } from "@/components/gitbrief/shared/section-label";
-import { StatStrip } from "@/components/gitbrief/shared/stat-strip";
-import { ActivityFeed } from "@/components/gitbrief/feed/activity-feed";
-import { FeatureProgressRow } from "@/components/gitbrief/features/feature-progress-row";
-import { demoFeatures, DEMO_NOW } from "@/lib/demo-data";
-import { formatRelative, getActivityForScope } from "@/lib/demo-selectors";
-import { useDemoState } from "@/stores/demo-state";
+import { EmptyState } from "@/components/gitbrief/shared/empty-state";
+import { SkeletonList } from "@/components/gitbrief/shared/skeleton-list";
+import { BriefCard } from "@/components/gitbrief/briefs/brief-card";
+import { ScopeLabel } from "@/components/gitbrief/briefs/scope-label";
+import { GenerateDialog } from "@/components/gitbrief/briefs/generate-dialog";
+import { useAuthSession } from "@/hooks/api/use-auth";
+import { useGetBriefSchedules } from "@/hooks/api/use-brief-schedules";
+import { useGetBriefsFirstPage } from "@/hooks/api/use-briefs";
+import { cadenceLabel, formatTimestamp } from "@/lib/cadence-label";
 
 export function HomePage() {
-  const schedules = useDemoState((s) => s.schedules);
-  const inFlightFeatures = demoFeatures
-    .filter((f) => f.status === "in_flight" || f.status === "at_risk")
-    .sort((a, b) => b.progress - a.progress)
-    .slice(0, 3);
+  const sessionQuery = useAuthSession();
+  const schedulesQuery = useGetBriefSchedules();
+  const briefsQuery = useGetBriefsFirstPage({ limit: 5 });
 
-  const today = DEMO_NOW.toISOString().slice(0, 10);
-  const shippedToday = demoFeatures.filter((f) => f.shippedAt && f.shippedAt.startsWith(today)).length;
-  const prsToday = getActivityForScope({ sinceDays: 1 }).filter((a) => a.kind === "pr_merged").length;
-  const queuedBriefs = schedules.filter((s) => !s.paused).length;
+  const [generateOpen, setGenerateOpen] = useState(false);
 
-  const nextSched = [...schedules]
+  const userName = sessionQuery.data?.data?.user.name ?? "there";
+
+  const nextSchedule = [...(schedulesQuery.data?.data ?? [])]
     .filter((s) => !s.paused)
     .sort((a, b) => (a.nextRunAt < b.nextRunAt ? -1 : 1))[0];
+
+  const briefs = briefsQuery.data?.data.items ?? [];
 
   return (
     <>
       <PageHeader
-        title="Home"
-        description="Everything that happened in your workspace today"
+        title={`Hi, ${userName}`}
+        description="Recent briefs and what's next on your schedule."
         actions={
-          <Button asChild size="sm">
-            <Link to="/briefs/new"><Plus className="size-3.5" /> New Brief</Link>
-          </Button>
+          <>
+            <Button size="sm" variant="outline" onClick={() => setGenerateOpen(true)}>
+              <Zap className="size-3.5" /> Generate now
+            </Button>
+            <Button asChild size="sm">
+              <Link to="/schedules/new">
+                <Plus className="size-3.5" /> New schedule
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      <StatStrip
-        className="mb-5"
-        items={[
-          { label: "features shipped today", value: shippedToday },
-          { label: "PRs merged today", value: prsToday },
-          { label: "briefs queued", value: queuedBriefs },
-        ]}
-      />
-
-      <div className="grid gap-5 md:grid-cols-[1fr_320px]">
-        <ActivityFeed />
-
-        <div className="space-y-4">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <SectionLabel>Feature progress</SectionLabel>
-              <Link to="/projects" className="text-[11px] text-muted-foreground hover:text-foreground">View all</Link>
-            </div>
-            <div className="mt-3">
-              {inFlightFeatures.map((f) => (
-                <FeatureProgressRow key={f.id} feature={f} />
-              ))}
-            </div>
-          </div>
-
-          {nextSched ? (
-            <div className="rounded-lg border bg-card p-4">
-              <SectionLabel>Next brief</SectionLabel>
-              <div className="mt-2 text-sm font-medium">{nextSched.name}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                in {formatRelative(nextSched.nextRunAt)}
+      {nextSchedule ? (
+        <Card className="mb-6">
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3">
+              <CalendarClock className="size-5 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">{nextSchedule.name}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  <ScopeLabel scope={nextSchedule.scope} />
+                  <span className="ml-2">· {cadenceLabel(nextSchedule)}</span>
+                </div>
               </div>
-              <Button variant="outline" size="sm" className="mt-3 w-full">Preview now</Button>
             </div>
-          ) : null}
-        </div>
-      </div>
+            <div className="text-right">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Next run
+              </div>
+              <div className="text-sm font-medium">
+                {formatTimestamp(nextSchedule.nextRunAt)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <section>
+        <SectionLabel className="mb-3">Recent briefs</SectionLabel>
+        {briefsQuery.isLoading ? (
+          <SkeletonList rows={3} />
+        ) : briefs.length === 0 ? (
+          <EmptyState
+            title="No briefs yet"
+            description="Generate one now, or create a schedule for recurring delivery."
+            action={
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setGenerateOpen(true)}>
+                  <Zap className="size-3.5" /> Generate now
+                </Button>
+                <Button asChild size="sm">
+                  <Link to="/schedules/new">
+                    <Plus className="size-3.5" /> New schedule
+                  </Link>
+                </Button>
+              </div>
+            }
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-0 divide-y">
+              {briefs.map((b) => (
+                <BriefCard key={b.id} brief={b} />
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <GenerateDialog open={generateOpen} onOpenChange={setGenerateOpen} />
     </>
   );
 }

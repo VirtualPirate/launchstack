@@ -2,46 +2,21 @@ import { BriefGeneratorService } from '../services/brief-generator.service';
 
 function makeService() {
   const commits = { findForBriefScope: jest.fn() };
-  const projects = { findByIdScopedToOrg: jest.fn() };
-  const teams = { findByIdScopedToOrg: jest.fn() };
-  const teamLinks = { listByTeam: jest.fn() };
-  const collaborators = {
-    findByIdScopedToOrg: jest.fn(),
-    findById: jest.fn(),
-  };
-  const repos = {
-    findByIdScopedToOrg: jest.fn(),
-    listIdsByOrganization: jest.fn(),
-  };
-  const projectLinks = { listByProject: jest.fn() };
+  const scopeResolver = { resolve: jest.fn() };
   const openai = { generate: jest.fn() };
   const svc = new BriefGeneratorService(
     commits as any,
-    projects as any,
-    projectLinks as any,
-    teams as any,
-    teamLinks as any,
-    collaborators as any,
-    repos as any,
+    scopeResolver as any,
     openai as any,
     {
       apiKey: 'k',
       model: 'gpt-x',
       maxPromptChars: 10_000,
       dispatcherIntervalSeconds: 60,
+      backfillMaxBriefs: 366,
     },
   );
-  return {
-    svc,
-    commits,
-    projects,
-    projectLinks,
-    teams,
-    teamLinks,
-    collaborators,
-    repos,
-    openai,
-  };
+  return { svc, commits, scopeResolver, openai };
 }
 
 const period = {
@@ -50,10 +25,12 @@ const period = {
 };
 
 describe('BriefGeneratorService.generate', () => {
-  it('returns empty-period result when no commits found (project scope)', async () => {
-    const { svc, projects, projectLinks, commits } = makeService();
-    projects.findByIdScopedToOrg.mockResolvedValue({ id: 'p1', name: 'Mobile' });
-    projectLinks.listByProject.mockResolvedValue([{ repositoryId: 'r1' }]);
+  it('returns empty-period result when no commits found', async () => {
+    const { svc, scopeResolver, commits } = makeService();
+    scopeResolver.resolve.mockResolvedValue({
+      repositoryIds: ['r1'],
+      scopeLabel: 'Project: Mobile',
+    });
     commits.findForBriefScope.mockResolvedValue([]);
     const out = await svc.generate({
       organizationId: 'o1',
@@ -68,9 +45,11 @@ describe('BriefGeneratorService.generate', () => {
   });
 
   it('calls LLM and returns title+summary for non-empty period', async () => {
-    const { svc, projects, projectLinks, commits, openai } = makeService();
-    projects.findByIdScopedToOrg.mockResolvedValue({ id: 'p1', name: 'Mobile' });
-    projectLinks.listByProject.mockResolvedValue([{ repositoryId: 'r1' }]);
+    const { svc, scopeResolver, commits, openai } = makeService();
+    scopeResolver.resolve.mockResolvedValue({
+      repositoryIds: ['r1'],
+      scopeLabel: 'Project: Mobile',
+    });
     commits.findForBriefScope.mockResolvedValue([
       {
         commit: {
@@ -111,9 +90,11 @@ describe('BriefGeneratorService.generate', () => {
     }
   });
 
-  it('throws SCOPE_DELETED when the scope row is missing (team scope)', async () => {
-    const { svc, teams } = makeService();
-    teams.findByIdScopedToOrg.mockResolvedValue(null);
+  it('propagates SCOPE_DELETED from the resolver', async () => {
+    const { svc, scopeResolver } = makeService();
+    scopeResolver.resolve.mockRejectedValue(
+      new Error('SCOPE_DELETED: team missing'),
+    );
     await expect(
       svc.generate({
         organizationId: 'o1',

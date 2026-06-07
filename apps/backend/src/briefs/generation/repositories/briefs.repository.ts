@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../databases/pg-drizzle';
 import { briefs } from '../../../databases/pg-drizzle/briefs-schema';
@@ -33,7 +33,10 @@ export class BriefsRepository {
     return tx ?? this.db;
   }
 
-  async findById(id: string, tx?: DrizzleExecutor): Promise<BriefSelect | null> {
+  async findById(
+    id: string,
+    tx?: DrizzleExecutor,
+  ): Promise<BriefSelect | null> {
     const [row] = await this.exec(tx)
       .select()
       .from(briefs)
@@ -96,7 +99,9 @@ export class BriefsRepository {
     if (filters.scopeTeamId)
       conditions.push(eq(briefs.scopeTeamId, filters.scopeTeamId));
     if (filters.scopeCollaboratorId)
-      conditions.push(eq(briefs.scopeCollaboratorId, filters.scopeCollaboratorId));
+      conditions.push(
+        eq(briefs.scopeCollaboratorId, filters.scopeCollaboratorId),
+      );
     if (filters.scopeRepositoryId)
       conditions.push(eq(briefs.scopeRepositoryId, filters.scopeRepositoryId));
     if (filters.cursorCreatedAt && filters.cursorId) {
@@ -110,5 +115,23 @@ export class BriefsRepository {
       .where(and(...conditions))
       .orderBy(desc(briefs.createdAt), desc(briefs.id))
       .limit(filters.limit);
+  }
+
+  async findPeriodStartsForSchedule(
+    scheduleId: string,
+    since: Date,
+    tx?: DrizzleExecutor,
+  ): Promise<Set<number>> {
+    const rows = await this.exec(tx)
+      .select({ periodStart: briefs.periodStart })
+      .from(briefs)
+      .where(
+        and(
+          eq(briefs.briefScheduleId, scheduleId),
+          gte(briefs.periodStart, since),
+          isNull(briefs.deletedAt),
+        ),
+      );
+    return new Set(rows.map((r) => r.periodStart.getTime()));
   }
 }

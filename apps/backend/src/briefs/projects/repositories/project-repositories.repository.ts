@@ -57,9 +57,11 @@ export class ProjectRepositoriesRepository {
       .delete(projectRepositories)
       .where(eq(projectRepositories.projectId, projectId));
     if (repositoryIds.length === 0) return;
-    await executor.insert(projectRepositories).values(
-      repositoryIds.map((repositoryId) => ({ projectId, repositoryId })),
-    );
+    await executor
+      .insert(projectRepositories)
+      .values(
+        repositoryIds.map((repositoryId) => ({ projectId, repositoryId })),
+      );
   }
 
   async deleteOne(

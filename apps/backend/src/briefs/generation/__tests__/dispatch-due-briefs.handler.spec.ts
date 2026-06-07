@@ -70,7 +70,8 @@ describe('DispatchDueBriefsHandler.handle', () => {
       {},
       60,
       expect.objectContaining({
-        singletonKey: expect.stringContaining('briefs.dispatch-due:'),
+        singletonKey: 'briefs.dispatch-due',
+        singletonSeconds: 60,
       }),
     );
     expect(pgBoss.send).toHaveBeenCalledWith(

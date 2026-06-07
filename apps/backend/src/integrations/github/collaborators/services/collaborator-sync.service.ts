@@ -28,7 +28,9 @@ export class CollaboratorSyncService {
   async syncRepo(repositoryId: string, trigger: SyncTrigger): Promise<void> {
     const repo = await this.repos.findByIdIncludingDeleted(repositoryId);
     if (!repo) {
-      this.logger.warn(`repo not found (trigger=${trigger}) id=${repositoryId}`);
+      this.logger.warn(
+        `repo not found (trigger=${trigger}) id=${repositoryId}`,
+      );
       return;
     }
 
@@ -72,7 +74,8 @@ export class CollaboratorSyncService {
         throw AppError.GITHUB_API_FAILED({ reason: 'collaborators_forbidden' });
       }
       throw AppError.GITHUB_API_FAILED({
-        reason: err instanceof Error ? err.message : 'list_collaborators_failed',
+        reason:
+          err instanceof Error ? err.message : 'list_collaborators_failed',
       });
     }
 

@@ -47,7 +47,10 @@ export class TeamsService {
     body: CreateTeamRequest,
   ): Promise<Team> {
     await this.assertCollaboratorsInOrg(organizationId, body.collaboratorIds);
-    const existing = await this.teams.findByNameInOrg(organizationId, body.name);
+    const existing = await this.teams.findByNameInOrg(
+      organizationId,
+      body.name,
+    );
     if (existing) throw AppError.TEAM_NAME_CONFLICT();
 
     return this.db.transaction(async (tx) => {
@@ -73,14 +76,19 @@ export class TeamsService {
     const row = await this.teams.findByIdScopedToOrg(teamId, organizationId);
     if (!row) throw AppError.TEAM_NOT_FOUND();
     if (body.name && body.name !== row.name) {
-      const collision = await this.teams.findByNameInOrg(organizationId, body.name);
+      const collision = await this.teams.findByNameInOrg(
+        organizationId,
+        body.name,
+      );
       if (collision && collision.id !== row.id) {
         throw AppError.TEAM_NAME_CONFLICT();
       }
     }
     const updated = await this.teams.update(teamId, {
       ...(body.name !== undefined ? { name: body.name } : {}),
-      ...(body.description !== undefined ? { description: body.description } : {}),
+      ...(body.description !== undefined
+        ? { description: body.description }
+        : {}),
       ...(body.color !== undefined ? { color: body.color } : {}),
     });
     if (!updated) throw AppError.TEAM_NOT_FOUND();
@@ -116,7 +124,10 @@ export class TeamsService {
     collaboratorIds: string[],
   ): Promise<void> {
     for (const id of collaboratorIds) {
-      const found = await this.collaborators.findByIdScopedToOrg(id, organizationId);
+      const found = await this.collaborators.findByIdScopedToOrg(
+        id,
+        organizationId,
+      );
       if (!found) throw AppError.GITHUB_COLLABORATOR_NOT_FOUND();
     }
   }

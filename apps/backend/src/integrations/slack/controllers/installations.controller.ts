@@ -79,7 +79,10 @@ export class SlackInstallationsController {
     const successUrl = `${frontendUrl}/integrations/slack`;
 
     if (query.error) {
-      res.redirect(302, `${successUrl}?error=${encodeURIComponent(query.error)}`);
+      res.redirect(
+        302,
+        `${successUrl}?error=${encodeURIComponent(query.error)}`,
+      );
       return;
     }
 

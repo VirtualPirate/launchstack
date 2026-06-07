@@ -125,9 +125,9 @@ describe('SlackClient', () => {
     expect(out).toHaveLength(2);
     expect(out[0]).toMatchObject({ id: 'C1' });
     expect(out[1]).toMatchObject({ id: 'C2' });
-    expect((client.conversations.list as jest.Mock).mock.calls[1][0]).toMatchObject(
-      { cursor: 'cur-2' },
-    );
+    expect(
+      (client.conversations.list as jest.Mock).mock.calls[1][0],
+    ).toMatchObject({ cursor: 'cur-2' });
   });
 
   it('paginates users.list through next_cursor', async () => {

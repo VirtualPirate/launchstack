@@ -10,6 +10,7 @@ import {
 import { BackfillCommitsHandler } from './handlers/backfill-commits.handler';
 import { AnalyzeRepoHandler } from './handlers/analyze-repo.handler';
 import { AnalyzeCommitHandler } from './handlers/analyze-commit.handler';
+import { ScanRepositoryHandler } from './handlers/scan-repository.handler';
 import { CommitAnalysesRepository } from './repositories/commit-analyses.repository';
 import { CommitsRepository } from './repositories/commits.repository';
 import { CommitAnalyzerService } from './services/commit-analyzer.service';
@@ -58,6 +59,7 @@ import { COMMIT_ANALYSIS_CONFIG_TOKEN } from './tokens';
     BackfillCommitsHandler,
     AnalyzeRepoHandler,
     AnalyzeCommitHandler,
+    ScanRepositoryHandler,
   ],
   exports: [CommitsRepository, CommitAnalysesRepository],
 })

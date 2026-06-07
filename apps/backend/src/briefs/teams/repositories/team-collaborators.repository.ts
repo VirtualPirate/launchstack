@@ -55,8 +55,10 @@ export class TeamCollaboratorsRepository {
       .delete(teamCollaborators)
       .where(eq(teamCollaborators.teamId, teamId));
     if (collaboratorIds.length === 0) return;
-    await executor.insert(teamCollaborators).values(
-      collaboratorIds.map((collaboratorId) => ({ teamId, collaboratorId })),
-    );
+    await executor
+      .insert(teamCollaborators)
+      .values(
+        collaboratorIds.map((collaboratorId) => ({ teamId, collaboratorId })),
+      );
   }
 }

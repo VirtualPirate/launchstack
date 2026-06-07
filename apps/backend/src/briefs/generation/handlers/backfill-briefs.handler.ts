@@ -5,10 +5,7 @@ import { BRIEFS_CONFIG_TOKEN } from '../../tokens';
 import type { BriefsConfig } from '../../briefs-config';
 import { CommitsRepository } from '../../../integrations/github/commit-analysis/repositories/commits.repository';
 import { BriefSchedulesRepository } from '../../schedules/repositories/brief-schedules.repository';
-import {
-  CadenceService,
-  type PeriodWindow,
-} from '../../schedules/services/cadence.service';
+import { CadenceService } from '../../schedules/services/cadence.service';
 import { BriefsRepository } from '../repositories/briefs.repository';
 import {
   BriefScopeResolver,
@@ -67,39 +64,34 @@ export class BackfillBriefsHandler {
     }
 
     const now = new Date();
-    const rangeStart = subYears(now, 1);
+    const yearAgo = subYears(now, 1);
     const firstLivePeriod = this.cadence.computePeriod(
       schedule,
       schedule.nextRunAt,
     );
     const upperExclusive = firstLivePeriod.start;
 
-    const timestamps = await this.commits.findCommitTimestampsForScope({
+    const oldest = await this.commits.findOldestCommitTimestampForScope({
       repositoryIds: resolved.repositoryIds,
-      periodStart: rangeStart,
-      periodEnd: upperExclusive,
+      since: yearAgo,
       collaboratorGithubUserIds: resolved.authorFilter,
     });
-
-    const windowsByStart = new Map<number, PeriodWindow>();
-    for (const ts of timestamps) {
-      const w = this.cadence.windowContaining(schedule, ts);
-      const startMs = w.start.getTime();
-      if (
-        startMs >= rangeStart.getTime() &&
-        startMs < upperExclusive.getTime()
-      ) {
-        windowsByStart.set(startMs, w);
-      }
+    if (!oldest) {
+      this.logger.log(
+        `[backfill ${id}] schedule ${schedule.id} has no commits in range; nothing to backfill`,
+      );
+      return;
     }
+
+    const rangeStart = this.cadence.windowContaining(schedule, oldest).start;
 
     const existing = await this.briefs.findPeriodStartsForSchedule(
       schedule.id,
       rangeStart,
     );
 
-    let windows = [...windowsByStart.values()]
-      .filter((w) => !existing.has(w.start.getTime()))
+    let windows = this.cadence
+      .windowsInRange(schedule, rangeStart, upperExclusive)
       .sort((a, b) => b.start.getTime() - a.start.getTime());
 
     const cap = this.config.backfillMaxBriefs;
@@ -109,6 +101,8 @@ export class BackfillBriefsHandler {
       );
       windows = windows.slice(0, cap);
     }
+
+    windows = windows.filter((w) => !existing.has(w.start.getTime()));
 
     let created = 0;
     for (const w of windows) {

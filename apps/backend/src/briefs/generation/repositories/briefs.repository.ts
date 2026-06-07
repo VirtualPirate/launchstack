@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE_DB } from '../../../databases/pg-drizzle';
 import { briefs } from '../../../databases/pg-drizzle/briefs-schema';
@@ -21,7 +21,7 @@ export interface ListBriefsFilters {
   scopeCollaboratorId?: string;
   scopeRepositoryId?: string;
   limit: number;
-  cursorCreatedAt?: Date;
+  cursorPeriodEnd?: Date;
   cursorId?: string;
 }
 
@@ -104,16 +104,22 @@ export class BriefsRepository {
       );
     if (filters.scopeRepositoryId)
       conditions.push(eq(briefs.scopeRepositoryId, filters.scopeRepositoryId));
-    if (filters.cursorCreatedAt && filters.cursorId) {
+    if (filters.cursorPeriodEnd && filters.cursorId) {
       conditions.push(
-        sql`(${briefs.createdAt}, ${briefs.id}) < (${filters.cursorCreatedAt}, ${filters.cursorId})`,
+        or(
+          lt(briefs.periodEnd, filters.cursorPeriodEnd),
+          and(
+            eq(briefs.periodEnd, filters.cursorPeriodEnd),
+            lt(briefs.id, filters.cursorId),
+          ),
+        )!,
       );
     }
     return this.exec(tx)
       .select()
       .from(briefs)
       .where(and(...conditions))
-      .orderBy(desc(briefs.createdAt), desc(briefs.id))
+      .orderBy(desc(briefs.periodEnd), desc(briefs.id))
       .limit(filters.limit);
   }
 

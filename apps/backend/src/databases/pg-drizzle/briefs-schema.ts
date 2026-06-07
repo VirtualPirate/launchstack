@@ -307,6 +307,10 @@ export const briefs = briefsSchema.table(
       table.organizationId,
       table.createdAt,
     ),
+    index('briefs_organization_period_end_idx').on(
+      table.organizationId,
+      table.periodEnd,
+    ),
     index('briefs_schedule_idx').on(table.briefScheduleId),
     index('briefs_org_scope_idx').on(
       table.organizationId,

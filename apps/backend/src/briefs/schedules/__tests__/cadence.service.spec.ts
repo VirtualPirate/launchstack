@@ -210,3 +210,90 @@ describe('CadenceService.windowContaining', () => {
     expect(w.start.toISOString()).toBe('2026-05-19T04:00:00.000Z');
   });
 });
+
+describe('CadenceService.windowsInRange', () => {
+  it('daily — returns one window per calendar day in range', () => {
+    const windows = svc.windowsInRange(
+      { cadenceType: 'daily', cadenceTime: '00:00', timezone: 'UTC' },
+      new Date('2026-06-01T00:00:00Z'),
+      new Date('2026-06-04T00:00:00Z'), // exclusive
+    );
+    expect(windows).toHaveLength(3);
+    expect(windows[0].start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+    expect(windows[0].end.toISOString()).toBe('2026-06-01T23:59:59.999Z');
+    expect(windows[2].start.toISOString()).toBe('2026-06-03T00:00:00.000Z');
+  });
+
+  it('weekly — returns one window per ISO week in range', () => {
+    // 2026-06-01 is a Monday, so week = Mon 2026-06-01 – Sun 2026-06-07.
+    // rangeEnd = 2026-06-08 (the next Monday) is exclusive → 1 week returned.
+    const windows = svc.windowsInRange(
+      {
+        cadenceType: 'weekly',
+        cadenceTime: '00:00',
+        cadenceDayOfWeek: 1,
+        timezone: 'UTC',
+      },
+      new Date('2026-06-01T00:00:00Z'),
+      new Date('2026-06-08T00:00:00Z'),
+    );
+    expect(windows).toHaveLength(1);
+    expect(windows[0].start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+    expect(windows[0].end.toISOString()).toBe('2026-06-07T23:59:59.999Z');
+  });
+
+  it('weekly — includes multiple weeks when range spans them', () => {
+    const windows = svc.windowsInRange(
+      {
+        cadenceType: 'weekly',
+        cadenceTime: '00:00',
+        cadenceDayOfWeek: 1,
+        timezone: 'UTC',
+      },
+      new Date('2026-06-01T00:00:00Z'),
+      new Date('2026-06-15T00:00:00Z'),
+    );
+    expect(windows).toHaveLength(2);
+    expect(windows[0].start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+    expect(windows[1].start.toISOString()).toBe('2026-06-08T00:00:00.000Z');
+  });
+
+  it('monthly — returns one window per calendar month in range', () => {
+    const windows = svc.windowsInRange(
+      {
+        cadenceType: 'monthly',
+        cadenceTime: '00:00',
+        cadenceDayOfMonth: 1,
+        timezone: 'UTC',
+      },
+      new Date('2026-04-01T00:00:00Z'),
+      new Date('2026-07-01T00:00:00Z'), // exclusive
+    );
+    expect(windows).toHaveLength(3);
+    expect(windows[0].start.toISOString()).toBe('2026-04-01T00:00:00.000Z');
+    expect(windows[1].start.toISOString()).toBe('2026-05-01T00:00:00.000Z');
+    expect(windows[2].start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  it('returns empty array when rangeEnd <= rangeStart', () => {
+    const windows = svc.windowsInRange(
+      { cadenceType: 'daily', cadenceTime: '00:00', timezone: 'UTC' },
+      new Date('2026-06-01T00:00:00Z'),
+      new Date('2026-06-01T00:00:00Z'), // equal → empty
+    );
+    expect(windows).toHaveLength(0);
+  });
+
+  it('rangeStart mid-window still includes that window', () => {
+    // rangeStart is 12:00 on June 1; the containing window starts at 00:00 June 1,
+    // which is < rangeEnd (June 3 00:00). Both June 1 and June 2 are included.
+    const windows = svc.windowsInRange(
+      { cadenceType: 'daily', cadenceTime: '00:00', timezone: 'UTC' },
+      new Date('2026-06-01T12:00:00Z'),
+      new Date('2026-06-03T00:00:00Z'),
+    );
+    expect(windows).toHaveLength(2);
+    expect(windows[0].start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+    expect(windows[1].start.toISOString()).toBe('2026-06-02T00:00:00.000Z');
+  });
+});

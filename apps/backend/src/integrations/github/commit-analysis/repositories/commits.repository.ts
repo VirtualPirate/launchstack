@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   aliasedTable,
   and,
+  asc,
   desc,
   eq,
   gte,
@@ -227,5 +228,38 @@ export class CommitsRepository {
       .from(githubCommits)
       .where(and(...conditions));
     return rows.map((r) => r.authoredAt);
+  }
+
+  async findOldestCommitTimestampForScope(input: {
+    repositoryIds: string[];
+    since: Date;
+    collaboratorGithubUserIds?: bigint[];
+    tx?: DrizzleExecutor;
+  }): Promise<Date | null> {
+    if (input.repositoryIds.length === 0) return null;
+    const conditions = [
+      inArray(githubCommits.repositoryId, input.repositoryIds),
+      gte(githubCommits.authoredAt, input.since),
+      isNull(githubCommits.deletedAt),
+      eq(githubCommits.parentCount, 1),
+    ];
+    if (
+      input.collaboratorGithubUserIds &&
+      input.collaboratorGithubUserIds.length > 0
+    ) {
+      conditions.push(
+        inArray(
+          githubCommits.authorGithubUserId,
+          input.collaboratorGithubUserIds,
+        ),
+      );
+    }
+    const [row] = await this.exec(input.tx)
+      .select({ authoredAt: githubCommits.authoredAt })
+      .from(githubCommits)
+      .where(and(...conditions))
+      .orderBy(asc(githubCommits.authoredAt))
+      .limit(1);
+    return row?.authoredAt ?? null;
   }
 }

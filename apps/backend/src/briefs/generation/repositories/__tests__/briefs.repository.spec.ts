@@ -1,5 +1,40 @@
 import { BriefsRepository } from '../briefs.repository';
 
+describe('BriefsRepository.list', () => {
+  function makeChain(rows: unknown[]) {
+    return {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            orderBy: () => ({
+              limit: () => Promise.resolve(rows),
+            }),
+          }),
+        }),
+      }),
+    };
+  }
+
+  it('returns rows without cursor condition when no cursor provided', async () => {
+    const rows = [{ id: 'a', createdAt: new Date() }];
+    const repo = new BriefsRepository(makeChain(rows) as never);
+    const result = await repo.list({ organizationId: 'org1', limit: 10 });
+    expect(result).toEqual(rows);
+  });
+
+  it('returns rows when cursor is provided', async () => {
+    const rows = [{ id: 'b', createdAt: new Date('2026-06-01T00:00:00Z') }];
+    const repo = new BriefsRepository(makeChain(rows) as never);
+    const result = await repo.list({
+      organizationId: 'org1',
+      limit: 10,
+      cursorPeriodEnd: new Date('2026-06-07T16:16:38.264Z'),
+      cursorId: 'e2861e81-15d2-46ac-b291-f152b7af2668',
+    });
+    expect(result).toEqual(rows);
+  });
+});
+
 describe('BriefsRepository.findPeriodStartsForSchedule', () => {
   it('returns a Set of periodStart epoch-millis', async () => {
     const a = new Date('2026-05-18T00:00:00Z');

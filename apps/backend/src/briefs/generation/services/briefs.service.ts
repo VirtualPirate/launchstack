@@ -43,14 +43,14 @@ export class BriefsService {
       scopeCollaboratorId: q.scopeCollaboratorId,
       scopeRepositoryId: q.scopeRepositoryId,
       limit: q.limit + 1,
-      cursorCreatedAt: cursor?.createdAt,
+      cursorPeriodEnd: cursor?.periodEnd,
       cursorId: cursor?.id,
     });
     const hasMore = rows.length > q.limit;
     const page = hasMore ? rows.slice(0, q.limit) : rows;
     const nextCursor = hasMore
       ? this.encodeCursor({
-          createdAt: page[page.length - 1].createdAt,
+          periodEnd: page[page.length - 1].periodEnd,
           id: page[page.length - 1].id,
         })
       : null;
@@ -152,19 +152,19 @@ export class BriefsService {
     }
   }
 
-  private encodeCursor(c: { createdAt: Date; id: string }): string {
+  private encodeCursor(c: { periodEnd: Date; id: string }): string {
     return Buffer.from(
-      JSON.stringify({ createdAt: c.createdAt.toISOString(), id: c.id }),
+      JSON.stringify({ periodEnd: c.periodEnd.toISOString(), id: c.id }),
     ).toString('base64url');
   }
 
-  private decodeCursor(s: string): { createdAt: Date; id: string } {
+  private decodeCursor(s: string): { periodEnd: Date; id: string } {
     try {
       const obj = JSON.parse(Buffer.from(s, 'base64url').toString('utf8')) as {
-        createdAt: string;
+        periodEnd: string;
         id: string;
       };
-      return { createdAt: new Date(obj.createdAt), id: obj.id };
+      return { periodEnd: new Date(obj.periodEnd), id: obj.id };
     } catch {
       throw AppError.BAD_REQUEST({ message: 'Invalid cursor' });
     }

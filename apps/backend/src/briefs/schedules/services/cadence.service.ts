@@ -123,6 +123,24 @@ export class CadenceService {
     }
   }
 
+  windowsInRange(
+    schedule: CadenceScheduleLike,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): PeriodWindow[] {
+    const windows: PeriodWindow[] = [];
+    if (rangeEnd.getTime() <= rangeStart.getTime()) return windows;
+    let current = this.windowContaining(schedule, rangeStart);
+    while (current.start.getTime() < rangeEnd.getTime()) {
+      windows.push(current);
+      current = this.windowContaining(
+        schedule,
+        new Date(current.end.getTime() + 1),
+      );
+    }
+    return windows;
+  }
+
   formatPeriodLabel(period: PeriodWindow, tz: string): string {
     const startStr = formatInTimeZone(period.start, tz, 'LLL d');
     const endStr = formatInTimeZone(period.end, tz, 'LLL d, yyyy');

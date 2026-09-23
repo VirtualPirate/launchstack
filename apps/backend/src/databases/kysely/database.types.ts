@@ -39,6 +39,8 @@ export interface OrganizationsTable {
   name: string;
   slug: string;
   ownerId: string;
+  /** Set = frozen read-only; see OrgDeactivationGuard. */
+  deactivatedAt: Date | null;
   createdAt: GeneratedTimestamp;
   updatedAt: GeneratedTimestamp;
 }

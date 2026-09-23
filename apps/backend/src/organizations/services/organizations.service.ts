@@ -43,6 +43,7 @@ export function serializeOrganization(row: OrganizationSelect): Organization {
     name: row.name,
     slug: row.slug,
     ownerId: row.ownerId,
+    deactivatedAt: row.deactivatedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

@@ -1,4 +1,4 @@
-import type { INestApplication } from '@nestjs/common';
+import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Server } from 'node:http';
 
@@ -22,14 +22,20 @@ type AuthServiceLike = {
  * isolates module registries per test file, so a file that needs different env
  * (see the worker spec's per-file task queue) can set it before the first call
  * here without affecting any other file.
+ *
+ * `controllers` mounts extra routes next to AppModule's, under the same global
+ * guards: for exercising a guard against a route shape no real controller has.
  */
-export async function createTestApp(): Promise<TestApp> {
+export async function createTestApp(
+  opts: { controllers?: Type[] } = {},
+): Promise<TestApp> {
   const { AppModule } = await import('../../../src/app.module');
   const { configureApp } = await import('../../../src/bootstrap/configure-app');
   const { AuthService } = await import('@thallesp/nestjs-better-auth');
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
+    controllers: opts.controllers,
   }).compile();
 
   const app = moduleRef.createNestApplication({ bodyParser: false });

@@ -7,6 +7,11 @@ export interface Organization {
   name: string;
   slug: string;
   ownerId: string;
+  /**
+   * Set = the organization is read-only: reads still work, and org-scoped
+   * writes that have not opted out answer 403 `ORG_DEACTIVATED`.
+   */
+  deactivatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

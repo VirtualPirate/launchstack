@@ -30,11 +30,14 @@ import {
   type OrgMembershipContext,
 } from '../decorators/org-membership.decorator';
 import { RequireOrgRole } from '../decorators/require-org-role.decorator';
+import { AllowWhenDeactivated } from '../decorators/allow-when-deactivated.decorator';
 
 type SessionPayload = {
   user: { id: string; email: string; emailVerified: boolean };
 };
 
+/** `@AllowWhenDeactivated`: inviting people survives the freeze. */
+@AllowWhenDeactivated()
 @Controller('api')
 export class InvitesController {
   constructor(private readonly invites: InvitesService) {}

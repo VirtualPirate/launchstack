@@ -44,3 +44,4 @@ export * from "./requests/auth.requests";
 export * from "./responses/auth.responses";
 export * from "./requests/organization.requests";
 export * from "./responses/organization.responses";
+export * from "./responses/health.responses";

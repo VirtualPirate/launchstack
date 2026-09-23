@@ -87,7 +87,7 @@ describe('POST /api/_internal/queue/noop', () => {
         .post('/api/_internal/queue/noop')
         .set(TOKEN_HEADER, process.env.INTERNAL_API_TOKEN!)
         .send({ message: 'hello e2e' });
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(202);
       expect(res.body).toMatchObject({ message: 'enqueued', success: true });
 
       const jobId = res.body.data.jobId as string;

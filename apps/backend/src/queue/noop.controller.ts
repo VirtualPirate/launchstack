@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -26,6 +28,7 @@ export class NoopController {
   ) {}
 
   @Post('noop')
+  @HttpCode(HttpStatus.ACCEPTED)
   async trigger(
     @Headers('x-internal-token') token: string | undefined,
     @Body() rawBody: unknown,

@@ -4,6 +4,10 @@ import { OrgContextGuard } from '../guards/org-context.guard';
 import { OrganizationMembersRepository } from '../repositories/members.repository';
 import { REQUIRE_ORG_ROLE_KEY } from '../decorators/require-org-role.decorator';
 
+// A real uuid: the guard now rejects anything Postgres' uuid parser would,
+// so the happy paths have to carry a header the DB would actually accept.
+const ORG_ID = '3f1a9c62-2c1f-4f2e-9a52-4b1d0d5f8e11';
+
 function makeContext(opts: {
   header?: string;
   session?: { user?: { id?: string } };
@@ -55,10 +59,33 @@ describe('OrgContextGuard', () => {
     });
   });
 
+  it.each([
+    ['not a uuid at all', 'org-1'],
+    ['a uuid missing a character', '3f1a9c62-2c1f-4f2e-9a52-4b1d0d5f8e1'],
+    ['a uuid with sql-ish junk appended', `${ORG_ID}' OR '1'='1`],
+    ['whitespace-padded', ` ${ORG_ID} `],
+  ])(
+    '400 ORG_HEADER_REQUIRED when the header is %s, and never queries the DB',
+    async (_label, header) => {
+      const { ctx, reflector, membersRepo } = makeContext({
+        level: 'member',
+        header,
+      });
+      const guard = new OrgContextGuard(reflector, membersRepo);
+      await expect(guard.canActivate(ctx)).rejects.toMatchObject({
+        status: 400,
+        code: 'ORG_HEADER_REQUIRED',
+      });
+      // The whole point: a malformed id must not reach the uuid column, where
+      // Postgres would raise 22P02 and the filter would report a 500.
+      expect(membersRepo.findByOrgAndUser).not.toHaveBeenCalled();
+    },
+  );
+
   it('401 when no session on an org-scoped route', async () => {
     const { ctx, reflector, membersRepo } = makeContext({
       level: 'member',
-      header: 'org-1',
+      header: ORG_ID,
       session: {},
     });
     const guard = new OrgContextGuard(reflector, membersRepo);
@@ -67,22 +94,27 @@ describe('OrgContextGuard', () => {
     });
   });
 
-  it('404 when caller is not a member', async () => {
+  // No membership row is the single answer for "org never existed", "org was
+  // deleted", and "member was just removed" — all 404, never 403, so the
+  // response can't be used to probe which orgs exist.
+  it('404 when a well-formed uuid has no membership row', async () => {
     const { ctx, reflector, membersRepo } = makeContext({
       level: 'member',
-      header: 'org-1',
+      header: ORG_ID,
       membership: null,
     });
     const guard = new OrgContextGuard(reflector, membersRepo);
     await expect(guard.canActivate(ctx)).rejects.toMatchObject({
       status: 404,
+      code: 'ORG_NOT_FOUND',
     });
+    expect(membersRepo.findByOrgAndUser).toHaveBeenCalledWith(ORG_ID, 'user-1');
   });
 
   it('403 when role is insufficient', async () => {
     const { ctx, reflector, membersRepo } = makeContext({
       level: 'owner',
-      header: 'org-1',
+      header: ORG_ID,
       membership: { role: 'admin' },
     });
     const guard = new OrgContextGuard(reflector, membersRepo);
@@ -94,13 +126,13 @@ describe('OrgContextGuard', () => {
   it('allows owner when admin is required', async () => {
     const { ctx, request, reflector, membersRepo } = makeContext({
       level: 'admin',
-      header: 'org-1',
+      header: ORG_ID,
       membership: { role: 'owner' },
     });
     const guard = new OrgContextGuard(reflector, membersRepo);
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(request.orgMembership).toEqual({
-      organizationId: 'org-1',
+      organizationId: ORG_ID,
       userId: 'user-1',
       role: 'owner',
     });
@@ -109,7 +141,7 @@ describe('OrgContextGuard', () => {
   it('allows viewer when member is required', async () => {
     const { ctx, reflector, membersRepo } = makeContext({
       level: 'member',
-      header: 'org-1',
+      header: ORG_ID,
       membership: { role: 'viewer' },
     });
     const guard = new OrgContextGuard(reflector, membersRepo);

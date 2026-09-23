@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { OrganizationRole } from '@launchstack/api-interfaces';
+import { z } from 'zod';
 import {
   OrgRoleLevel,
   REQUIRE_ORG_ROLE_KEY,
@@ -19,6 +20,11 @@ const LEVEL_MIN_RANK: Record<OrgRoleLevel, number> = {
   admin: 2,
   owner: 3,
 };
+
+// The header goes straight into `WHERE organization_id = $1` against a uuid
+// column; without this, a malformed value reaches Postgres and comes back as
+// 22P02 — an unknown error the exception filter can only turn into a 500.
+const ORGANIZATION_ID_SCHEMA = z.uuid();
 
 @Injectable()
 export class OrgContextGuard implements CanActivate {
@@ -50,7 +56,10 @@ export class OrgContextGuard implements CanActivate {
     const organizationId = Array.isArray(headerValue)
       ? headerValue[0]
       : headerValue;
-    if (!organizationId || typeof organizationId !== 'string') {
+    if (
+      typeof organizationId !== 'string' ||
+      !ORGANIZATION_ID_SCHEMA.safeParse(organizationId).success
+    ) {
       throw AppError.ORG_HEADER_REQUIRED();
     }
 

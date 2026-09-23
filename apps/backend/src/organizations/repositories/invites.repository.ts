@@ -34,6 +34,7 @@ interface InviteListRow {
   orgName: string;
   orgSlug: string;
   orgOwnerId: string;
+  orgDeactivatedAt: Date | null;
   orgCreatedAt: Date;
   orgUpdatedAt: Date;
   invitedById: string | null;
@@ -62,6 +63,7 @@ function toInviteWithRefs(r: InviteListRow): InviteWithRefs {
       name: r.orgName,
       slug: r.orgSlug,
       ownerId: r.orgOwnerId,
+      deactivatedAt: r.orgDeactivatedAt,
       createdAt: r.orgCreatedAt,
       updatedAt: r.orgUpdatedAt,
     },
@@ -109,6 +111,7 @@ export class OrganizationInvitesRepository {
         'organizations.name as orgName',
         'organizations.slug as orgSlug',
         'organizations.ownerId as orgOwnerId',
+        'organizations.deactivatedAt as orgDeactivatedAt',
         'organizations.createdAt as orgCreatedAt',
         'organizations.updatedAt as orgUpdatedAt',
         'invitedBy.id as invitedById',

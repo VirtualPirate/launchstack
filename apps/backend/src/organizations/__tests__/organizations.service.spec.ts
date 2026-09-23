@@ -34,18 +34,20 @@ function makeMocks() {
     })),
   } as any;
 
-  return { orgsRepo, membersRepo, db };
+  const teardown = { run: jest.fn().mockResolvedValue(undefined) } as any;
+
+  return { orgsRepo, membersRepo, db, teardown };
 }
 
 describe('OrganizationsService', () => {
   describe('create', () => {
     it('rejects with 409 when caller already owns an org', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       orgsRepo.create.mockRejectedValue(
         uniqueViolation('organizations_owner_id_unique'),
       );
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await expect(
         svc.createOrganization('user-1', { name: 'Acme' }),
       ).rejects.toMatchObject({ status: 409, code: 'ORG_OWNER_CONFLICT' });
@@ -53,7 +55,7 @@ describe('OrganizationsService', () => {
     });
 
     it('retries a slug clash with a fresh slug', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       orgsRepo.create
         .mockRejectedValueOnce(uniqueViolation('organizations_slug_unique'))
         .mockResolvedValueOnce({
@@ -66,7 +68,7 @@ describe('OrganizationsService', () => {
         });
       membersRepo.create.mockResolvedValue({ id: 'm-1', role: 'owner' });
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       const result = await svc.createOrganization('user-1', { name: 'Acme' });
 
       expect(orgsRepo.create).toHaveBeenCalledTimes(2);
@@ -74,7 +76,7 @@ describe('OrganizationsService', () => {
     });
 
     it('creates org + owner membership in a transaction', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       orgsRepo.create.mockResolvedValue({
         id: 'org-1',
         name: 'Acme',
@@ -91,7 +93,7 @@ describe('OrganizationsService', () => {
         createdAt: new Date(),
       });
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       const result = await svc.createOrganization('user-1', { name: 'Acme' });
 
       expect(db.transaction).toHaveBeenCalledTimes(1);
@@ -111,19 +113,19 @@ describe('OrganizationsService', () => {
 
   describe('updateOrganization', () => {
     it('rejects slug conflicts with 409', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       orgsRepo.update.mockRejectedValue(
         uniqueViolation('organizations_slug_unique'),
       );
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await expect(
         svc.updateOrganization('org-1', { slug: 'taken' }),
       ).rejects.toMatchObject({ status: 409, code: 'ORG_SLUG_CONFLICT' });
     });
 
     it('updates when slug is free', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       orgsRepo.update.mockResolvedValue({
         id: 'org-1',
         name: 'Acme',
@@ -133,7 +135,7 @@ describe('OrganizationsService', () => {
         updatedAt: new Date(),
       });
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       const result = await svc.updateOrganization('org-1', {
         slug: 'acme-new',
       });
@@ -143,10 +145,10 @@ describe('OrganizationsService', () => {
 
   describe('transferOwnership', () => {
     it('rejects when target is not an admin of this org', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       membersRepo.findByOrgAndUser.mockResolvedValue(null);
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await expect(
         svc.transferOwnership({
           organizationId: 'org-1',
@@ -157,7 +159,7 @@ describe('OrganizationsService', () => {
     });
 
     it('rejects when target already owns another org', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       membersRepo.findByOrgAndUser.mockImplementation(
         async (_orgId: string, userId: string) =>
           userId === 'user-2'
@@ -168,7 +170,7 @@ describe('OrganizationsService', () => {
         uniqueViolation('organizations_owner_id_unique'),
       );
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await expect(
         svc.transferOwnership({
           organizationId: 'org-1',
@@ -182,7 +184,7 @@ describe('OrganizationsService', () => {
     });
 
     it('flips owner_id and swaps role rows in a transaction', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       membersRepo.findByOrgAndUser.mockImplementation(
         async (_orgId: string, userId: string) =>
           userId === 'user-2'
@@ -198,7 +200,7 @@ describe('OrganizationsService', () => {
         updatedAt: new Date(),
       });
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await svc.transferOwnership({
         organizationId: 'org-1',
         currentOwnerUserId: 'user-1',
@@ -222,17 +224,21 @@ describe('OrganizationsService', () => {
   });
 
   describe('deleteOrganization', () => {
-    it('calls repo.delete (cascade handles members/invites)', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+    it('tears down, then calls repo.delete (cascade handles members/invites)', async () => {
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       await svc.deleteOrganization('org-1');
+      expect(teardown.run).toHaveBeenCalledWith('org-1');
       expect(orgsRepo.delete).toHaveBeenCalledWith('org-1');
+      expect(teardown.run.mock.invocationCallOrder[0]).toBeLessThan(
+        orgsRepo.delete.mock.invocationCallOrder[0],
+      );
     });
   });
 
   describe('listMyOrganizations', () => {
     it('returns rows shaped as { organization, role }', async () => {
-      const { orgsRepo, membersRepo, db } = makeMocks();
+      const { orgsRepo, membersRepo, db, teardown } = makeMocks();
       membersRepo.listByUser.mockResolvedValue([
         {
           organization: {
@@ -253,7 +259,7 @@ describe('OrganizationsService', () => {
         },
       ]);
 
-      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db, teardown);
       const out = await svc.listMyOrganizations('u1');
       expect(out).toHaveLength(1);
       expect(out[0].role).toBe('admin');

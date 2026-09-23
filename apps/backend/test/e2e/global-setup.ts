@@ -8,6 +8,7 @@ import {
 } from '@testcontainers/postgresql';
 import { Client } from 'pg';
 import type { TestProject } from 'vitest/node';
+import { SA_ORG } from '../../src/temporal/search-attributes';
 
 const execFileAsync = promisify(execFile);
 
@@ -107,7 +108,11 @@ export async function setup(project: TestProject): Promise<void> {
   // child). createTimeSkipping would run the Java test server instead, which
   // lacks Schedules and visibility; time skipping is not needed for API-level
   // tests. First run downloads the server binary and needs network access.
-  temporal = await TestWorkflowEnvironment.createLocal();
+  // The search attribute is pre-registered so org-scoped starts work before any
+  // app boots; SchedulesBootstrap's own registration then hits ALREADY_EXISTS.
+  temporal = await TestWorkflowEnvironment.createLocal({
+    server: { searchAttributes: [{ name: SA_ORG, type: 'KEYWORD' }] },
+  });
 
   project.provide('temporalAddress', temporal.address);
 

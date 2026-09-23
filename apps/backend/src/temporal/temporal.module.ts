@@ -5,6 +5,7 @@ import { Client, Connection } from '@temporalio/client';
 import { buildTemporalConfig, type TemporalConfig } from './temporal.config';
 import { TEMPORAL_CLIENT, TEMPORAL_CONFIG } from './temporal.tokens';
 import { TemporalProducerService } from './producer.service';
+import { SchedulesBootstrap } from './schedules.bootstrap';
 
 @Global()
 @Module({})
@@ -32,6 +33,7 @@ export class TemporalModule {
           },
         },
         TemporalProducerService,
+        SchedulesBootstrap,
       ],
       exports: [TemporalProducerService, TEMPORAL_CLIENT, TEMPORAL_CONFIG],
     };

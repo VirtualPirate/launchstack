@@ -30,6 +30,19 @@ export class OrganizationsRepository {
     return row ?? null;
   }
 
+  /**
+   * The one column OrgDeactivationGuard needs on every write. A missing row
+   * reads as active: OrgContextGuard already proved the membership exists.
+   */
+  async findDeactivatedAt(id: string, tx?: DbExecutor): Promise<Date | null> {
+    const row = await this.exec(tx)
+      .selectFrom('organizations')
+      .select('deactivatedAt')
+      .where('id', '=', id)
+      .executeTakeFirst();
+    return row?.deactivatedAt ?? null;
+  }
+
   async create(
     input: OrganizationInsert,
     tx?: DbExecutor,

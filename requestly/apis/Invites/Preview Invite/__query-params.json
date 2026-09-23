@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "key": "token",
+    "value": "{{inviteToken}}",
+    "isEnabled": true,
+    "description": "Invite token from the invite email."
+  }
+]

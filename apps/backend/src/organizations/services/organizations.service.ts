@@ -13,6 +13,7 @@ import type {
 } from '../../databases/kysely';
 import { OrganizationsRepository } from '../repositories/organizations.repository';
 import { OrganizationMembersRepository } from '../repositories/members.repository';
+import { OrganizationTeardownService } from './organization-teardown.service';
 import { AppError } from '../../common/errors';
 
 function buildSlug(name: string): string {
@@ -43,6 +44,7 @@ export function serializeOrganization(row: OrganizationSelect): Organization {
     name: row.name,
     slug: row.slug,
     ownerId: row.ownerId,
+    deactivatedAt: row.deactivatedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -54,6 +56,7 @@ export class OrganizationsService {
     private readonly orgs: OrganizationsRepository,
     private readonly members: OrganizationMembersRepository,
     @Inject(KYSELY_DB) private readonly db: AppDatabase,
+    private readonly teardown: OrganizationTeardownService,
   ) {}
 
   async createOrganization(
@@ -138,6 +141,7 @@ export class OrganizationsService {
   }
 
   async deleteOrganization(organizationId: string): Promise<void> {
+    await this.teardown.run(organizationId);
     await this.orgs.delete(organizationId);
   }
 

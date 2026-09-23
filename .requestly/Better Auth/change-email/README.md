@@ -1,1 +1,0 @@
-Collection for /change-email endpoints

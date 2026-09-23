@@ -6,8 +6,8 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
-import App from "@/App";
 import { AuthAPI } from "@/api/auth.api";
+import { AppShell } from "@/components/layout/app-shell";
 import { clearSignedOutUserState } from "@/hooks/api/use-auth";
 import { normalizeRedirectPath } from "@/lib/auth-redirect";
 import { AcceptInvitePage } from "@/routes/accept-invite";
@@ -239,7 +239,7 @@ const protectedRoute = createRoute({
       });
     }
   },
-  component: App,
+  component: AppShell,
 });
 
 const homeRoute = createRoute({
@@ -312,5 +312,12 @@ export const router = createRouter({
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
+  }
+  interface StaticDataRouteOption {
+    /**
+     * The page owns its height and scroll: AppShell renders it edge to edge
+     * instead of inside the padded, scrolling container.
+     */
+    fullBleed?: boolean;
   }
 }

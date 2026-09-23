@@ -73,6 +73,11 @@ export const AppError = sealRegistry({
     status: HttpStatus.FORBIDDEN,
     message: 'Insufficient organization role',
   }),
+  ORG_DEACTIVATED: defineError({
+    status: HttpStatus.FORBIDDEN,
+    message:
+      'This organization is deactivated and is read-only. Contact support to reactivate it.',
+  }),
 
   // --- Org lifecycle ---
   ORG_OWNER_CONFLICT: defineError({

@@ -1,1 +1,0 @@
-Collection for /get-session endpoints

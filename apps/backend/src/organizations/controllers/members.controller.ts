@@ -20,7 +20,10 @@ import {
   type OrgMembershipContext,
 } from '../decorators/org-membership.decorator';
 import { RequireOrgRole } from '../decorators/require-org-role.decorator';
+import { AllowWhenDeactivated } from '../decorators/allow-when-deactivated.decorator';
 
+/** `@AllowWhenDeactivated`: membership keeps working while an organization is frozen. */
+@AllowWhenDeactivated()
 @Controller('api/organizations/current/members')
 export class MembersController {
   constructor(private readonly members: MembersService) {}

@@ -39,11 +39,11 @@ AppModule ─── controllers: AppController, HealthController (+ HealthServic
 ├── ConfigModule (global)
 ├── LoggerModule ─── nestjs-pino + RequestIdMiddleware
 ├── KyselyModule (global) ─── provides KYSELY_DB token
-├── TemporalModule (global) ─── provides TemporalProducerService, TEMPORAL_CLIENT
+├── TemporalModule (global) ─── provides TemporalProducerService, TEMPORAL_CLIENT, SchedulesBootstrap
 ├── AppAuthModule
 │   └── BetterAuthModule.forRootAsync()
 │       └── injects KYSELY_DB + ConfigService
-├── OrganizationsModule ─── organizations, members, invites + OrgContextGuard
+├── OrganizationsModule ─── organizations, members, invites + OrgContextGuard, OrgDeactivationGuard
 └── QueueModule ─── noop smoke-test activity/controller
 ```
 
@@ -56,6 +56,17 @@ AppModule ─── controllers: AppController, HealthController (+ HealthServic
 **Body parsing is opt-in per controller.** The global parser is off for Better Auth, so any controller with a `@Body()` param needs `express.json()` applied in its module's `configure()`. Existing examples: `AppAuthModule` (`EmailOtpController`), `OrganizationsModule`, `QueueModule`. **Forget this and the body arrives `undefined`.**
 
 **Health.** `GET /api/health/live` touches nothing and always returns 200 while the process serves HTTP: point container healthchecks and restart policies here. `GET /api/health` is readiness: it probes Postgres (`select 1`) and Temporal (`getSystemInfo`) in parallel, 2s timeout each, and returns 503 with per-dependency detail when either fails. Never wire a restart to readiness, or a database blip becomes a crash loop.
+
+### Organizations (tenancy)
+
+Org-scoped routes read the active org from the `X-Organization-Id` header and live under `/api/organizations/current/...`. Two global guards, registered in this order in `OrganizationsModule`:
+
+- **`OrgContextGuard`** — runs only on routes with `@RequireOrgRole(level)`. Validates the header, loads the caller's membership (404 `ORG_NOT_FOUND` if none), checks the role, and puts `{ organizationId, userId, role }` on the request for `@OrgMembership()`.
+- **`OrgDeactivationGuard`** — when `organizations.deactivated_at` is set, rejects every route whose level is above `member` with 403 `ORG_DEACTIVATED`, unless the route or controller has `@AllowWhenDeactivated()`. The three organization controllers opt out, so a frozen org can still be renamed, handed over, deleted and have its members managed.
+
+**Rule: reads are `@RequireOrgRole('member')`, writes are `'admin'` (or `'owner'`).** Deactivation relies on it: a write tagged `member` stays open on a frozen org. A new product route that creates or changes data must be `admin`+ and must not opt out. There is no admin API yet; freeze and unfreeze an org in SQL (`update organizations set deactivated_at = now() where id = …`, and `= null` to undo).
+
+**Deletion** hard-deletes the row and cascades. `OrganizationTeardownService.run()` goes first and terminates the org's running workflows (see "Search attributes" below). Add a step there for anything else the org holds outside its rows (third-party installations, tokens); keep each step best-effort so an outage never makes an org undeletable.
 
 ### Graceful-degradation config pattern
 
@@ -144,7 +155,11 @@ Run the worker with `pnpm start:worker:dev` (or `pnpm dev:worker` from the repo 
 - `startDeduped(workflowType, opts)` — requires `opts.workflowId`; sets `workflowIdConflictPolicy: 'USE_EXISTING'`, so a second start with a live id returns the existing run.
 - `opts` also takes `args`, `searchAttributes`, and `startDelay` (e.g. `'30s'`).
 
-Inject `TEMPORAL_CLIENT` for anything else (signals, queries, schedules).
+Inject `TEMPORAL_CLIENT` for anything else (signals, queries).
+
+**Search attributes.** Start every org-scoped workflow with `searchAttributes: orgSearchAttributes(organizationId)` (`src/temporal/search-attributes.ts`, a Keyword `OrganizationId`). Org deletion finds and terminates the org's Running executions by it; a start without it outlives the org. Temporal rejects a start that carries an unregistered attribute, so `SchedulesBootstrap` registers it on API boot (idempotent; `ALREADY_EXISTS` is ignored). System-scoped work passes none.
+
+**Schedules.** Recurring workflows are Temporal Schedules, declared in `SCHEDULES` in `src/temporal/schedules.bootstrap.ts` (`{ id, workflowType, spec }`). On API boot each is created with overlap `SKIP`, or, if it exists, has its spec replaced, so an edited spec reaches a running cluster on the next deploy. Removing an entry does not delete the Schedule (`temporal schedule delete --schedule-id <id>`). Failures are logged, never thrown. Both steps are gated by `TEMPORAL_MANAGE_SCHEDULES` (default `true`); `src/worker.ts` forces it `false`, since the worker boots the same `AppModule`.
 
 **Adding a job** — three pieces:
 
@@ -195,6 +210,7 @@ Then start it: `await temporal.start(WORKFLOW.sendWelcomeEmail, { args: [userId]
 | `TEMPORAL_TASK_QUEUE` | `launchstack` |
 | `TEMPORAL_MAX_CONCURRENT_ACTIVITIES` | `20` |
 | `TEMPORAL_MAX_CONCURRENT_WORKFLOW_TASKS` | `20` |
+| `TEMPORAL_MANAGE_SCHEDULES` | `true` (API registers search attributes and syncs Schedules; the worker always skips) |
 
 Concurrency caps are per worker process: the effective ceiling is replicas × these values. A single task queue serves every workflow; move an activity type to its own queue and worker only when it needs a hard cap of its own.
 
@@ -225,7 +241,7 @@ Returns **202** `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", suc
 
 When adding new ESM-only dependencies used in tests, you'll need to add corresponding mocks and `moduleNameMapper` entries.
 
-**E2E tests** (`test/e2e/`): Vitest (`vitest.e2e.config.ts`, swc for decorator metadata) against a Testcontainers Postgres cloned from a migrated template per file, a Temporal CLI dev server, and the real Better Auth — only `resend` is mocked. Specs boot `AppModule` through `test/e2e/harness/create-test-app.ts`, which applies the same `configureApp()` (`src/bootstrap/configure-app.ts`) as `main.ts`. `queue.e2e.spec.ts` runs a real Temporal worker end to end. Env comes from `.env.test`. Docker must be running. Full harness notes: `test/e2e/README.md`.
+**E2E tests** (`test/e2e/`): Vitest (`vitest.e2e.config.ts`, swc for decorator metadata) against a Testcontainers Postgres cloned from a migrated template per file, a Temporal CLI dev server, and the real Better Auth — only `resend` is mocked. Specs boot `AppModule` through `test/e2e/harness/create-test-app.ts`, which applies the same `configureApp()` (`src/bootstrap/configure-app.ts`) as `main.ts`. `queue.e2e.spec.ts` runs a real Temporal worker end to end. `createTestApp({ controllers })` mounts extra test-only controllers under the real global guards (see `org-deactivation.e2e.spec.ts`). Env comes from `.env.test`. Docker must be running. Full harness notes: `test/e2e/README.md`.
 
 ### Response Format
 

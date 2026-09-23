@@ -26,11 +26,14 @@ import {
   type OrgMembershipContext,
 } from '../decorators/org-membership.decorator';
 import { RequireOrgRole } from '../decorators/require-org-role.decorator';
+import { AllowWhenDeactivated } from '../decorators/allow-when-deactivated.decorator';
 
 type SessionPayload = {
   user: { id: string; email: string; emailVerified: boolean };
 };
 
+/** `@AllowWhenDeactivated`: a frozen organization can still be renamed, handed over and deleted. */
+@AllowWhenDeactivated()
 @Controller('api/organizations')
 export class OrganizationsController {
   constructor(private readonly orgs: OrganizationsService) {}

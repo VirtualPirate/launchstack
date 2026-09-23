@@ -1,1 +1,0 @@
-Collection for /email-otp/request-password-reset endpoints

@@ -21,7 +21,9 @@ import {
   OrganizationMembersRepository,
   OrganizationInvitesRepository,
 } from './repositories';
+import { OrganizationTeardownService } from './services/organization-teardown.service';
 import { OrgContextGuard } from './guards/org-context.guard';
+import { OrgDeactivationGuard } from './guards/org-deactivation.guard';
 
 @Module({
   controllers: [OrganizationsController, MembersController, InvitesController],
@@ -30,12 +32,19 @@ import { OrgContextGuard } from './guards/org-context.guard';
     OrganizationMembersRepository,
     OrganizationInvitesRepository,
     OrganizationsService,
+    OrganizationTeardownService,
     MembersService,
     InvitesService,
     InviteMailer,
     {
       provide: APP_GUARD,
       useClass: OrgContextGuard,
+    },
+    // Order matters: Nest runs global guards in registration order, and this
+    // one reads the membership OrgContextGuard puts on the request.
+    {
+      provide: APP_GUARD,
+      useClass: OrgDeactivationGuard,
     },
   ],
 })

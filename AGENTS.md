@@ -95,7 +95,7 @@ Migrations live in `apps/backend/migrations/` and run via `kysely-ctl` (`kysely.
 
 ### Frontend (React + Vite)
 
-**Entry:** `apps/frontend/src/main.tsx` → `App.tsx`
+**Entry:** `apps/frontend/src/main.tsx` → `router.tsx` (protected routes render inside `components/layout/app-shell.tsx`)
 
 **Path alias:** `@` maps to `src/` (configured in vite.config.ts and tsconfig).
 

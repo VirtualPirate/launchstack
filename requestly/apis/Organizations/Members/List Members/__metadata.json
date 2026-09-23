@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "ef1a5d42-33c9-4b93-a299-469f4ce4540f",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/organizations/current/members",
+  "method": "GET",
+  "contentType": "none"
+}

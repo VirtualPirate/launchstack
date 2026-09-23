@@ -1,4 +1,6 @@
 import {
+  type AuthChangePasswordRequest,
+  type AuthChangePasswordResponse,
   type AuthClientResult,
   type AuthEmailSignInRequest,
   type AuthEmailSignInResponse,
@@ -7,13 +9,19 @@ import {
   type AuthForgetPasswordRequest,
   type AuthForgetPasswordResponse,
   type AuthGoogleSignInRequest,
+  type AuthListAccountsResponse,
+  type AuthListSessionsResponse,
   type AuthResetPasswordResponse,
   type AuthResetPasswordWithOtpRequest,
+  type AuthRevokeSessionRequest,
+  type AuthRevokeSessionResponse,
   type AuthSendVerificationOtpRequest,
   type AuthSendVerificationOtpResponse,
   type AuthSessionResponse,
   type AuthSignOutResponse,
   type AuthSocialSignInResponse,
+  type AuthUpdateUserRequest,
+  type AuthUpdateUserResponse,
   type AuthVerifyEmailOtpRequest,
   type AuthVerifyEmailOtpResponse,
 } from "@launchstack/api-interfaces";
@@ -92,5 +100,47 @@ export const AuthAPI = {
   ): Promise<AuthClientResult<AuthResetPasswordResponse>> => {
     const response = await authClient.emailOtp.resetPassword(payload);
     return response as AuthClientResult<AuthResetPasswordResponse>;
+  },
+
+  updateUser: async (
+    payload: AuthUpdateUserRequest,
+  ): Promise<AuthClientResult<AuthUpdateUserResponse>> => {
+    const response = await authClient.updateUser(payload);
+    return response as AuthClientResult<AuthUpdateUserResponse>;
+  },
+
+  changePassword: async (
+    payload: AuthChangePasswordRequest,
+  ): Promise<AuthClientResult<AuthChangePasswordResponse>> => {
+    const response = await authClient.changePassword(payload);
+    return response as AuthClientResult<AuthChangePasswordResponse>;
+  },
+
+  listSessions: async (): Promise<
+    AuthClientResult<AuthListSessionsResponse>
+  > => {
+    const response = await authClient.listSessions();
+    return response as AuthClientResult<AuthListSessionsResponse>;
+  },
+
+  revokeSession: async (
+    payload: AuthRevokeSessionRequest,
+  ): Promise<AuthClientResult<AuthRevokeSessionResponse>> => {
+    const response = await authClient.revokeSession(payload);
+    return response as AuthClientResult<AuthRevokeSessionResponse>;
+  },
+
+  revokeOtherSessions: async (): Promise<
+    AuthClientResult<AuthRevokeSessionResponse>
+  > => {
+    const response = await authClient.revokeOtherSessions();
+    return response as AuthClientResult<AuthRevokeSessionResponse>;
+  },
+
+  listAccounts: async (): Promise<
+    AuthClientResult<AuthListAccountsResponse>
+  > => {
+    const response = await authClient.listAccounts();
+    return response as AuthClientResult<AuthListAccountsResponse>;
   },
 };

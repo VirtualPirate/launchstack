@@ -1,1 +1,0 @@
-Collection for /reset-password endpoints

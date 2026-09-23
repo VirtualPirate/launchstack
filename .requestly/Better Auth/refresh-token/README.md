@@ -1,1 +1,0 @@
-Collection for /refresh-token endpoints

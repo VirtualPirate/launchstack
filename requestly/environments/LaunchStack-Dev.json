@@ -1,0 +1,76 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/environment.json",
+  "id": "3ac6bdbe-c1b9-4cd5-aa8f-b0df33fffb1a",
+  "variables": {
+    "apiBaseUrl": {
+      "id": "3f70f332-d606-4415-89b2-2a4622bfc3ee",
+      "syncValue": "http://localhost:3000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a0"
+    },
+    "authToken": {
+      "id": "937aca33-1cfd-4702-bc42-655f0cf53733",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a1"
+    },
+    "email": {
+      "id": "3e131b31-249f-4797-a7b7-4132a807c2be",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a2"
+    },
+    "password": {
+      "id": "41b79c32-0788-4d68-81a5-fff5f8fe60dc",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a3"
+    },
+    "organizationId": {
+      "id": "7e695a83-5714-4344-b1bf-b48b06a827e4",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a4"
+    },
+    "internalToken": {
+      "id": "7631b346-6a47-4888-87f7-89d17b89af9d",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a5"
+    },
+    "memberId": {
+      "id": "8962bbbe-4138-419e-bf3c-6f9a8d8d5f76",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a6"
+    },
+    "inviteId": {
+      "id": "b2040d1b-e3e7-4c7e-a762-189b4579955c",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a7"
+    },
+    "inviteToken": {
+      "id": "79b7bc6d-ca32-4eeb-bd38-8693f6ee2e96",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a8"
+    },
+    "newOwnerUserId": {
+      "id": "820e3e51-3060-4a6d-9acc-1f65fc9c25cc",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a9"
+    }
+  }
+}

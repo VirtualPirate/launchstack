@@ -11,6 +11,9 @@ import { buildActivities } from './temporal/activity-registry';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap(): Promise<void> {
+  // The API owns Schedules and search attributes (SchedulesBootstrap); this
+  // process boots the same AppModule, so opt it out before the module inits.
+  process.env.TEMPORAL_MANAGE_SCHEDULES = 'false';
   const app = await NestFactory.createApplicationContext(AppModule, {
     bufferLogs: true,
   });

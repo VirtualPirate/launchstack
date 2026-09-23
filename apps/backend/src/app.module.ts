@@ -2,7 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DrizzleModule } from './databases/pg-drizzle';
+import { KyselyModule } from './databases/kysely';
 import { AppAuthModule } from './auth';
 import { OrganizationsModule } from './organizations';
 import { PgBossModule } from './queue';
@@ -13,7 +13,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule,
-    DrizzleModule,
+    KyselyModule,
     PgBossModule.forRoot(),
     AppAuthModule,
     OrganizationsModule,

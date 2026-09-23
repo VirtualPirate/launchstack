@@ -1,7 +1,13 @@
 import { createAuth, AuthConfig } from './auth.config';
 
+// Snapshot the pool's options, not node-postgres internals.
+jest.mock('pg', () => ({
+  Pool: jest.fn((options: object) => ({ id: 'pg-pool', options })),
+}));
+
 const baseConfig: AuthConfig = {
   db: {} as any,
+  databaseUrl: 'postgresql://test:test@localhost:5432/test',
   secret: 'test-secret-for-unit-tests-only',
   baseURL: 'http://localhost:3000',
   trustedOrigins: ['http://localhost:3000', 'http://localhost:5173'],
@@ -49,7 +55,7 @@ describe('createAuth', () => {
       const options = getAuthOptions(baseConfig);
 
       expect(options.socialProviders).toBeUndefined();
-      expect(options.account).toBeUndefined();
+      expect(options.account.accountLinking).toBeUndefined();
     });
 
     it('should not include socialProviders when only clientId is set', () => {
@@ -59,7 +65,7 @@ describe('createAuth', () => {
       });
 
       expect(options.socialProviders).toBeUndefined();
-      expect(options.account).toBeUndefined();
+      expect(options.account.accountLinking).toBeUndefined();
     });
 
     it('should not include socialProviders when only clientSecret is set', () => {
@@ -69,7 +75,7 @@ describe('createAuth', () => {
       });
 
       expect(options.socialProviders).toBeUndefined();
-      expect(options.account).toBeUndefined();
+      expect(options.account.accountLinking).toBeUndefined();
     });
   });
 

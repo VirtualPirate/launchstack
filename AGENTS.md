@@ -24,11 +24,11 @@ pnpm build:packages         # Build shared packages only
 ### Database (requires Docker postgres running)
 ```bash
 docker compose up -d        # Start PostgreSQL on port 11753
-pnpm db:generate            # Create a new Drizzle migration
+pnpm db:generate <name>     # Create a new (empty) Kysely migration file
 pnpm db:up                  # Apply migrations
 pnpm db:down                # Rollback last migration
-pnpm db:push                # Push schema directly (no migration file)
-pnpm db:studio              # Open Drizzle Studio UI
+pnpm db:status              # Show migration status
+pnpm db:fresh               # Roll back everything and re-apply (destructive)
 ```
 
 ### Testing (backend)
@@ -59,17 +59,15 @@ Packages are built with tsup (CJS + ESM) and must be built before apps (`pnpm bu
 
 **Entry:** `apps/backend/src/main.ts` — Body parser is disabled (Better Auth handles its own parsing).
 
-**Module graph:** `AppModule` imports `ConfigModule` (global), `DrizzleModule` (global), and `AppAuthModule`.
+**Module graph:** `AppModule` imports `ConfigModule` (global), `KyselyModule` (global), and `AppAuthModule`.
 
-**Database:** Drizzle ORM with `postgres` driver. The `DrizzleModule` (`src/databases/pg-drizzle/drizzle.module.ts`) is a global provider injected via `DRIZZLE_DB` token. Schema files:
-- `src/databases/pg-drizzle/schema.ts` — App tables
-- `src/databases/pg-drizzle/auth-schema.ts` — Better Auth tables (user, session, account, verification) in `auth` PostgreSQL schema
+**Database:** Kysely with the `pg` (node-postgres) driver and `CamelCasePlugin`. The `KyselyModule` (`src/databases/kysely/kysely.module.ts`) is a global provider injected via `KYSELY_DB` token. Table types live in `src/databases/kysely/database.types.ts` — app tables in `public`, Better Auth tables (user, session, account, verification) as `auth.*`. Types are hand-written: update them alongside every migration.
 
-Migrations live in `apps/backend/drizzle/` and use `@drepkovsky/drizzle-migrations`. The `drizzle.config.ts` configures both drizzle-kit (for push/studio) and drizzle-migrations (for generate/up/down).
+Migrations live in `apps/backend/migrations/` and run via `kysely-ctl` (`kysely.config.ts`).
 
-**Auth:** Better Auth v1.6.2 integrated via `@thallesp/nestjs-better-auth`. Auth config is in `src/auth/auth.config.ts` — creates the Better Auth instance with drizzle adapter, email+password, Google OAuth (optional, via `socialProviders`), email OTP (Resend), token encryption (AES-256-GCM via `databaseHooks`), and openAPI plugin (non-prod). The `AppAuthModule` wires it up with env-based config. Auth routes are served at `/api/auth/*` by the NestJS wrapper. Auth decorators available: `@AllowAnonymous()`, `@OptionalAuth()`, `@Session()`.
+**Auth:** Better Auth v1.6.2 integrated via `@thallesp/nestjs-better-auth`. Auth config is in `src/auth/auth.config.ts` — creates the Better Auth instance over its own `pg` Pool (`search_path=auth`, snake_case `fields` mappings), email+password, Google OAuth (optional, via `socialProviders`), email OTP (Resend), token encryption (AES-256-GCM via `databaseHooks`), and openAPI plugin (non-prod). The `AppAuthModule` wires it up with env-based config. Auth routes are served at `/api/auth/*` by the NestJS wrapper. Auth decorators available: `@AllowAnonymous()`, `@OptionalAuth()`, `@Session()`.
 
-**Testing:** Jest with module mocks for `@thallesp/nestjs-better-auth`, `better-auth`, `better-auth/adapters/drizzle`, `better-auth/plugins`, and `resend` (see `moduleNameMapper` in package.json).
+**Testing:** Jest with module mocks for `@thallesp/nestjs-better-auth`, `better-auth`, `better-auth/plugins`, and `resend` (see `moduleNameMapper` in package.json).
 
 ### Frontend (React + Vite)
 

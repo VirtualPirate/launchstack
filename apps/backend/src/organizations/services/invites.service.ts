@@ -1,7 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type {
   InvitePreview,
   InviteRole,
@@ -9,9 +7,11 @@ import type {
   Organization,
   OrganizationInvite,
 } from '@launchstack/api-interfaces';
-import { DRIZZLE_DB } from '../../databases/pg-drizzle';
-import { user } from '../../databases/pg-drizzle/auth-schema';
-import type { OrganizationMemberSelect } from '../../databases/pg-drizzle/types';
+import { KYSELY_DB } from '../../databases/kysely';
+import type {
+  AppDatabase,
+  OrganizationMemberSelect,
+} from '../../databases/kysely';
 import { OrganizationsRepository } from '../repositories/organizations.repository';
 import { OrganizationMembersRepository } from '../repositories/members.repository';
 import {
@@ -22,8 +22,6 @@ import { generateInviteToken, hashInviteToken } from '../tokens';
 import { serializeOrganization } from './organizations.service';
 import { InviteMailer } from './invite-mailer';
 import { AppError } from '../../common/errors';
-
-type Db = PostgresJsDatabase<Record<string, unknown>>;
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -56,7 +54,7 @@ export class InvitesService {
     private readonly invites: OrganizationInvitesRepository,
     private readonly members: OrganizationMembersRepository,
     private readonly orgs: OrganizationsRepository,
-    @Inject(DRIZZLE_DB) private readonly db: Db,
+    @Inject(KYSELY_DB) private readonly db: AppDatabase,
     private readonly mailer: InviteMailer,
     private readonly config: ConfigService,
   ) {}
@@ -67,11 +65,11 @@ export class InvitesService {
   ) => Promise<{ id: string; name: string; email: string } | null> = async (
     userId,
   ) => {
-    const [row] = await this.db
-      .select({ id: user.id, name: user.name, email: user.email })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
+    const row = await this.db
+      .selectFrom('auth.user')
+      .select(['id', 'name', 'email'])
+      .where('id', '=', userId)
+      .executeTakeFirst();
     return row ?? null;
   };
 
@@ -105,7 +103,7 @@ export class InvitesService {
     const tokenHash = hashInviteToken(rawToken);
     const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
-    const created = await this.db.transaction(async (tx) => {
+    const created = await this.db.transaction().execute(async (tx) => {
       const existing = await this.invites.findPendingByOrgAndEmail(
         input.organizationId,
         email,
@@ -288,7 +286,7 @@ export class InvitesService {
       throw AppError.INVITE_EXPIRED();
     }
 
-    const result = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction().execute(async (tx) => {
       const existing = await this.members.findByOrgAndUser(
         row.organizationId,
         input.caller.userId,

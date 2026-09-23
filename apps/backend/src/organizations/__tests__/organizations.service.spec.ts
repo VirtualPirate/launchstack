@@ -21,9 +21,10 @@ function makeMocks() {
   } as any;
 
   const db = {
-    transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ __tx: true }),
-    ),
+    transaction: jest.fn(() => ({
+      execute: async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({ __tx: true }),
+    })),
   } as any;
 
   return { orgsRepo, membersRepo, db };

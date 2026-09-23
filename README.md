@@ -28,7 +28,7 @@ Most "starter templates" leave you stranded the moment you need something real: 
 - **End-to-end type safety.** A shared `api-interfaces` package means the request you send from React is the exact shape your NestJS controller expects. Refactor a field and TypeScript catches it on both sides.
 - **Server state, solved.** Powered by **[TanStack Query](https://tanstack.com/query)** — automatic caching, request deduplication, background refetching, and optimistic updates. No `useEffect` fetching, no stale state, no race conditions. Your UI stays in sync with your server, effortlessly.
 - **A UI you'd actually ship.** **[shadcn/ui](https://ui.shadcn.com)** + **Tailwind CSS v4** + **Radix UI** primitives means accessible, beautiful components you own and can customize down to the last pixel.
-- **Migrations you can trust.** **[Drizzle ORM](https://orm.drizzle.team)** with versioned migrations gives you SQL-grade control with TypeScript ergonomics — no ORM tax, no "what is this query actually doing?" moments.
+- **Migrations you can trust.** **[Kysely](https://kysely.dev)** — a type-safe SQL query builder with versioned migrations gives you SQL-grade control with TypeScript ergonomics — no ORM tax, no "what is this query actually doing?" moments.
 - **Tested where it matters.** 50+ unit tests covering organizations, invites, members, RBAC guards, and token security. Plus e2e tests for the full auth + org flow.
 
 This is what a real production foundation looks like. Fork it, rename it, and start building the part that actually makes your product yours.
@@ -79,20 +79,19 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 
 ### Backend
 
-- **NestJS 11** with global `ConfigModule`, global Drizzle DB provider, and modular feature areas (`auth`, `organizations`)
+- **NestJS 11** with global `ConfigModule`, global Kysely DB provider, and modular feature areas (`auth`, `organizations`)
 - **Body parser disabled at root** so Better Auth can handle its own parsing; JSON middleware is applied selectively per controller
 - **Global `OrgContextGuard`** that resolves the active org from the `X-Organization-Id` header and attaches it to every request
 - **Custom decorators**: `@OrgMembership()`, `@RequireOrgRole(level)`, `@AllowAnonymous()`, `@Session()`
 - **Zod validation pipe** — every endpoint validates input against shared schemas from `@launchstack/api-interfaces`
-- **Repository pattern** — clean separation between controllers, services, and Drizzle data access
+- **Repository pattern** — clean separation between controllers, services, and Kysely data access
 - **Transactional integrity** — multi-step operations (create org + create owner membership, accept invite + add member) wrapped in DB transactions
 
 ### Database
 
 - **PostgreSQL 18** via Docker Compose (port `11753` to avoid local conflicts)
-- **Drizzle ORM** with full TypeScript schema definitions in `apps/backend/src/databases/pg-drizzle/`
-- **Versioned migrations** with `@drepkovsky/drizzle-migrations` (generate / up / down / status / fresh)
-- **Drizzle Studio** for visual DB browsing (`pnpm db:studio`)
+- **Kysely** with typed table definitions in `apps/backend/src/databases/kysely/database.types.ts`
+- **Versioned migrations** with `kysely-ctl` in `apps/backend/migrations/` (generate / up / down / status / fresh)
 - **Auth schema isolated** in the `auth` PostgreSQL schema; app tables in `public`
 - **Indexes that matter** — unique slug, unique owner-per-org, unique pending-invite-per-email-per-org, plus lookup indexes
 
@@ -115,7 +114,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 
 - **[NestJS 11](https://nestjs.com)** — modular Node.js framework with first-class TypeScript and DI
 - **[Better Auth 1.6](https://better-auth.com)** — modern, plugin-based auth (via `@thallesp/nestjs-better-auth`)
-- **[Drizzle ORM](https://orm.drizzle.team)** — type-safe SQL with `postgres` driver
+- **[Kysely](https://kysely.dev)** — type-safe SQL query builder on `pg` (node-postgres)
 - **[PostgreSQL 18](https://www.postgresql.org)** — running in Docker
 - **[Zod 4](https://zod.dev)** — schema validation, shared with the frontend
 - **[Resend](https://resend.com)** — transactional email API
@@ -139,7 +138,7 @@ This is what a real production foundation looks like. Fork it, rename it, and st
 - **[pnpm](https://pnpm.io)** workspaces — fast, disk-efficient package manager
 - **[TypeScript 5.9](https://www.typescriptlang.org)** strict mode, end to end
 - **[Jest 30](https://jestjs.io)** — unit and e2e testing
-- **[Drizzle Kit](https://orm.drizzle.team/kit-docs/overview)** + **[`@drepkovsky/drizzle-migrations`](https://github.com/drepkovsky/drizzle-migrations)** — schema management
+- **[kysely-ctl](https://github.com/kysely-org/kysely-ctl)** — migration CLI
 - **[Docker Compose](https://docs.docker.com/compose/)** — local Postgres
 - **[ESLint 9](https://eslint.org)** + **[Prettier](https://prettier.io)** — flat config
 
@@ -220,13 +219,11 @@ Sign up with any email, enter the OTP from the email Resend sends you, and you'r
 | `pnpm build`          | Build packages, then both apps                |
 | `pnpm build:packages` | Build shared packages only                    |
 | `pnpm lint`           | Lint every workspace                          |
-| `pnpm db:generate`    | Generate a new Drizzle migration              |
+| `pnpm db:generate`    | Create a new (empty) Kysely migration file    |
 | `pnpm db:up`          | Apply pending migrations                      |
 | `pnpm db:down`        | Roll back the last migration                  |
 | `pnpm db:status`      | Show migration status                         |
 | `pnpm db:fresh`       | Drop everything and re-apply (dev only)       |
-| `pnpm db:push`        | Push schema directly without a migration file |
-| `pnpm db:studio`      | Open Drizzle Studio                           |
 
 ### Backend (`cd apps/backend`)
 
@@ -247,11 +244,11 @@ launchstack/
 │   ├── backend/                  # NestJS 11 API server (port 3000)
 │   │   ├── src/
 │   │   │   ├── auth/             # Better Auth config, OTP controller, token crypto
-│   │   │   ├── databases/        # Drizzle module, schema, migrations
+│   │   │   ├── databases/        # Kysely module and table types
 │   │   │   ├── emails/           # React Email templates (OTP, invite)
 │   │   │   ├── organizations/    # Multi-tenancy: controllers, services, repos, guards
 │   │   │   └── main.ts
-│   │   ├── drizzle/              # Generated migration files
+│   │   ├── migrations/           # Kysely migration files
 │   │   └── test/                 # E2E tests (auth, organizations)
 │   └── frontend/                 # React 19 + Vite + Tailwind v4 (port 5173)
 │       ├── src/

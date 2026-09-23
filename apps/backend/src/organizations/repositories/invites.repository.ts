@@ -1,21 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gt } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { DRIZZLE_DB } from '../../databases/pg-drizzle';
-import {
-  organizationInvites,
-  organizations,
-} from '../../databases/pg-drizzle/schema';
-import { user } from '../../databases/pg-drizzle/auth-schema';
+import { KYSELY_DB } from '../../databases/kysely';
 import type {
+  AppDatabase,
   OrganizationInviteInsert,
   OrganizationInviteSelect,
   OrganizationSelect,
   UserSelect,
-} from '../../databases/pg-drizzle/types';
-import type { DrizzleExecutor } from './organizations.repository';
-
-type Db = PostgresJsDatabase<Record<string, unknown>>;
+} from '../../databases/kysely';
+import type { DbExecutor } from './organizations.repository';
 
 type InviteStatus = OrganizationInviteSelect['status'];
 
@@ -25,162 +17,230 @@ export interface InviteWithRefs {
   invitedBy: Pick<UserSelect, 'id' | 'name' | 'email'> | null;
 }
 
+interface InviteListRow {
+  inviteId: string;
+  inviteOrganizationId: string;
+  inviteEmail: string;
+  inviteRole: OrganizationInviteSelect['role'];
+  inviteTokenHash: string;
+  inviteStatus: InviteStatus;
+  inviteExpiresAt: Date;
+  inviteInvitedByUserId: string | null;
+  inviteAcceptedByUserId: string | null;
+  inviteAcceptedAt: Date | null;
+  inviteCreatedAt: Date;
+  inviteUpdatedAt: Date;
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  orgOwnerId: string;
+  orgCreatedAt: Date;
+  orgUpdatedAt: Date;
+  invitedById: string | null;
+  invitedByName: string | null;
+  invitedByEmail: string | null;
+}
+
+function toInviteWithRefs(r: InviteListRow): InviteWithRefs {
+  return {
+    invite: {
+      id: r.inviteId,
+      organizationId: r.inviteOrganizationId,
+      email: r.inviteEmail,
+      role: r.inviteRole,
+      tokenHash: r.inviteTokenHash,
+      status: r.inviteStatus,
+      expiresAt: r.inviteExpiresAt,
+      invitedByUserId: r.inviteInvitedByUserId,
+      acceptedByUserId: r.inviteAcceptedByUserId,
+      acceptedAt: r.inviteAcceptedAt,
+      createdAt: r.inviteCreatedAt,
+      updatedAt: r.inviteUpdatedAt,
+    },
+    organization: {
+      id: r.orgId,
+      name: r.orgName,
+      slug: r.orgSlug,
+      ownerId: r.orgOwnerId,
+      createdAt: r.orgCreatedAt,
+      updatedAt: r.orgUpdatedAt,
+    },
+    invitedBy: r.invitedById
+      ? { id: r.invitedById, name: r.invitedByName!, email: r.invitedByEmail! }
+      : null,
+  };
+}
+
 @Injectable()
 export class OrganizationInvitesRepository {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Db) {}
+  constructor(@Inject(KYSELY_DB) private readonly db: AppDatabase) {}
 
-  private exec(tx?: DrizzleExecutor): DrizzleExecutor {
+  private exec(tx?: DbExecutor): DbExecutor {
     return tx ?? this.db;
+  }
+
+  private listQuery(tx?: DbExecutor) {
+    return this.exec(tx)
+      .selectFrom('organizationInvites')
+      .innerJoin(
+        'organizations',
+        'organizations.id',
+        'organizationInvites.organizationId',
+      )
+      .leftJoin(
+        'auth.user as invitedBy',
+        'invitedBy.id',
+        'organizationInvites.invitedByUserId',
+      )
+      .select([
+        'organizationInvites.id as inviteId',
+        'organizationInvites.organizationId as inviteOrganizationId',
+        'organizationInvites.email as inviteEmail',
+        'organizationInvites.role as inviteRole',
+        'organizationInvites.tokenHash as inviteTokenHash',
+        'organizationInvites.status as inviteStatus',
+        'organizationInvites.expiresAt as inviteExpiresAt',
+        'organizationInvites.invitedByUserId as inviteInvitedByUserId',
+        'organizationInvites.acceptedByUserId as inviteAcceptedByUserId',
+        'organizationInvites.acceptedAt as inviteAcceptedAt',
+        'organizationInvites.createdAt as inviteCreatedAt',
+        'organizationInvites.updatedAt as inviteUpdatedAt',
+        'organizations.id as orgId',
+        'organizations.name as orgName',
+        'organizations.slug as orgSlug',
+        'organizations.ownerId as orgOwnerId',
+        'organizations.createdAt as orgCreatedAt',
+        'organizations.updatedAt as orgUpdatedAt',
+        'invitedBy.id as invitedById',
+        'invitedBy.name as invitedByName',
+        'invitedBy.email as invitedByEmail',
+      ])
+      .orderBy('organizationInvites.createdAt', 'desc');
   }
 
   async findById(
     id: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .select()
-      .from(organizationInvites)
-      .where(eq(organizationInvites.id, id))
-      .limit(1);
+    const row = await this.exec(tx)
+      .selectFrom('organizationInvites')
+      .selectAll()
+      .where('id', '=', id)
+      .limit(1)
+      .executeTakeFirst();
     return row ?? null;
   }
 
   async findByTokenHash(
     tokenHash: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .select()
-      .from(organizationInvites)
-      .where(eq(organizationInvites.tokenHash, tokenHash))
-      .limit(1);
+    const row = await this.exec(tx)
+      .selectFrom('organizationInvites')
+      .selectAll()
+      .where('tokenHash', '=', tokenHash)
+      .limit(1)
+      .executeTakeFirst();
     return row ?? null;
   }
 
   async findPendingByOrgAndEmail(
     organizationId: string,
     email: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .select()
-      .from(organizationInvites)
-      .where(
-        and(
-          eq(organizationInvites.organizationId, organizationId),
-          eq(organizationInvites.email, email),
-          eq(organizationInvites.status, 'pending'),
-        ),
-      )
-      .limit(1);
+    const row = await this.exec(tx)
+      .selectFrom('organizationInvites')
+      .selectAll()
+      .where('organizationId', '=', organizationId)
+      .where('email', '=', email)
+      .where('status', '=', 'pending')
+      .limit(1)
+      .executeTakeFirst();
     return row ?? null;
   }
 
   async listByOrg(
     organizationId: string,
     opts: { status?: InviteStatus | 'all' } = {},
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<InviteWithRefs[]> {
-    const conditions = [eq(organizationInvites.organizationId, organizationId)];
+    let query = this.listQuery(tx).where(
+      'organizationInvites.organizationId',
+      '=',
+      organizationId,
+    );
     if (opts.status && opts.status !== 'all') {
-      conditions.push(eq(organizationInvites.status, opts.status));
+      query = query.where('organizationInvites.status', '=', opts.status);
     }
-    const rows = await this.exec(tx)
-      .select({
-        invite: organizationInvites,
-        organization: organizations,
-        invitedBy: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
-      })
-      .from(organizationInvites)
-      .innerJoin(
-        organizations,
-        eq(organizations.id, organizationInvites.organizationId),
-      )
-      .leftJoin(user, eq(user.id, organizationInvites.invitedByUserId))
-      .where(and(...conditions))
-      .orderBy(desc(organizationInvites.createdAt));
-    return rows.map((r) => ({
-      invite: r.invite,
-      organization: r.organization,
-      invitedBy: r.invitedBy?.id ? r.invitedBy : null,
-    }));
+    const rows = await query.execute();
+    return rows.map(toInviteWithRefs);
   }
 
   async listByEmail(
     email: string,
     opts: { status?: InviteStatus | 'all'; notExpiredAfter?: Date } = {},
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<InviteWithRefs[]> {
-    const conditions = [eq(organizationInvites.email, email)];
+    let query = this.listQuery(tx).where(
+      'organizationInvites.email',
+      '=',
+      email,
+    );
     if (opts.status && opts.status !== 'all') {
-      conditions.push(eq(organizationInvites.status, opts.status));
+      query = query.where('organizationInvites.status', '=', opts.status);
     }
     if (opts.notExpiredAfter) {
-      conditions.push(gt(organizationInvites.expiresAt, opts.notExpiredAfter));
+      query = query.where(
+        'organizationInvites.expiresAt',
+        '>',
+        opts.notExpiredAfter,
+      );
     }
-    const rows = await this.exec(tx)
-      .select({
-        invite: organizationInvites,
-        organization: organizations,
-        invitedBy: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
-      })
-      .from(organizationInvites)
-      .innerJoin(
-        organizations,
-        eq(organizations.id, organizationInvites.organizationId),
-      )
-      .leftJoin(user, eq(user.id, organizationInvites.invitedByUserId))
-      .where(and(...conditions))
-      .orderBy(desc(organizationInvites.createdAt));
-    return rows.map((r) => ({
-      invite: r.invite,
-      organization: r.organization,
-      invitedBy: r.invitedBy?.id ? r.invitedBy : null,
-    }));
+    const rows = await query.execute();
+    return rows.map(toInviteWithRefs);
   }
 
   async create(
     input: OrganizationInviteInsert,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect> {
-    const [row] = await this.exec(tx)
-      .insert(organizationInvites)
+    return this.exec(tx)
+      .insertInto('organizationInvites')
       .values(input)
-      .returning();
-    return row;
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async updateStatus(
     id: string,
     status: InviteStatus,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .update(organizationInvites)
-      .set({ status })
-      .where(eq(organizationInvites.id, id))
-      .returning();
+    const row = await this.exec(tx)
+      .updateTable('organizationInvites')
+      .set({ status, updatedAt: new Date() })
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
     return row ?? null;
   }
 
   async rotateToken(
     id: string,
     patch: { tokenHash: string; expiresAt: Date },
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .update(organizationInvites)
-      .set({ tokenHash: patch.tokenHash, expiresAt: patch.expiresAt })
-      .where(eq(organizationInvites.id, id))
-      .returning();
+    const row = await this.exec(tx)
+      .updateTable('organizationInvites')
+      .set({
+        tokenHash: patch.tokenHash,
+        expiresAt: patch.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
     return row ?? null;
   }
 
@@ -188,13 +248,19 @@ export class OrganizationInvitesRepository {
     id: string,
     acceptedByUserId: string,
     acceptedAt: Date,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationInviteSelect | null> {
-    const [row] = await this.exec(tx)
-      .update(organizationInvites)
-      .set({ status: 'accepted', acceptedByUserId, acceptedAt })
-      .where(eq(organizationInvites.id, id))
-      .returning();
+    const row = await this.exec(tx)
+      .updateTable('organizationInvites')
+      .set({
+        status: 'accepted',
+        acceptedByUserId,
+        acceptedAt,
+        updatedAt: new Date(),
+      })
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
     return row ?? null;
   }
 }

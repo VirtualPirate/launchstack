@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   type MiddlewareConsumer,
   Module,
@@ -7,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AuthModule as BetterAuthModule } from '@thallesp/nestjs-better-auth';
 import * as express from 'express';
-import { DRIZZLE_DB } from '../databases/pg-drizzle';
+import { KYSELY_DB, type AppDatabase } from '../databases/kysely';
 import { createAuth } from './auth.config';
 import { EmailOtpController } from './email-otp.controller';
 import { EmailOtpService } from './email-otp.service';
@@ -15,8 +14,9 @@ import { EmailOtpService } from './email-otp.service';
 @Module({
   imports: [
     BetterAuthModule.forRootAsync({
-      inject: [DRIZZLE_DB, ConfigService],
-      useFactory: (db: any, configService: ConfigService) => {
+      inject: [KYSELY_DB, ConfigService],
+      useFactory: (db: AppDatabase, configService: ConfigService) => {
+        const databaseUrl = configService.getOrThrow<string>('DATABASE_URL');
         const secret = configService.getOrThrow<string>('BETTER_AUTH_SECRET');
         const baseURL = configService.getOrThrow<string>('BETTER_AUTH_URL');
         const frontendURL = configService.getOrThrow<string>('FRONTEND_URL');
@@ -29,6 +29,7 @@ import { EmailOtpService } from './email-otp.service';
         return {
           auth: createAuth({
             db,
+            databaseUrl,
             secret,
             baseURL,
             trustedOrigins: [baseURL, frontendURL],

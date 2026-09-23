@@ -1,21 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { DRIZZLE_DB } from '../../databases/pg-drizzle';
-import {
-  organizationMembers,
-  organizations,
-} from '../../databases/pg-drizzle/schema';
-import { user } from '../../databases/pg-drizzle/auth-schema';
+import { KYSELY_DB } from '../../databases/kysely';
 import type {
+  AppDatabase,
   OrganizationMemberInsert,
   OrganizationMemberSelect,
   OrganizationSelect,
   UserSelect,
-} from '../../databases/pg-drizzle/types';
-import type { DrizzleExecutor } from './organizations.repository';
-
-type Db = PostgresJsDatabase<Record<string, unknown>>;
+} from '../../databases/kysely';
+import type { DbExecutor } from './organizations.repository';
 
 export interface MemberRowWithUser {
   member: OrganizationMemberSelect;
@@ -29,110 +21,150 @@ export interface MyOrganizationRow {
 
 @Injectable()
 export class OrganizationMembersRepository {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Db) {}
+  constructor(@Inject(KYSELY_DB) private readonly db: AppDatabase) {}
 
-  private exec(tx?: DrizzleExecutor): DrizzleExecutor {
+  private exec(tx?: DbExecutor): DbExecutor {
     return tx ?? this.db;
   }
 
   async findByOrgAndUser(
     organizationId: string,
     userId: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationMemberSelect | null> {
-    const [row] = await this.exec(tx)
-      .select()
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.userId, userId),
-        ),
-      )
-      .limit(1);
+    const row = await this.exec(tx)
+      .selectFrom('organizationMembers')
+      .selectAll()
+      .where('organizationId', '=', organizationId)
+      .where('userId', '=', userId)
+      .limit(1)
+      .executeTakeFirst();
     return row ?? null;
   }
 
   async listByOrg(
     organizationId: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<MemberRowWithUser[]> {
     const rows = await this.exec(tx)
-      .select({
-        member: organizationMembers,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        },
-      })
-      .from(organizationMembers)
-      .innerJoin(user, eq(organizationMembers.userId, user.id))
-      .where(eq(organizationMembers.organizationId, organizationId));
-    return rows;
+      .selectFrom('organizationMembers')
+      .innerJoin('auth.user as u', 'u.id', 'organizationMembers.userId')
+      .select([
+        'organizationMembers.id as memberId',
+        'organizationMembers.organizationId as memberOrganizationId',
+        'organizationMembers.userId as memberUserId',
+        'organizationMembers.role as memberRole',
+        'organizationMembers.createdAt as memberCreatedAt',
+        'u.id as userId',
+        'u.name as userName',
+        'u.email as userEmail',
+        'u.image as userImage',
+      ])
+      .where('organizationMembers.organizationId', '=', organizationId)
+      .execute();
+    return rows.map((r) => ({
+      member: {
+        id: r.memberId,
+        organizationId: r.memberOrganizationId,
+        userId: r.memberUserId,
+        role: r.memberRole,
+        createdAt: r.memberCreatedAt,
+      },
+      user: {
+        id: r.userId,
+        name: r.userName,
+        email: r.userEmail,
+        image: r.userImage,
+      },
+    }));
   }
 
   async listByUser(
     userId: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<MyOrganizationRow[]> {
     const rows = await this.exec(tx)
-      .select({
-        organization: organizations,
-        member: organizationMembers,
-      })
-      .from(organizationMembers)
+      .selectFrom('organizationMembers')
       .innerJoin(
-        organizations,
-        eq(organizations.id, organizationMembers.organizationId),
+        'organizations',
+        'organizations.id',
+        'organizationMembers.organizationId',
       )
-      .where(eq(organizationMembers.userId, userId));
-    return rows;
+      .select([
+        'organizations.id as orgId',
+        'organizations.name as orgName',
+        'organizations.slug as orgSlug',
+        'organizations.ownerId as orgOwnerId',
+        'organizations.createdAt as orgCreatedAt',
+        'organizations.updatedAt as orgUpdatedAt',
+        'organizationMembers.id as memberId',
+        'organizationMembers.organizationId as memberOrganizationId',
+        'organizationMembers.userId as memberUserId',
+        'organizationMembers.role as memberRole',
+        'organizationMembers.createdAt as memberCreatedAt',
+      ])
+      .where('organizationMembers.userId', '=', userId)
+      .execute();
+    return rows.map((r) => ({
+      organization: {
+        id: r.orgId,
+        name: r.orgName,
+        slug: r.orgSlug,
+        ownerId: r.orgOwnerId,
+        createdAt: r.orgCreatedAt,
+        updatedAt: r.orgUpdatedAt,
+      },
+      member: {
+        id: r.memberId,
+        organizationId: r.memberOrganizationId,
+        userId: r.memberUserId,
+        role: r.memberRole,
+        createdAt: r.memberCreatedAt,
+      },
+    }));
   }
 
   async create(
     input: OrganizationMemberInsert,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationMemberSelect> {
-    const [row] = await this.exec(tx)
-      .insert(organizationMembers)
+    return this.exec(tx)
+      .insertInto('organizationMembers')
       .values(input)
-      .returning();
-    return row;
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async updateRole(
     id: string,
     role: OrganizationMemberInsert['role'],
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<OrganizationMemberSelect | null> {
-    const [row] = await this.exec(tx)
-      .update(organizationMembers)
+    const row = await this.exec(tx)
+      .updateTable('organizationMembers')
       .set({ role })
-      .where(eq(organizationMembers.id, id))
-      .returning();
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
     return row ?? null;
   }
 
-  async delete(id: string, tx?: DrizzleExecutor): Promise<void> {
+  async delete(id: string, tx?: DbExecutor): Promise<void> {
     await this.exec(tx)
-      .delete(organizationMembers)
-      .where(eq(organizationMembers.id, id));
+      .deleteFrom('organizationMembers')
+      .where('id', '=', id)
+      .execute();
   }
 
   async deleteByOrgAndUser(
     organizationId: string,
     userId: string,
-    tx?: DrizzleExecutor,
+    tx?: DbExecutor,
   ): Promise<void> {
     await this.exec(tx)
-      .delete(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.userId, userId),
-        ),
-      );
+      .deleteFrom('organizationMembers')
+      .where('organizationId', '=', organizationId)
+      .where('userId', '=', userId)
+      .execute();
   }
 }

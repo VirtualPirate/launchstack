@@ -1,6 +1,6 @@
 export {
   OrganizationsRepository,
-  type DrizzleExecutor,
+  type DbExecutor,
 } from './organizations.repository';
 export {
   OrganizationMembersRepository,

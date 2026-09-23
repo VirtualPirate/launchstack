@@ -21,9 +21,9 @@ function mocks() {
     findById: jest.fn(),
   } as any;
   const db = {
-    transaction: jest.fn(async (fn: (tx: any) => Promise<any>) =>
-      fn({ __tx: true }),
-    ),
+    transaction: jest.fn(() => ({
+      execute: async (fn: (tx: any) => Promise<any>) => fn({ __tx: true }),
+    })),
   } as any;
   const mailer = {
     sendInviteEmail: jest.fn().mockResolvedValue(undefined),

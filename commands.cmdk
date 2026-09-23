@@ -24,13 +24,11 @@
     "start": { "command": "docker compose up -d postgres", "description": "Start PostgreSQL database (port 11753)" },
     "stop": { "command": "docker compose down", "description": "Stop PostgreSQL database" },
     "container status": { "command": "docker compose ps", "description": "Check database container status" },
-    "generate": { "command": "pnpm db:generate", "description": "Generate migration with up/down from schema changes" },
+    "generate": { "command": "pnpm db:generate", "description": "Create an empty Kysely migration (pass a name: pnpm db:generate <name>)" },
     "up": { "command": "pnpm db:up", "description": "Apply pending database migrations" },
-    "down": { "command": "pnpm db:down", "description": "Rollback latest migration batch" },
-    "migration status": { "command": "pnpm db:status", "description": "Show migration status and batches" },
-    "fresh": { "command": "pnpm db:fresh", "description": "Rollback ALL migrations (dev reset)" },
-    "push": { "command": "pnpm db:push", "description": "Push schema directly to database (dev)" },
-    "studio": { "command": "pnpm db:studio", "description": "Open Drizzle Studio database browser" }
+    "down": { "command": "pnpm db:down", "description": "Rollback latest migration" },
+    "migration status": { "command": "pnpm db:status", "description": "Show migration status" },
+    "fresh": { "command": "pnpm db:fresh", "description": "Rollback ALL migrations and re-apply (dev reset)" }
   },
   "lint": {
     "all": { "command": "pnpm lint", "description": "Lint all packages and apps" }

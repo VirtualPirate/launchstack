@@ -1,21 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type {
   MyOrganization,
   Organization,
   OrganizationRole,
 } from '@launchstack/api-interfaces';
-import { DRIZZLE_DB } from '../../databases/pg-drizzle';
+import { KYSELY_DB } from '../../databases/kysely';
 import type {
+  AppDatabase,
   OrganizationMemberSelect,
   OrganizationSelect,
-} from '../../databases/pg-drizzle/types';
+} from '../../databases/kysely';
 import { OrganizationsRepository } from '../repositories/organizations.repository';
 import { OrganizationMembersRepository } from '../repositories/members.repository';
 import { AppError } from '../../common/errors';
-
-type Db = PostgresJsDatabase<Record<string, unknown>>;
 
 function buildSlug(name: string): string {
   const base = name
@@ -43,7 +41,7 @@ export class OrganizationsService {
   constructor(
     private readonly orgs: OrganizationsRepository,
     private readonly members: OrganizationMembersRepository,
-    @Inject(DRIZZLE_DB) private readonly db: Db,
+    @Inject(KYSELY_DB) private readonly db: AppDatabase,
   ) {}
 
   async createOrganization(
@@ -58,7 +56,7 @@ export class OrganizationsService {
       throw AppError.ORG_OWNER_CONFLICT();
     }
 
-    const result = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction().execute(async (tx) => {
       let slug = buildSlug(input.name);
       for (let attempt = 0; attempt < 5; attempt++) {
         const clash = await this.orgs.findBySlug(slug, tx);
@@ -132,7 +130,7 @@ export class OrganizationsService {
       throw AppError.ORG_TRANSFER_TO_SELF();
     }
 
-    return await this.db.transaction(async (tx) => {
+    return await this.db.transaction().execute(async (tx) => {
       const target = await this.members.findByOrgAndUser(
         input.organizationId,
         input.newOwnerUserId,

@@ -23,13 +23,11 @@ pnpm format                 # Prettier on src/ and test/
 ### Database (requires `docker compose up -d` from repo root)
 
 ```bash
-pnpm db:generate            # Create Drizzle migration
+pnpm db:generate <name>     # Create an empty Kysely migration (migrations/YYYYMMDDHHmmss_<name>.ts)
 pnpm db:up                  # Apply migrations
 pnpm db:down                # Rollback last migration
 pnpm db:status              # Show migration status
-pnpm db:fresh               # Reset DB (destructive)
-pnpm db:push                # Push schema directly (no migration file)
-pnpm db:studio              # Drizzle Studio UI
+pnpm db:fresh               # Roll back all migrations and re-apply (destructive)
 ```
 
 ## Architecture
@@ -39,10 +37,10 @@ pnpm db:studio              # Drizzle Studio UI
 ```
 AppModule
 ├── ConfigModule (global)
-├── DrizzleModule (global) ─── provides DRIZZLE_DB token
+├── KyselyModule (global) ─── provides KYSELY_DB token
 └── AppAuthModule
     └── BetterAuthModule.forRootAsync()
-        └── injects DRIZZLE_DB + ConfigService
+        └── injects KYSELY_DB + ConfigService
 ```
 
 ### Key Entry Points
@@ -50,20 +48,20 @@ AppModule
 - **`src/main.ts`** — NestJS bootstrap. Body parser disabled (`bodyParser: false`) because Better Auth handles its own request parsing.
 - **`src/app.module.ts`** — Root module importing all feature modules.
 
-### Database (Drizzle ORM)
+### Database (Kysely)
 
-The `DrizzleModule` (`src/databases/pg-drizzle/drizzle.module.ts`) is a **global** module. Inject the database anywhere via the `DRIZZLE_DB` token:
+The `KyselyModule` (`src/databases/kysely/kysely.module.ts`) is a **global** module. Inject the database anywhere via the `KYSELY_DB` token:
 
 ```typescript
-constructor(@Inject(DRIZZLE_DB) private db: DrizzleDB) {}
+constructor(@Inject(KYSELY_DB) private db: AppDatabase) {}
 ```
 
-Schema is split across two files:
+The instance runs on `pg` (node-postgres) with `CamelCasePlugin`: table and column names are camelCase in TypeScript and snake_case in SQL. Table types are hand-written in `src/databases/kysely/database.types.ts` — application tables (`organizations`, …) plus Better Auth tables as `auth.user`, `auth.session`, `auth.account`, `auth.verification`. Update them in the same change as the migration.
 
-- `src/databases/pg-drizzle/schema.ts` — Application tables
-- `src/databases/pg-drizzle/auth-schema.ts` — Better Auth tables (`user`, `session`, `account`, `verification`) in the `auth` PostgreSQL schema namespace
+- **Transactions:** `this.db.transaction().execute(async (tx) => …)`. Repositories take an optional `tx?: DbExecutor` and fall back to `this.db`.
+- **`updatedAt`:** Kysely has no `$onUpdate` — set `updatedAt: new Date()` explicitly in every `updateTable(...).set(...)`.
 
-Both are registered in `DrizzleModule` and in `drizzle.config.ts`. Migrations live in `drizzle/` and use `@drepkovsky/drizzle-migrations` (not drizzle-kit) for generate/up/down.
+Migrations live in `migrations/` and run via `kysely-ctl` (`kysely.config.ts`). They are plain `up(db: Kysely<any>)` / `down` functions using literal snake_case identifiers — never import app code, and the CamelCasePlugin is not installed on the migration connection. File names use a `YYYYMMDDHHmmss_` prefix because Kysely applies migrations in lexical order.
 
 ### Auth (Better Auth)
 
@@ -71,7 +69,7 @@ Auth uses [Better Auth](https://www.better-auth.com/) v1.6.2 via the `@thallesp/
 
 **Config:** `src/auth/auth.config.ts` — factory function `createAuth()` that builds the Better Auth instance with:
 
-- Drizzle adapter (PostgreSQL)
+- Its own `pg` Pool (Better Auth's built-in Kysely adapter) with `search_path=auth`, plus per-model `fields` mappings to the snake_case columns
 - Email + password authentication
 - Google OAuth social provider (optional, enabled when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set). Account linking is enabled with Google as a trusted provider, meaning Google sign-in auto-links to existing email+password accounts with the same email.
 - Token encryption via `databaseHooks` — OAuth access tokens and refresh tokens are encrypted at rest using AES-256-GCM. Encryption key is derived from `BETTER_AUTH_SECRET` via scrypt. **Note:** Changing `BETTER_AUTH_SECRET` after OAuth tokens are stored will make existing encrypted tokens unreadable.
@@ -143,8 +141,8 @@ Watch the backend logs for `[noop <jobId>] received: hello`.
 **Operational risks:**
 
 - **First-run permissions.** pg-boss creates and migrates its own `pgboss` schema on `boss.start()`. The `DATABASE_URL` user must have `CREATE` on the database the first time the app starts. Local Docker Postgres satisfies this; locked-down production users may need a one-time admin run of `boss.start()` or manual schema bootstrap.
-- **DB connection growth.** pg-boss uses `node-postgres` and Drizzle uses `postgres-js`; they cannot share a pool. Total connections per worker replica ~= `drizzle_pool + PG_BOSS_POOL_MAX`. Cap with `PG_BOSS_POOL_MAX` (default 10) and check Postgres `max_connections` headroom before scaling worker replicas.
-- **Schema is owned by pg-boss.** Never reference the `pgboss` schema in `drizzle/` migrations.
+- **DB connection growth.** pg-boss, the app's Kysely instance, and Better Auth each own a separate `pg` pool (default max 10 each). Total connections per worker replica ~= `kysely_pool + better_auth_pool + PG_BOSS_POOL_MAX`. Cap with `PG_BOSS_POOL_MAX` (default 10) and check Postgres `max_connections` headroom before scaling worker replicas.
+- **Schema is owned by pg-boss.** Never reference the `pgboss` schema in `migrations/`.
 
 **Dashboard (local dev):**
 
@@ -166,7 +164,6 @@ Open http://localhost:3210. Reads from the same `DATABASE_URL` / `pgboss` schema
 
 - `src/__mocks__/@thallesp/nestjs-better-auth.ts`
 - `src/__mocks__/better-auth.ts`
-- `src/__mocks__/better-auth/adapters/drizzle.ts`
 - `src/__mocks__/better-auth/plugins.ts`
 - `src/__mocks__/resend.ts`
 

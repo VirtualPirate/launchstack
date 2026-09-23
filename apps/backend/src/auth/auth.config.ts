@@ -1,16 +1,15 @@
 import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { emailOTP, openAPI } from 'better-auth/plugins';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { Pool } from 'pg';
 import { Resend } from 'resend';
-import * as authSchema from '../databases/pg-drizzle/auth-schema';
+import type { AppDatabase } from '../databases/kysely';
 import { renderOtpEmail } from '../emails/render-email';
 import { deriveKey, encrypt } from './crypto';
 
 export interface AuthConfig {
-  db: PostgresJsDatabase<Record<string, unknown>>;
+  db: AppDatabase;
+  databaseUrl: string;
   secret: string;
   baseURL: string;
   trustedOrigins: string[];
@@ -27,24 +26,65 @@ export function createAuth(config: AuthConfig) {
   const encryptionKey = deriveKey(config.secret);
 
   return betterAuth({
-    database: drizzleAdapter(config.db, {
-      provider: 'pg',
-      schema: authSchema,
+    // Better Auth runs its own Kysely instance over this pool. The auth tables
+    // live in the `auth` Postgres schema with snake_case columns, hence the
+    // search_path and the per-model `fields` mappings below.
+    database: new Pool({
+      connectionString: config.databaseUrl,
+      options: '-c search_path=auth',
     }),
     secret: config.secret,
     baseURL: config.baseURL,
     trustedOrigins: config.trustedOrigins,
+    user: {
+      fields: {
+        emailVerified: 'email_verified',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+    },
+    session: {
+      fields: {
+        expiresAt: 'expires_at',
+        ipAddress: 'ip_address',
+        userAgent: 'user_agent',
+        userId: 'user_id',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+    },
+    verification: {
+      fields: {
+        expiresAt: 'expires_at',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+    },
+    account: {
+      fields: {
+        accountId: 'account_id',
+        providerId: 'provider_id',
+        userId: 'user_id',
+        accessToken: 'access_token',
+        refreshToken: 'refresh_token',
+        idToken: 'id_token',
+        accessTokenExpiresAt: 'access_token_expires_at',
+        refreshTokenExpiresAt: 'refresh_token_expires_at',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+      ...(googleEnabled && {
+        accountLinking: {
+          enabled: true,
+          trustedProviders: ['google'],
+        },
+      }),
+    },
     ...(googleEnabled && {
       socialProviders: {
         google: {
           clientId: config.googleClientId!,
           clientSecret: config.googleClientSecret!,
-        },
-      },
-      account: {
-        accountLinking: {
-          enabled: true,
-          trustedProviders: ['google'],
         },
       },
     }),
@@ -70,11 +110,11 @@ export function createAuth(config: AuthConfig) {
           return;
         }
 
-        const [existingUser] = await config.db
-          .select({ emailVerified: authSchema.user.emailVerified })
-          .from(authSchema.user)
-          .where(eq(authSchema.user.email, email))
-          .limit(1);
+        const existingUser = await config.db
+          .selectFrom('auth.user')
+          .select('emailVerified')
+          .where('email', '=', email)
+          .executeTakeFirst();
 
         if (existingUser && !existingUser.emailVerified) {
           throw new APIError('FORBIDDEN', {

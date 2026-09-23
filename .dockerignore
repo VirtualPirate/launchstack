@@ -1,0 +1,33 @@
+# deps / build outputs — reinstalled/rebuilt inside the image
+**/node_modules
+**/dist
+**/.next
+**/out
+deploy/
+coverage/
+.turbo/
+
+# vcs / editor / os
+.git
+.gitignore
+.vscode
+.cursor
+.claude
+.idea
+**/*.swp
+.DS_Store
+
+# local env + logs (never bake secrets into an image)
+**/.env
+**/.env.*
+!**/.env.example
+logs/
+**/*.log
+
+# docs / misc not needed at build time
+.docs/
+docs/
+.agents/
+.requestly/
+requestly/
+screenshot/

@@ -1,0 +1,464 @@
+# =============================================================================
+# Temporal — PRODUCTION stack for DOKPLOY (Compose type)
+# =============================================================================
+#
+# Differences from the local dev stack (repo-root docker-compose.yaml):
+#   * temporalio/server, not temporalio/auto-setup. Schema migration is a separate
+#     one-shot job, so the serving containers never touch DDL.
+#   * The four roles (frontend / history / matching / worker) run as separate
+#     containers so they can be restarted and scaled independently.
+#   * NUM_HISTORY_SHARDS is explicit and must be decided BEFORE first boot.
+#   * Namespace is created explicitly with a real retention period.
+#   * Prometheus metrics exposed, resource limits set.
+#
+# Requires an EXTERNAL Postgres (Dokploy-managed, RDS, etc). The user needs
+# CREATE DATABASE for the one-shot schema job only.
+#
+# -----------------------------------------------------------------------------
+# ONE NETWORK, DELIBERATE
+# -----------------------------------------------------------------------------
+# Multi-homing a server container means setting BIND_ON_IP=0.0.0.0 to work
+# around a single-address bind. That is fine when all four roles share one
+# process. It is NOT fine here: with split containers, ringpop membership
+# advertises whatever BIND_ON_IP resolves to, and 0.0.0.0 is not a routable
+# address for a peer. You would then also need TEMPORAL_BROADCAST_ADDRESS set to
+# the correct per-container IP, on the correct network, at runtime.
+#
+# So: every Temporal service sits on dokploy-network ONLY. BIND_ON_IP is left
+# unset, and the image entrypoint (docker/entrypoint.sh, shared by
+# temporalio/server) derives the container's single IP with:
+#   : "${BIND_ON_IP:=$(getent hosts "$(hostname)" | awk '{print $1;}')}"
+# One network means one address, so membership works with no ceremony.
+#
+# Tradeoff: anything on dokploy-network can dial 7233, which is unauthenticated
+# admin access to every namespace. See "HARDENING 7233" at the bottom.
+#
+# -----------------------------------------------------------------------------
+# BEFORE FIRST BOOT
+# -----------------------------------------------------------------------------
+#   1. Set TEMPORAL_NUM_HISTORY_SHARDS. It is IMMUTABLE. Changing it later means
+#      a new cluster and a data migration — history refuses to start against a
+#      database provisioned with a different count. 512 is the conventional
+#      production value; 128 is defensible on one modest box. Do not leave it
+#      small. Moving an EXISTING cluster: keep its current count or use fresh
+#      databases.
+#   2. Check the newest patch tags on Docker Hub for temporalio/server,
+#      temporalio/admin-tools (server part must MATCH server; the tag is
+#      <server>-tctl-<v>-cli-<v>, there is no bare version tag) and temporalio/ui
+#      (versioned separately, 2.x line). The defaults below are a starting point,
+#      not a recommendation to stay there.
+#   3. Confirm the temporal-sql-tool flags for your version. They have drifted
+#      across releases. Authoritative reference:
+#        docker run --rm --entrypoint cat temporalio/auto-setup:<TAG> \
+#          /etc/temporal/auto-setup.sh
+#   4. Fill .env from .env.example.
+#
+# -----------------------------------------------------------------------------
+# DYNAMIC CONFIG — NOTHING IS MOUNTED, ON PURPOSE
+# -----------------------------------------------------------------------------
+# DYNAMIC_CONFIG_FILE_PATH points at /etc/temporal/config/dynamicconfig/docker.yaml,
+# an EMPTY file the temporalio/server image already ships, and which
+# config_template.yaml already defaults to. An empty dynamic config is complete and
+# valid — every key has a working default — so there is nothing to supply.
+#
+# Do not add a Dokploy File Mount (../files/dynamicconfig.yaml) for it without
+# reading this: a bind mount whose SOURCE does not exist makes
+# Docker create a DIRECTORY at that path rather than erroring, and every server
+# role then dies at boot, non-recoverably, with
+#   unable to read dynamic config: ...: is a directory
+# The mount has to exist in Dokploy BEFORE the first deploy, on every host, forever
+# — for a file that is empty anyway. Not worth the boot-time failure mode.
+#
+# To actually set an override (rate limits, per-namespace RPS), bake it instead:
+# write the YAML into the repo and COPY it over docker.yaml in a small image that
+# FROMs temporalio/server. Path unchanged, no env change, no mount, and the file is
+# reviewable in git.
+#
+# Local bring-up without Dokploy:
+#   docker network create dokploy-network
+#   docker compose --env-file .env up -d
+# =============================================================================
+
+x-server-image: &server-image temporalio/server:${TEMPORAL_VERSION:-1.29.7}
+# admin-tools does NOT publish a bare server-version tag — its tags are
+# <server>-tctl-<v>-cli-<v>. Must be bumped alongside TEMPORAL_VERSION.
+x-tools-image: &tools-image temporalio/admin-tools:${TEMPORAL_ADMIN_TOOLS_VERSION:-1.29.7-tctl-1.18.4-cli-1.7.2}
+
+# Shared persistence + telemetry config for every server role. The server image
+# renders /etc/temporal/config/docker.yaml from these on start.
+x-server-env: &server-env
+  DB: postgres12
+  POSTGRES_SEEDS: ${POSTGRES_HOST}
+  DB_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PWD: ${POSTGRES_PASSWORD}
+  DBNAME: ${TEMPORAL_DBNAME:-temporal}
+  VISIBILITY_DBNAME: ${TEMPORAL_VISIBILITY_DBNAME:-temporal_visibility}
+  # Must be identical across all roles and identical to what the schema job
+  # provisioned against. Immutable after first boot.
+  NUM_HISTORY_SHARDS: ${TEMPORAL_NUM_HISTORY_SHARDS:-512}
+  ENABLE_ES: "false"
+  # The EMPTY file the temporalio/server image already ships. Nothing is mounted over it —
+  # see "DYNAMIC CONFIG" in the header for why not. An empty dynamic config is complete and
+  # valid; every key has a working default.
+  DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/config/dynamicconfig/docker.yaml
+  # Scrape target. Without this you cannot see task-queue backlog or
+  # schedule-to-start latency, which are the two numbers that tell you a worker
+  # has quietly died. Nothing scrapes it yet — port 8000 is reachable on
+  # dokploy-network but no Prometheus is pointed at it in this stack.
+  PROMETHEUS_ENDPOINT: 0.0.0.0:8000
+  LOG_LEVEL: ${TEMPORAL_LOG_LEVEL:-info}
+
+x-server-common: &server-common
+  image: *server-image
+  restart: unless-stopped
+  # Give in-flight tasks a chance to drain instead of being killed at 10s.
+  stop_grace_period: 60s
+  depends_on:
+    temporal-schema:
+      condition: service_completed_successfully
+  # No volumes. Dynamic config is the image's own empty docker.yaml — see "DYNAMIC
+  # CONFIG" in the header before adding a mount back.
+  networks:
+    - dokploy-network
+
+services:
+  # ---------------------------------------------------------------------------
+  # One-shot: create databases and migrate schema. Runs to completion, exits.
+  # This is the whole point of not using auto-setup — DDL lives here, not in a
+  # container that serves traffic.
+  #
+  # Retries the whole sequence, because this job is the hard gate for all four
+  # server roles (service_completed_successfully) and has restart: "no". A
+  # Postgres that is merely slow to accept connections after a host reboot would
+  # otherwise fail the deploy with nothing to self-heal it.
+  # ---------------------------------------------------------------------------
+  temporal-schema:
+    image: *tools-image
+    restart: "no"
+    # admin-tools ships ENTRYPOINT ["tini","--","sleep","infinity"] and NO CMD.
+    # `command:` replaces CMD, not ENTRYPOINT — without this override the container
+    # runs `tini -- sleep infinity sh -euc <script>`, the script never executes, the
+    # job never exits, and every role below hangs on service_completed_successfully.
+    entrypoint: ["tini", "--"]
+    environment:
+      SQL_PLUGIN: postgres12
+      SQL_HOST: ${POSTGRES_HOST}
+      SQL_PORT: ${POSTGRES_PORT:-5432}
+      SQL_USER: ${POSTGRES_USER}
+      SQL_PASSWORD: ${POSTGRES_PASSWORD}
+      # MUST track the server roles' DBNAME / VISIBILITY_DBNAME. Without these the
+      # job provisions `temporal` / `temporal_visibility` while the servers connect
+      # to whatever .env named, and history starts against databases nobody built.
+      CORE_DB: ${TEMPORAL_DBNAME:-temporal}
+      VIS_DB: ${TEMPORAL_VISIBILITY_DBNAME:-temporal_visibility}
+    command:
+      - sh
+      - -euc
+      - |
+        SCHEMA=/etc/temporal/schema/postgresql/v12
+
+        # create-database and setup-schema are first-run steps and are expected
+        # to fail on subsequent deploys (database/version table already there).
+        # update-schema is the version-aware step and is the one that MUST
+        # succeed — it is what makes this job safe to re-run and what applies
+        # migrations when you bump the server version.
+        provision() {
+          for db in "$${CORE_DB}" "$${VIS_DB}"; do
+            echo "== $${db}: create database"
+            temporal-sql-tool --database "$${db}" create-database || true
+          done
+
+          echo "== $${CORE_DB}: schema"
+          temporal-sql-tool --database "$${CORE_DB}" setup-schema -v 0.0 || true
+          temporal-sql-tool --database "$${CORE_DB}" update-schema \
+            -d "$${SCHEMA}/temporal/versioned" || return 1
+
+          echo "== $${VIS_DB}: schema"
+          temporal-sql-tool --database "$${VIS_DB}" setup-schema -v 0.0 || true
+          temporal-sql-tool --database "$${VIS_DB}" update-schema \
+            -d "$${SCHEMA}/visibility/versioned" || return 1
+        }
+
+        for i in $$(seq 1 20); do
+          if provision; then
+            echo "== schema up to date"
+            exit 0
+          fi
+          echo "-- attempt $$i failed (Postgres not reachable yet?), retry in 5s"
+          sleep 5
+        done
+
+        # Final attempt outside the retry loop, so a real schema error surfaces
+        # its output and this job exits non-zero instead of looping forever.
+        echo "== final attempt"
+        provision
+        echo "== schema up to date"
+    networks:
+      - dokploy-network
+
+  # ---------------------------------------------------------------------------
+  # History — the hot path. Owns shards, writes mutable state and event history.
+  # Most memory-hungry role; the first one to scale out.
+  # ---------------------------------------------------------------------------
+  temporal-history:
+    <<: *server-common
+    environment:
+      <<: *server-env
+      SERVICES: history
+    deploy:
+      resources:
+        limits:
+          memory: ${TEMPORAL_HISTORY_MEM:-2G}
+
+  # ---------------------------------------------------------------------------
+  # Matching — task queue dispatch.
+  # ---------------------------------------------------------------------------
+  temporal-matching:
+    <<: *server-common
+    environment:
+      <<: *server-env
+      SERVICES: matching
+    deploy:
+      resources:
+        limits:
+          memory: ${TEMPORAL_MATCHING_MEM:-768M}
+
+  # ---------------------------------------------------------------------------
+  # Frontend — the only role your Workers and Clients talk to. 7233 is NOT
+  # published to the host; it is reachable on dokploy-network at the alias below.
+  # ---------------------------------------------------------------------------
+  temporal-frontend:
+    <<: *server-common
+    environment:
+      <<: *server-env
+      SERVICES: frontend
+    expose:
+      - "7233"
+    deploy:
+      resources:
+        limits:
+          memory: ${TEMPORAL_FRONTEND_MEM:-768M}
+    networks:
+      dokploy-network:
+        aliases:
+          # Stable address for other stacks, since Dokploy mangles container
+          # names per project. Your NestJS workers dial ${TEMPORAL_ALIAS}:7233.
+          - ${TEMPORAL_ALIAS:-temporal}
+
+  # ---------------------------------------------------------------------------
+  # Worker — Temporal's OWN internal system worker (archival, scheduled task
+  # cleanup, batch ops, namespace replication). Not your application worker.
+  # ---------------------------------------------------------------------------
+  temporal-worker:
+    <<: *server-common
+    environment:
+      <<: *server-env
+      SERVICES: worker
+    deploy:
+      resources:
+        limits:
+          memory: ${TEMPORAL_WORKER_MEM:-512M}
+
+  # ---------------------------------------------------------------------------
+  # One-shot: wait for the cluster to serve, then register the namespace.
+  #
+  # This job is also the readiness gate for the UI. The server image ships no
+  # CLI, so a container-level healthcheck on the roles above would need a binary
+  # that isn't there — a healthcheck that can never pass is worse than none,
+  # because dependents hang forever with no obvious cause. admin-tools has the
+  # CLI, so the gate lives here instead.
+  # ---------------------------------------------------------------------------
+  temporal-bootstrap:
+    image: *tools-image
+    restart: "no"
+    # Same ENTRYPOINT trap as temporal-schema above.
+    entrypoint: ["tini", "--"]
+    depends_on:
+      temporal-frontend:
+        condition: service_started
+      temporal-history:
+        condition: service_started
+      temporal-matching:
+        condition: service_started
+    environment:
+      # The compose SERVICE NAME, not ${TEMPORAL_ALIAS}. Compose registers the service
+      # name as a DNS alias on every network the service joins, so this resolves for
+      # anything in this project unconditionally. ${TEMPORAL_ALIAS} is a hand-published
+      # alias that exists only while temporal-frontend is actually running — dialing it
+      # from inside the same project adds a dependency on that registration for no gain,
+      # and a frontend that is crashlooping turns into a confusing DNS error here
+      # (`server misbehaving`) instead of a connection failure that names the real
+      # problem. The alias is for CROSS-STACK consumers (launchstack); keep it for them.
+      TEMPORAL_ADDRESS: temporal-frontend:7233
+      # MUST match TEMPORAL_NAMESPACE in the launchstack stack's .env — that is the
+      # namespace backend and worker connect to, and nothing creates it but this job.
+      # A mismatch is silent here and fails over there with "Namespace X is not found".
+      NS: ${TEMPORAL_NAMESPACE:-default}
+      # Your audit window. Histories are GONE after this, so pick it with the
+      # "a sync went wrong three days ago" case in mind. Changing it later:
+      #   temporal operator namespace update --namespace <ns> --retention <dur>
+      RETENTION: ${TEMPORAL_RETENTION:-7d}
+    command:
+      - sh
+      - -euc
+      - |
+        echo "waiting for frontend at $${TEMPORAL_ADDRESS}"
+        for i in $$(seq 1 60); do
+          temporal operator cluster health >/dev/null 2>&1 && break
+          echo "  not serving yet ($$i/60)"
+          sleep 3
+        done
+        # Final attempt, unsuppressed, so a real failure surfaces its error and
+        # this job exits non-zero rather than pretending success.
+        temporal operator cluster health
+
+        if temporal operator namespace describe --namespace "$${NS}" >/dev/null 2>&1; then
+          echo "namespace $${NS} already exists"
+        else
+          echo "creating namespace $${NS} with retention $${RETENTION}"
+          temporal operator namespace create \
+            --namespace "$${NS}" --retention "$${RETENTION}"
+        fi
+
+        # Custom search attributes, if you want to filter workflows by tenant /
+        # connection in the UI. Safe to leave commented; adding them later is
+        # fine, removing them is not.
+        # temporal operator search-attribute create \
+        #   --namespace "$${NS}" --name OrgId --type Keyword || true
+    networks:
+      - dokploy-network
+
+  # ---------------------------------------------------------------------------
+  # Idle CLI box. Does nothing but sleep, so there is a container to `docker exec`
+  # into when you need `temporal ...` against this cluster. Every other role runs
+  # temporalio/server, which does NOT ship the CLI, and the two containers that do
+  # (temporal-schema, temporal-bootstrap) are one-shot jobs that have already
+  # exited by the time you want a shell.
+  #
+  #   docker exec -it <project>-temporal-admin-1 sh
+  #   temporal operator namespace describe -n default
+  #   temporal workflow count --query "CloseTime < '2026-08-01T00:00:00Z'"
+  #
+  # TEMPORAL_ADDRESS/TEMPORAL_NAMESPACE are read by the CLI itself, so both flags
+  # can be omitted. Read-only by convention only — this image can terminate and
+  # batch-delete, same as the UI. It is not exposed to the network.
+  # ---------------------------------------------------------------------------
+  temporal-admin:
+    image: *tools-image
+    restart: unless-stopped
+    # Same ENTRYPOINT trap as temporal-schema and temporal-bootstrap: the image
+    # entrypoint would otherwise swallow the command.
+    entrypoint: ["tini", "--"]
+    command: ["sleep", "infinity"]
+    depends_on:
+      temporal-frontend:
+        condition: service_started
+    environment:
+      # Service name, not ${TEMPORAL_ALIAS} — same reasoning as temporal-bootstrap.
+      TEMPORAL_ADDRESS: temporal-frontend:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - dokploy-network
+
+  # ---------------------------------------------------------------------------
+  # UI. Full read/write console — terminate, signal, reset, batch actions. The
+  # basicauth middleware is mandatory, not decorative.
+  #
+  # DO NOT also add a domain in the Dokploy "Domains" tab. That tab cannot
+  # attach middleware, so it registers a SECOND router on the same hostname with
+  # no auth, and Traefik may serve that one. These labels are the only place
+  # this hostname is configured.
+  #
+  # An empty TEMPORAL_UI_BASIC_AUTH fails CLOSED — no credential matches an
+  # empty user list.
+  #
+  # Note the coupling: gating on temporal-bootstrap means a namespace-registration
+  # failure also takes down the console you would use to diagnose it. Switch to
+  # `temporal-frontend: service_started` if you would rather have the UI up early.
+  # ---------------------------------------------------------------------------
+  temporal-ui:
+    image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.52.1}
+    restart: unless-stopped
+    depends_on:
+      temporal-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      # Service name, not ${TEMPORAL_ALIAS} — same reasoning as temporal-bootstrap.
+      TEMPORAL_ADDRESS: temporal-frontend:7233
+      TEMPORAL_DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      # ui-server defaults allowOrigins to http://localhost:8080, which is wrong
+      # behind a real hostname. Same-origin requests skip CORS, but the CSRF
+      # check consults this.
+      TEMPORAL_CORS_ORIGINS: https://${TEMPORAL_UI_DOMAIN}
+    expose:
+      - "8080"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    labels:
+      - traefik.enable=true
+      # Explicit because if Dokploy's global providers.docker.network default
+      # ever changes, Traefik could resolve an address it has no route to.
+      # Symptom would be a 504 against a perfectly healthy container.
+      - traefik.docker.network=dokploy-network
+      # Router/middleware/service names are GLOBAL to the Traefik instance, not
+      # scoped to the Compose project. Rename the `temporal-ui` segment if
+      # another stack on this host already claims it.
+      - traefik.http.routers.temporal-ui.rule=Host(`${TEMPORAL_UI_DOMAIN}`)
+      - traefik.http.routers.temporal-ui.entrypoints=websecure
+      - traefik.http.routers.temporal-ui.tls.certresolver=letsencrypt
+      # `expose` alone is not enough for Traefik to infer the port.
+      - traefik.http.services.temporal-ui.loadbalancer.server.port=8080
+      - traefik.http.routers.temporal-ui.middlewares=temporal-ui-auth
+      - traefik.http.middlewares.temporal-ui-auth.basicauth.users=${TEMPORAL_UI_BASIC_AUTH}
+      - traefik.http.routers.temporal-ui-http.rule=Host(`${TEMPORAL_UI_DOMAIN}`)
+      - traefik.http.routers.temporal-ui-http.entrypoints=web
+      - traefik.http.routers.temporal-ui-http.middlewares=temporal-ui-https
+      - traefik.http.middlewares.temporal-ui-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.temporal-ui-https.redirectscheme.permanent=true
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
+
+# =============================================================================
+# HARDENING 7233
+# =============================================================================
+# As written, any container on dokploy-network can dial the frontend and has
+# unauthenticated admin access to every namespace. For a single-tenant stack you
+# own end to end, that may be an acceptable, stated risk. If it isn't, the real
+# fixes, in order of effort:
+#
+#   1. Dedicated network. Create `temporal-net`, attach the four server roles,
+#      both jobs, your Postgres and your NestJS workers to it, and give ONLY
+#      temporal-ui both temporal-net and dokploy-network. The UI has no ringpop
+#      membership so multi-homing is harmless there. Requires a Postgres you can
+#      attach to a second network — a Dokploy-managed Postgres generally can't
+#      be, which is why this file doesn't default to it.
+#   2. mTLS on the frontend, via the `tls` block in a mounted config override.
+#   3. An authorizer + claim mapper, if you ever have more than one consumer.
+#
+# =============================================================================
+# ALSO NOT DONE HERE
+# =============================================================================
+#   * Archival is off. Once retention expires, histories are gone. If LaunchStack
+#     needs an audit trail longer than your retention window, configure archival
+#     to S3/GCS rather than stretching retention indefinitely.
+#   * No replicas. Two frontends and two history nodes is the smallest genuinely
+#     HA shape, but on a single Dokploy host it buys you very little — the host
+#     is the failure domain. Worth revisiting only when you have two hosts.
+#   * Backups. `temporal` and `temporal_visibility` are now real production
+#     databases. They need to be in whatever backup policy your app DB is in.
+#   * Audit. Everyone shares one basicauth credential, so there is no record of
+#     who terminated a workflow.
+#   * Metrics scraping. PROMETHEUS_ENDPOINT is set on every role but no
+#     Prometheus is deployed here, so nothing reads :8000 yet.
+# =============================================================================

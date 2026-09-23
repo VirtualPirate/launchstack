@@ -37,6 +37,37 @@ services:
       GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT}
       GRAFANA_CLOUD_OTLP_AUTH: ${GRAFANA_CLOUD_OTLP_AUTH}
 
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    container_name: launchstack-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-launchstack}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-launchstack}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      ENABLE_ES: "false"
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.52.1
+    container_name: launchstack-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "${TEMPORAL_UI_PORT:-8080}:8080"
+
 volumes:
   postgres_data:
   otel_checkpoints:

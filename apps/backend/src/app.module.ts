@@ -5,8 +5,8 @@ import { AppService } from './app.service';
 import { KyselyModule } from './databases/kysely';
 import { AppAuthModule } from './auth';
 import { OrganizationsModule } from './organizations';
-import { PgBossModule } from './queue';
 import { QueueModule } from './queue/queue.module';
+import { TemporalModule } from './temporal';
 import { LoggerModule, RequestIdMiddleware } from './logger';
 
 @Module({
@@ -14,7 +14,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule,
     KyselyModule,
-    PgBossModule.forRoot(),
+    TemporalModule.forRoot(),
     AppAuthModule,
     OrganizationsModule,
     QueueModule,

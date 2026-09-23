@@ -10,9 +10,10 @@ LaunchStack is a full-stack TypeScript monorepo (pnpm workspaces) with a NestJS 
 
 ### Development
 ```bash
-pnpm dev                    # Run frontend (Vite :5173) + backend (NestJS :3000) in parallel
+pnpm dev                    # Run frontend (Vite :5173) + backend (NestJS :3000) + Temporal worker in parallel
 pnpm dev:frontend           # Frontend only
 pnpm dev:backend            # Backend only
+pnpm dev:worker             # Temporal worker only (needs Temporal: docker compose up -d)
 ```
 
 ### Build
@@ -23,7 +24,7 @@ pnpm build:packages         # Build shared packages only
 
 ### Database (requires Docker postgres running)
 ```bash
-docker compose up -d        # Start PostgreSQL on port 11753
+docker compose up -d        # Start PostgreSQL (11753), Temporal (7233) + Temporal UI (8080)
 pnpm db:generate <name>     # Create a new (empty) Kysely migration file
 pnpm db:up                  # Apply migrations
 pnpm db:down                # Rollback last migration
@@ -59,7 +60,9 @@ Packages are built with tsup (CJS + ESM) and must be built before apps (`pnpm bu
 
 **Entry:** `apps/backend/src/main.ts` — Body parser is disabled (Better Auth handles its own parsing).
 
-**Module graph:** `AppModule` imports `ConfigModule` (global), `KyselyModule` (global), and `AppAuthModule`.
+**Module graph:** `AppModule` imports `ConfigModule` (global), `KyselyModule` (global), `TemporalModule` (global), and `AppAuthModule`.
+
+**Background jobs:** Temporal. The API starts workflows; a separate worker process (`src/worker.ts`) runs activities. See `apps/backend/AGENTS.md` → "Background jobs (Temporal)".
 
 **Database:** Kysely with the `pg` (node-postgres) driver and `CamelCasePlugin`. The `KyselyModule` (`src/databases/kysely/kysely.module.ts`) is a global provider injected via `KYSELY_DB` token. Table types live in `src/databases/kysely/database.types.ts` — app tables in `public`, Better Auth tables (user, session, account, verification) as `auth.*`. Types are hand-written: update them alongside every migration.
 

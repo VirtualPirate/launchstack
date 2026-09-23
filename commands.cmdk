@@ -2,8 +2,9 @@
   "dev": {
     "frontend": { "command": "pnpm dev:frontend", "description": "Start Vite dev server for frontend" },
     "backend": { "command": "pnpm dev:backend", "description": "Start NestJS dev server for backend" },
-    "all": { "command": "pnpm dev", "description": "Start frontend and backend in parallel" },
-    "pg boss": { "command": "pnpm dev:dashboard", "description": "Start pg-boss dashboard (localhost:3210)" }
+    "worker": { "command": "pnpm dev:worker", "description": "Start Temporal worker (watch mode)" },
+    "all": { "command": "pnpm dev", "description": "Start frontend, backend and worker in parallel" },
+    "temporal": { "command": "docker compose up -d temporal temporal-ui", "description": "Start Temporal server + UI (localhost:8080)" }
   },
   "build": {
     "all": { "command": "pnpm build", "description": "Build packages then all apps for production" },
@@ -14,7 +15,8 @@
   "serve": {
     "frontend preview": { "command": "pnpm preview:frontend", "description": "Preview frontend production build" },
     "frontend prod": { "command": "pnpm serve:frontend:prod", "description": "Build and serve frontend in production mode" },
-    "backend prod": { "command": "pnpm start:prod:backend", "description": "Start backend from production build" }
+    "backend prod": { "command": "pnpm start:prod:backend", "description": "Start backend from production build" },
+    "worker prod": { "command": "pnpm start:prod:worker", "description": "Start Temporal worker from production build" }
   },
   "shadcn": {
     "add component": { "command": "cd apps/frontend && pnpm dlx shadcn@latest add", "description": "Add a shadcn component (append component name)" },

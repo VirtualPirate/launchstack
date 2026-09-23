@@ -4,12 +4,12 @@ import {
   type NestModule,
 } from '@nestjs/common';
 import * as express from 'express';
+import { NoopActivity } from './noop.activity';
 import { NoopController } from './noop.controller';
-import { NoopHandler } from './noop.handler';
 
 @Module({
   controllers: [NoopController],
-  providers: [NoopHandler],
+  providers: [NoopActivity],
 })
 export class QueueModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

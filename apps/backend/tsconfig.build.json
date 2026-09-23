@@ -1,10 +1,20 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Flat dist/ (dist/main.js, dist/worker.js), not dist/src/ — what
+    // `node dist/main` and `node dist/worker.js` expect.
+    "rootDir": "./src",
+    // Keep the incremental cache inside dist/ so nest-cli's `deleteOutDir` wipes
+    // it along with the output. Otherwise tsc reads a stale tsbuildinfo, decides
+    // everything is up to date, emits nothing, and `node dist/main` 404s.
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+  },
   "exclude": [
     "node_modules",
     "test",
     "dist",
     "migrations",
+    "docs",
     "**/*spec.ts",
     "kysely.config.ts"
   ]

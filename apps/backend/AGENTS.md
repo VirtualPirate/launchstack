@@ -38,6 +38,7 @@ pnpm db:fresh               # Roll back all migrations and re-apply (destructive
 AppModule
 ├── ConfigModule (global)
 ├── KyselyModule (global) ─── provides KYSELY_DB token
+├── TemporalModule (global) ─── provides TemporalProducerService, TEMPORAL_CLIENT
 └── AppAuthModule
     └── BetterAuthModule.forRootAsync()
         └── injects KYSELY_DB + ConfigService
@@ -46,6 +47,7 @@ AppModule
 ### Key Entry Points
 
 - **`src/main.ts`** — NestJS bootstrap. Body parser disabled (`bodyParser: false`) because Better Auth handles its own request parsing.
+- **`src/worker.ts`** — Temporal worker process. Boots the same `AppModule` without HTTP and runs `@Activity` methods (see "Background jobs (Temporal)").
 - **`src/app.module.ts`** — Root module importing all feature modules.
 
 ### Database (Kysely)
@@ -90,42 +92,80 @@ Auth uses [Better Auth](https://www.better-auth.com/) v1.6.2 via the `@thallesp/
 - `docs/auth-signup-flow.md` — Email + password sign-up with OTP verification (cURL examples)
 - `docs/google-oauth-flow.md` — Google OAuth sign-in/sign-up, account linking, token encryption, frontend integration
 
-### Background jobs (pg-boss)
+### Background jobs (Temporal)
 
-Background jobs run on [pg-boss](https://github.com/timgit/pg-boss) v12 via a thin in-house NestJS integration in `src/queue/`.
+Background jobs run on [Temporal](https://temporal.io/) via a thin in-house bridge in `src/temporal/`. `src/queue/` holds only the `noop` smoke-test activity and controller.
 
-**Module graph:** `PgBossModule.forRoot()` is global; it constructs and starts a single `PGBoss` instance and (when `WORKER_ROLE` is `worker` or `both`) discovers `@Handler(JobDef)` methods via `DiscoveryService` and registers them through `boss.work()`. `QueueModule` registers job-specific handlers and the smoke-test controller.
+**Topology.** `docker compose up -d` (repo root) starts a Temporal server (`temporalio/auto-setup`) on `localhost:7233` next to the app's Postgres, plus the Temporal Web UI on **http://localhost:8080** (override with `TEMPORAL_UI_PORT`). The server creates its own `temporal` and `temporal_visibility` databases on the same Postgres instance on first boot; only the Temporal server talks to them.
 
-**Producer API (`PgBossService`):** Inject anywhere and call `send(JobDef, data)`, `sendAfter(JobDef, data, delaySeconds)`, or `sendOnce(JobDef, data, key)`. Payloads are validated with `JobDef.schema.parse()` before the INSERT. Use `getJob(id)` to inspect status; `raw()` returns the underlying PGBoss instance as an escape hatch.
+**Two processes.**
 
-**Defining a job:**
+- **API** (`src/main.ts`) — Temporal client only. Starts workflows, runs no activities.
+- **Worker** (`src/worker.ts`) — boots `AppModule` with `NestFactory.createApplicationContext()` (DI, no HTTP), collects every `@Activity` method, and polls the task queue. Activities run here, against the app DB.
 
-```ts
-// queue/jobs/send-welcome-email.job.ts
-import { z } from 'zod';
-import { defineJob } from '../define-job';
+Run the worker with `pnpm start:worker:dev` (or `pnpm dev:worker` from the repo root; `pnpm dev` runs it too). Production: `pnpm start:worker` (`node dist/worker.js`) or the root `pnpm start:prod:worker`. If the worker is not running, workflows start but never execute.
 
-export const SendWelcomeEmailJob = defineJob({
-  name: 'send-welcome-email',
-  schema: z.object({ userId: z.string() }),
-  workOptions: { localConcurrency: 5 },
-  retryLimit: 3,
-  retryDelay: 60,
-  retryBackoff: true,
-});
-```
+`tsconfig.build.json` pins `rootDir` to `./src`, so `nest build` emits a flat `dist/` (`dist/main.js`, `dist/worker.js`). The worker bundles `dist/temporal/workflows` at boot.
 
-Add a handler class with `@Handler(JobDef)` and register it in a feature module's `providers`. The handler is auto-discovered on boot.
+**Producer API (`TemporalProducerService`).** Inject anywhere:
 
-**Run modes (`WORKER_ROLE`):**
+- `start(workflowType, opts)` — starts a new execution. Generates `${type}:<uuid>` unless `opts.workflowId` is set. Resolves to the `workflowId` (the `{ jobId }` async endpoints return).
+- `startDeduped(workflowType, opts)` — requires `opts.workflowId`; sets `workflowIdConflictPolicy: 'USE_EXISTING'`, so a second start with a live id returns the existing run.
+- `opts` also takes `args`, `searchAttributes`, and `startDelay` (e.g. `'30s'`).
 
-| Value | Boots `boss.start()` | Producers (`send`) | Handlers (`work`) |
-| --- | --- | --- | --- |
-| `api` | yes | yes | no |
-| `worker` | yes | yes | yes |
-| `both` (default, dev) | yes | yes | yes |
+Inject `TEMPORAL_CLIENT` for anything else (signals, queries, schedules).
 
-In production, run API replicas with `WORKER_ROLE=api` and worker replicas with `WORKER_ROLE=worker`. Worker capacity scales with replica count x per-job `localConcurrency` (and/or `groupConcurrency` where used).
+**Adding a job** — three pieces:
+
+1. **Activity** — a method on a provider, tagged `@Activity('feature.action')`, registered in a feature module's `providers`. Business logic goes here (DB, network, Nest DI).
+
+   ```ts
+   @Injectable()
+   export class WelcomeEmailActivities {
+     @Activity('email.sendWelcome')
+     async sendWelcome(input: { userId: string }): Promise<void> {
+       // runs in the worker process
+     }
+   }
+   ```
+
+2. **Signature** — add the method to `Activities` in `src/temporal/activities.interface.ts`.
+
+3. **Workflow** — a plain async function in `src/temporal/workflows/<name>.workflow.ts`, exported from `workflows/index.ts`, with its type name added to `WORKFLOW` in `src/temporal/workflow-types.ts`. Call activities through a retry profile from `workflows/activity-proxies.ts` (add a profile there when none fits).
+
+   ```ts
+   export async function SendWelcomeEmailWorkflow(userId: string): Promise<void> {
+     await once['email.sendWelcome']({ userId });
+   }
+   ```
+
+Then start it: `await temporal.start(WORKFLOW.sendWelcomeEmail, { args: [userId] })`.
+
+**Workflow code is sandboxed.** Files under `src/temporal/workflows/` must be deterministic: no NestJS, no DB, no network, no `Date.now()`/`Math.random()` outside what the SDK patches. Import only `@temporalio/workflow` and type-only imports. Use `sleep()`, `startChild()`, `continueAsNew()` from `@temporalio/workflow` for timers and fan-out.
+
+**Retry mapping** (from the old pg-boss job options):
+
+| pg-boss | Temporal |
+| --- | --- |
+| `retryLimit N` | `retry.maximumAttempts = N + 1` |
+| `retryDelay` | `retry.initialInterval` |
+| `retryBackoff: true` | `retry.backoffCoefficient: 2` |
+| `expireInSeconds` | `startToCloseTimeout` |
+| `sendOnce(key)` | `startDeduped(type, { workflowId: key })` |
+| `sendAfter(delay)` | `start(type, { startDelay })` |
+| `localConcurrency` | `TEMPORAL_MAX_CONCURRENT_ACTIVITIES` (per worker process) |
+
+**Config** (all optional):
+
+| Var | Default |
+| --- | --- |
+| `TEMPORAL_ADDRESS` | `localhost:7233` |
+| `TEMPORAL_NAMESPACE` | `default` |
+| `TEMPORAL_TASK_QUEUE` | `launchstack` |
+| `TEMPORAL_MAX_CONCURRENT_ACTIVITIES` | `20` |
+| `TEMPORAL_MAX_CONCURRENT_WORKFLOW_TASKS` | `20` |
+
+Concurrency caps are per worker process: the effective ceiling is replicas × these values. A single task queue serves every workflow; move an activity type to its own queue and worker only when it needs a hard cap of its own.
 
 **Smoke test:**
 
@@ -136,27 +176,12 @@ curl -X POST http://localhost:3000/api/_internal/queue/noop \
   -d '{"message":"hello"}'
 ```
 
-Watch the backend logs for `[noop <jobId>] received: hello`.
+Returns `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", success: true }`. The worker logs `[noop] received: hello`, and the run shows as Completed in the Temporal UI.
 
-**Operational risks:**
+**Operational notes:**
 
-- **First-run permissions.** pg-boss creates and migrates its own `pgboss` schema on `boss.start()`. The `DATABASE_URL` user must have `CREATE` on the database the first time the app starts. Local Docker Postgres satisfies this; locked-down production users may need a one-time admin run of `boss.start()` or manual schema bootstrap.
-- **DB connection growth.** pg-boss, the app's Kysely instance, and Better Auth each own a separate `pg` pool (default max 10 each). Total connections per worker replica ~= `kysely_pool + better_auth_pool + PG_BOSS_POOL_MAX`. Cap with `PG_BOSS_POOL_MAX` (default 10) and check Postgres `max_connections` headroom before scaling worker replicas.
-- **Schema is owned by pg-boss.** Never reference the `pgboss` schema in `migrations/`.
-
-**Dashboard (local dev):**
-
-A web UI for inspecting queues and jobs. Local-dev only — binds to 127.0.0.1, no auth.
-
-In a separate terminal:
-
-```bash
-pnpm dev:dashboard
-```
-
-Open http://localhost:3210. Reads from the same `DATABASE_URL` / `pgboss` schema as the backend (`PGBOSS_SCHEMA` in `.env`, mirroring `PG_BOSS_SCHEMA`). Port `3210` is hard-coded in the `dev:dashboard` script; edit the script to change it. Warning history populates because the queue config sets `persistWarnings: true`.
-
-**Production deployment** is intentionally not wired up. When the time comes, the dashboard ships as a standalone process (Node or Docker) fronted by a reverse proxy with auth (`PGBOSS_DASHBOARD_AUTH_USERNAME` / `PGBOSS_DASHBOARD_AUTH_PASSWORD`). See https://github.com/timgit/pg-boss/blob/master/packages/dashboard/README.md.
+- **API boot needs Temporal.** `TemporalModule` connects eagerly, so the API (and e2e tests that import `AppModule`) fail to boot when the server at `TEMPORAL_ADDRESS` is unreachable.
+- **Legacy cleanup.** The `pgboss` Postgres schema from the old queue is orphaned. Drop it manually (`DROP SCHEMA pgboss CASCADE;`) once no in-flight jobs matter.
 
 ### Testing
 
@@ -194,3 +219,4 @@ Optional:
 
 - `GOOGLE_CLIENT_ID` — Google OAuth client ID (omit to disable Google sign-in)
 - `GOOGLE_CLIENT_SECRET` — Google OAuth client secret (omit to disable Google sign-in)
+- `TEMPORAL_*` — Temporal connection and worker caps; defaults work with the Docker setup (see "Background jobs (Temporal)")

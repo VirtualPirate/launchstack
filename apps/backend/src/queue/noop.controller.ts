@@ -8,8 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { z } from 'zod';
-import { NoopJob } from './jobs/noop.job';
-import { PgBossService } from './pg-boss.service';
+import { TemporalProducerService, WORKFLOW } from '../temporal';
 
 const Body$ = z.object({ message: z.string().min(1) });
 
@@ -17,7 +16,7 @@ const Body$ = z.object({ message: z.string().min(1) });
 @AllowAnonymous()
 export class NoopController {
   constructor(
-    private readonly pgBoss: PgBossService,
+    private readonly temporal: TemporalProducerService,
     private readonly config: ConfigService,
   ) {}
 
@@ -31,7 +30,9 @@ export class NoopController {
       throw new UnauthorizedException();
     }
     const body = Body$.parse(rawBody);
-    const jobId = await this.pgBoss.send(NoopJob, { message: body.message });
+    const jobId = await this.temporal.start(WORKFLOW.noop, {
+      args: [body.message],
+    });
     return { data: { jobId }, message: 'enqueued', success: true };
   }
 }

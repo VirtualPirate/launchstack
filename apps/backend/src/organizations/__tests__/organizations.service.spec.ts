@@ -1,10 +1,17 @@
 import { OrganizationsService } from '../services/organizations.service';
 
+/** The shape pg gives a unique-index rejection. */
+function uniqueViolation(constraint: string) {
+  return Object.assign(new Error('duplicate key'), {
+    code: '23505',
+    constraint,
+  });
+}
+
 function makeMocks() {
   const orgsRepo = {
     findById: jest.fn(),
-    findBySlug: jest.fn(),
-    findByOwnerId: jest.fn(),
+    lockById: jest.fn().mockResolvedValue({ id: 'org-1' }),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -34,18 +41,40 @@ describe('OrganizationsService', () => {
   describe('create', () => {
     it('rejects with 409 when caller already owns an org', async () => {
       const { orgsRepo, membersRepo, db } = makeMocks();
-      orgsRepo.findByOwnerId.mockResolvedValue({ id: 'existing' });
+      orgsRepo.create.mockRejectedValue(
+        uniqueViolation('organizations_owner_id_unique'),
+      );
 
       const svc = new OrganizationsService(orgsRepo, membersRepo, db);
       await expect(
         svc.createOrganization('user-1', { name: 'Acme' }),
-      ).rejects.toMatchObject({ status: 409 });
+      ).rejects.toMatchObject({ status: 409, code: 'ORG_OWNER_CONFLICT' });
+      expect(orgsRepo.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries a slug clash with a fresh slug', async () => {
+      const { orgsRepo, membersRepo, db } = makeMocks();
+      orgsRepo.create
+        .mockRejectedValueOnce(uniqueViolation('organizations_slug_unique'))
+        .mockResolvedValueOnce({
+          id: 'org-1',
+          name: 'Acme',
+          slug: 'acme-def456',
+          ownerId: 'user-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      membersRepo.create.mockResolvedValue({ id: 'm-1', role: 'owner' });
+
+      const svc = new OrganizationsService(orgsRepo, membersRepo, db);
+      const result = await svc.createOrganization('user-1', { name: 'Acme' });
+
+      expect(orgsRepo.create).toHaveBeenCalledTimes(2);
+      expect(result.organization.id).toBe('org-1');
     });
 
     it('creates org + owner membership in a transaction', async () => {
       const { orgsRepo, membersRepo, db } = makeMocks();
-      orgsRepo.findByOwnerId.mockResolvedValue(null);
-      orgsRepo.findBySlug.mockResolvedValue(null);
       orgsRepo.create.mockResolvedValue({
         id: 'org-1',
         name: 'Acme',
@@ -83,17 +112,18 @@ describe('OrganizationsService', () => {
   describe('updateOrganization', () => {
     it('rejects slug conflicts with 409', async () => {
       const { orgsRepo, membersRepo, db } = makeMocks();
-      orgsRepo.findBySlug.mockResolvedValue({ id: 'other', slug: 'taken' });
+      orgsRepo.update.mockRejectedValue(
+        uniqueViolation('organizations_slug_unique'),
+      );
 
       const svc = new OrganizationsService(orgsRepo, membersRepo, db);
       await expect(
         svc.updateOrganization('org-1', { slug: 'taken' }),
-      ).rejects.toMatchObject({ status: 409 });
+      ).rejects.toMatchObject({ status: 409, code: 'ORG_SLUG_CONFLICT' });
     });
 
     it('updates when slug is free', async () => {
       const { orgsRepo, membersRepo, db } = makeMocks();
-      orgsRepo.findBySlug.mockResolvedValue(null);
       orgsRepo.update.mockResolvedValue({
         id: 'org-1',
         name: 'Acme',
@@ -128,11 +158,15 @@ describe('OrganizationsService', () => {
 
     it('rejects when target already owns another org', async () => {
       const { orgsRepo, membersRepo, db } = makeMocks();
-      membersRepo.findByOrgAndUser.mockResolvedValueOnce({
-        role: 'admin',
-        id: 'm2',
-      });
-      orgsRepo.findByOwnerId.mockResolvedValue({ id: 'other' });
+      membersRepo.findByOrgAndUser.mockImplementation(
+        async (_orgId: string, userId: string) =>
+          userId === 'user-2'
+            ? { id: 'm2', role: 'admin' }
+            : { id: 'm1', role: 'owner' },
+      );
+      orgsRepo.setOwner.mockRejectedValue(
+        uniqueViolation('organizations_owner_id_unique'),
+      );
 
       const svc = new OrganizationsService(orgsRepo, membersRepo, db);
       await expect(
@@ -141,7 +175,10 @@ describe('OrganizationsService', () => {
           currentOwnerUserId: 'user-1',
           newOwnerUserId: 'user-2',
         }),
-      ).rejects.toMatchObject({ status: 409 });
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'ORG_TRANSFER_TARGET_OWNS_ELSEWHERE',
+      });
     });
 
     it('flips owner_id and swaps role rows in a transaction', async () => {
@@ -152,7 +189,6 @@ describe('OrganizationsService', () => {
             ? { id: 'm2', role: 'admin' }
             : { id: 'm1', role: 'owner' },
       );
-      orgsRepo.findByOwnerId.mockResolvedValue(null);
       orgsRepo.setOwner.mockResolvedValue({
         id: 'org-1',
         ownerId: 'user-2',
@@ -174,16 +210,14 @@ describe('OrganizationsService', () => {
         'user-2',
         expect.anything(),
       );
-      expect(membersRepo.updateRole).toHaveBeenCalledWith(
-        'm2',
-        'owner',
-        expect.anything(),
+      // Lock before any membership read; demote before promote.
+      expect(orgsRepo.lockById.mock.invocationCallOrder[0]).toBeLessThan(
+        membersRepo.findByOrgAndUser.mock.invocationCallOrder[0],
       );
-      expect(membersRepo.updateRole).toHaveBeenCalledWith(
-        'm1',
-        'admin',
-        expect.anything(),
-      );
+      expect(membersRepo.updateRole.mock.calls).toEqual([
+        ['m1', 'admin', expect.anything()],
+        ['m2', 'owner', expect.anything()],
+      ]);
     });
   });
 

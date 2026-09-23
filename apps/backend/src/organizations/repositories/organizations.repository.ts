@@ -30,32 +30,6 @@ export class OrganizationsRepository {
     return row ?? null;
   }
 
-  async findBySlug(
-    slug: string,
-    tx?: DbExecutor,
-  ): Promise<OrganizationSelect | null> {
-    const row = await this.exec(tx)
-      .selectFrom('organizations')
-      .selectAll()
-      .where('slug', '=', slug)
-      .limit(1)
-      .executeTakeFirst();
-    return row ?? null;
-  }
-
-  async findByOwnerId(
-    userId: string,
-    tx?: DbExecutor,
-  ): Promise<OrganizationSelect | null> {
-    const row = await this.exec(tx)
-      .selectFrom('organizations')
-      .selectAll()
-      .where('ownerId', '=', userId)
-      .limit(1)
-      .executeTakeFirst();
-    return row ?? null;
-  }
-
   async create(
     input: OrganizationInsert,
     tx?: DbExecutor,
@@ -86,6 +60,17 @@ export class OrganizationsRepository {
       .deleteFrom('organizations')
       .where('id', '=', id)
       .execute();
+  }
+
+  /** Row lock; transaction-only by signature, since outside one it is released at once. */
+  async lockById(id: string, tx: DbExecutor): Promise<{ id: string } | null> {
+    const row = await tx
+      .selectFrom('organizations')
+      .select('id')
+      .where('id', '=', id)
+      .forUpdate()
+      .executeTakeFirst();
+    return row ?? null;
   }
 
   async setOwner(

@@ -11,6 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DEFAULT_AUTH_REDIRECT_PATH,
   normalizeRedirectPath,
@@ -38,9 +40,6 @@ function getErrorMessage(error: unknown, fallback: string) {
 
   return fallback;
 }
-
-const inputClassName =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function VerifyEmailPage() {
   const search = useSearch({ strict: false }) as {
@@ -143,14 +142,11 @@ export function VerifyEmailPage() {
         <CardContent className="space-y-4">
           <form className="space-y-4" onSubmit={handleVerify}>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="otp">
-                Verification code
-              </label>
-              <input
+              <Label htmlFor="otp">Verification code</Label>
+              <Input
                 id="otp"
                 type="text"
                 inputMode="numeric"
-                className={inputClassName}
                 placeholder="123456"
                 value={otp}
                 onChange={(event) => setOtp(event.target.value)}

@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/auth/password-input";
 
 type EmailAuthMode = "sign-in" | "sign-up";
@@ -19,9 +21,6 @@ interface EmailAuthFormProps {
   initialEmail?: string;
   onSubmit: (values: EmailAuthSubmitValues) => Promise<void> | void;
 }
-
-const inputClassName =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function EmailAuthForm({
   mode,
@@ -52,13 +51,10 @@ export function EmailAuthForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       {mode === "sign-up" ? (
         <div className="space-y-1.5">
-          <label className="text-sm font-medium" htmlFor="name">
-            Full name
-          </label>
-          <input
+          <Label htmlFor="name">Full name</Label>
+          <Input
             id="name"
             type="text"
-            className={inputClassName}
             placeholder="Jane Doe"
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -69,13 +65,10 @@ export function EmailAuthForm({
       ) : null}
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium" htmlFor="email">
-          Email
-        </label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
-          className={inputClassName}
           placeholder="you@example.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -86,9 +79,7 @@ export function EmailAuthForm({
 
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between">
-          <label className="text-sm font-medium" htmlFor="password">
-            Password
-          </label>
+          <Label htmlFor="password">Password</Label>
           {mode === "sign-in" ? (
             <Link
               to="/forgot-password"

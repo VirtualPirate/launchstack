@@ -12,13 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   useResetPasswordWithOtp,
   useSendVerificationOtp,
 } from "@/hooks/api/use-auth";
-
-const inputClassName =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) {
@@ -167,14 +166,11 @@ export function ResetPasswordPage() {
         <CardContent className="space-y-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="otp">
-                Verification code
-              </label>
-              <input
+              <Label htmlFor="otp">Verification code</Label>
+              <Input
                 id="otp"
                 type="text"
                 inputMode="numeric"
-                className={inputClassName}
                 placeholder="123456"
                 value={otp}
                 onChange={(event) => setOtp(event.target.value)}
@@ -185,9 +181,7 @@ export function ResetPasswordPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="password">
-                New password
-              </label>
+              <Label htmlFor="password">New password</Label>
               <PasswordInput
                 id="password"
                 placeholder="••••••••"
@@ -200,9 +194,7 @@ export function ResetPasswordPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="confirmPassword">
-                Confirm new password
-              </label>
+              <Label htmlFor="confirmPassword">Confirm new password</Label>
               <PasswordInput
                 id="confirmPassword"
                 placeholder="••••••••"

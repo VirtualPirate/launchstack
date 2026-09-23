@@ -49,6 +49,21 @@ pnpm lint                   # Lint all workspaces
 ### Deployment
 Production runs on Dokploy as two Compose apps (`temporal`, `launchstack`) built from `infra/docker/`. See `infra/dokploy/README.md` for topology and first-deploy steps, and `infra/dokploy/AGENTS.md` before editing any file there.
 
+## Timezones
+
+Read this before writing anything that touches a date. `main.ts` and `worker.ts` pin `process.env.TZ ??= 'UTC'` because Better Auth's naive `timestamp` columns only round-trip while every process shares one zone. Do not rely on that pin for anything else.
+
+The model: **an instant and a calendar date are different types.** A `timestamptz` column, a JS `Date`, and an ISO string with an offset are instants. A billing period, a chart bucket, and anything a user picks in a date input are calendar dates in a specific zone. Converting between them requires naming the zone: the zone the data belongs to (an org's or a schedule's), the viewer's (for something the viewer just picked), or UTC (for a calendar date that is already resolved and only needs printing).
+
+1. **Never build a wall clock with `new Date(y, m, d, h, …)`.** That constructor resolves in the *server's* zone, and V8 silently rewrites the fields when they land in that zone's DST gap. Resolve a zoned wall clock through a string (`` `${dateKey}T${time}` `` + an explicit zone).
+2. **Do calendar arithmetic on `YYYY-MM-DD` keys, not on instants.** A local day is 23, 24 or 25 hours, so `+ 86400000` skips or repeats a day twice a year. Parse to `{y, m, d}` and step with UTC-field `Date`s used purely as containers.
+3. **A `YYYY-MM-DD` key is already resolved — never convert it into a zone.** To print one, anchor `T00:00:00Z` and format with `timeZone: "UTC"`. Anchoring at noon (`T12:00:00Z`) to "be safe" is off by one for every zone at +12 or beyond.
+4. **Periods and windows are half-open — `start <= t < end`.** An inclusive `23:59:59.999` end does not tile: on a 25-hour fall-back day the repeated hour belongs to neither window. Derive the exclusive end from the *next calendar date's* midnight, never by adding 24h or 1ms. A label formats `end - 1ms` to name the last day covered.
+5. **Tiling is not the test — "a window is exactly the set of instants whose local date is that day" is.** Windows can tile with zero gaps and still be shifted an hour. When a wall clock does not exist, resolve to the transition instant itself (the first instant that exists at or after it); rounding up to the next whole hour overshoots in zones with 30- and 45-minute shifts. Resolve it in **one** place.
+6. **Never send a zone *name* to Postgres.** Resolve the boundaries in app code and pass instants. `AT TIME ZONE` rejects legacy aliases (`Asia/Calcutta`) on a Postgres without `tzdata-legacy`, and silently inverts the sign of offset strings (`+05:30`).
+7. **Validate a timezone as an IANA id, not as "something `Intl` accepts".** `Intl` accepts `'+05:30'`. Check `Intl.supportedValuesOf('timeZone')` membership.
+8. **Test on a transition date under a non-UTC process zone**, or the test proves nothing. Setting `process.env.TZ` inside a spec is a no-op under Jest 30 (the sandbox never reaches V8's zone cache); set it in a custom Jest environment or run the suite with `TZ=… pnpm exec jest`. Zones worth reaching for: `America/New_York` (gap at 02:00), `America/Santiago` (gap at 00:00), `Asia/Kathmandu` (+05:45), `Pacific/Chatham` (+12:45).
+
 ## Architecture
 
 ### Monorepo Layout

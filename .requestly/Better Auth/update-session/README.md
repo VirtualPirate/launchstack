@@ -1,1 +1,0 @@
-Collection for /update-session endpoints

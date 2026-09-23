@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "e4a47adb-83aa-467c-b8bd-eff67ee811d2",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/auth/email-otp/send-verification-otp",
+  "method": "POST",
+  "contentType": "raw"
+}

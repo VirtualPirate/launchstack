@@ -1,0 +1,8 @@
+[
+  {
+    "key": "inviteId",
+    "value": "{{inviteId}}",
+    "description": "Organization invite id.",
+    "dataType": "string"
+  }
+]

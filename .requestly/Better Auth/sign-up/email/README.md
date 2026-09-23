@@ -1,1 +1,0 @@
-Collection for /sign-up/email endpoints

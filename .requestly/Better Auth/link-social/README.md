@@ -1,1 +1,0 @@
-Collection for /link-social endpoints

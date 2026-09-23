@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "key": "X-Organization-Id",
+    "value": "{{organizationId}}",
+    "isEnabled": true,
+    "description": "Required by OrgContextGuard for role-gated routes."
+  }
+]

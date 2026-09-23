@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "6692adf3-5ecb-401e-9bd8-98a8ca226f40",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/auth/email-otp/reset-password",
+  "method": "POST",
+  "contentType": "raw"
+}

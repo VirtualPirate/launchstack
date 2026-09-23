@@ -1,1 +1,0 @@
-Collection for /email-otp/send-verification-otp endpoints

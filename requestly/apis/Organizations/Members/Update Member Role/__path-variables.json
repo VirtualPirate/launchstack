@@ -1,0 +1,8 @@
+[
+  {
+    "key": "memberId",
+    "value": "{{memberId}}",
+    "description": "Target organization member id.",
+    "dataType": "string"
+  }
+]

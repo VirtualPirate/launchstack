@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.4.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "70bae126-db06-4b66-9120-3cd6baf2d580",
+  "rank": "",
+  "url": "{{apiBaseUrl}}/api/_internal/queue/noop",
+  "method": "POST",
+  "contentType": "raw"
+}

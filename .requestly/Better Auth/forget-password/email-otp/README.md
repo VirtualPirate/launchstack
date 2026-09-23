@@ -1,1 +1,0 @@
-Collection for /forget-password/email-otp endpoints

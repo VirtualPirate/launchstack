@@ -1,1 +1,0 @@
-Collection for /unlink-account endpoints

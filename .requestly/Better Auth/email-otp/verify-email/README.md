@@ -1,1 +1,0 @@
-Collection for /email-otp/verify-email endpoints

@@ -38,7 +38,7 @@ cd apps/backend
 pnpm test                   # Run unit tests (Jest)
 pnpm test:watch             # Watch mode
 pnpm test:e2e               # E2E tests (Vitest + Testcontainers; needs Docker)
-pnpm test -- --testPathPattern=<pattern>  # Run a single test file
+pnpm exec jest --testPathPatterns=<pattern>  # Run a single test file
 ```
 
 ### Linting

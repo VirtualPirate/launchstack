@@ -12,7 +12,7 @@ All commands run from `apps/backend/`:
 pnpm start:dev              # Watch mode (port 3000)
 pnpm start:debug            # Debug + watch mode
 pnpm test                   # Unit tests (Jest)
-pnpm test -- --testPathPattern=<pattern>  # Single test file
+pnpm exec jest --testPathPatterns=<pattern>  # Single test file
 pnpm test:watch             # Watch mode
 pnpm test:e2e               # E2E tests (Vitest; needs Docker — see test/e2e/README.md)
 pnpm test:cov               # Coverage report

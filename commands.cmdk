@@ -3,8 +3,7 @@
     "frontend": { "command": "pnpm dev:frontend", "description": "Start Vite dev server for frontend" },
     "backend": { "command": "pnpm dev:backend", "description": "Start NestJS dev server for backend" },
     "worker": { "command": "pnpm dev:worker", "description": "Start Temporal worker (watch mode)" },
-    "all": { "command": "pnpm dev", "description": "Start frontend, backend and worker in parallel" },
-    "temporal": { "command": "docker compose up -d temporal temporal-ui", "description": "Start Temporal server + UI (localhost:8080)" }
+    "all": { "command": "pnpm dev", "description": "Start frontend, backend and worker in parallel" }
   },
   "build": {
     "all": { "command": "pnpm build", "description": "Build packages then all apps for production" },
@@ -18,13 +17,25 @@
     "backend prod": { "command": "pnpm start:prod:backend", "description": "Start backend from production build" },
     "worker prod": { "command": "pnpm start:prod:worker", "description": "Start Temporal worker from production build" }
   },
+  "stack": {
+    "up": { "command": "docker compose up -d", "description": "Start every container: postgres, temporal, temporal-ui, admin tools, otel-collector" },
+    "down": { "command": "docker compose down", "description": "Stop and remove all containers (volumes kept)" },
+    "logs": { "command": "docker compose logs -f", "description": "Tail logs from all containers" }
+  },
+  "temporal": {
+    "start": { "command": "docker compose up -d temporal temporal-ui temporal-admin-tools", "description": "Start Temporal server, UI (localhost:8080) and admin tools" },
+    "stop": { "command": "docker compose stop temporal temporal-ui temporal-admin-tools", "description": "Stop Temporal containers only" },
+    "list workflows": { "command": "docker exec launchstack-temporal-admin temporal workflow list --namespace default", "description": "List workflow executions in the default namespace" },
+    "logs": { "command": "docker compose logs -f temporal", "description": "Tail Temporal server logs" },
+    "reset": { "command": "pnpm temporal:reset", "description": "DROP the local temporal + temporal_visibility databases and rebuild them (asks first)" }
+  },
   "shadcn": {
     "add component": { "command": "cd apps/frontend && pnpm dlx shadcn@latest add", "description": "Add a shadcn component (append component name)" },
     "init": { "command": "cd apps/frontend && pnpm dlx shadcn@latest init", "description": "Re-initialize shadcn configuration" }
   },
   "db": {
     "start": { "command": "docker compose up -d postgres", "description": "Start PostgreSQL database (port 11753)" },
-    "stop": { "command": "docker compose down", "description": "Stop PostgreSQL database" },
+    "stop": { "command": "docker compose stop postgres", "description": "Stop PostgreSQL container only" },
     "container status": { "command": "docker compose ps", "description": "Check database container status" },
     "generate": { "command": "pnpm db:generate", "description": "Create an empty Kysely migration (pass a name: pnpm db:generate <name>)" },
     "up": { "command": "pnpm db:up", "description": "Apply pending database migrations" },
@@ -32,7 +43,16 @@
     "migration status": { "command": "pnpm db:status", "description": "Show migration status" },
     "fresh": { "command": "pnpm db:fresh", "description": "Rollback ALL migrations and re-apply (dev reset)" }
   },
+  "test": {
+    "backend": { "command": "pnpm --filter backend test", "description": "Run backend Jest unit tests + email render check" },
+    "backend watch": { "command": "pnpm --filter backend test:watch", "description": "Run backend unit tests in watch mode" },
+    "backend coverage": { "command": "pnpm --filter backend test:cov", "description": "Run backend unit tests with coverage report" },
+    "backend e2e": { "command": "pnpm --filter backend test:e2e", "description": "Run backend E2E tests (Vitest + Testcontainers; needs Docker)" },
+    "frontend": { "command": "pnpm --filter frontend test", "description": "Run frontend checks" }
+  },
   "lint": {
-    "all": { "command": "pnpm lint", "description": "Lint all packages and apps" }
+    "all": { "command": "pnpm lint", "description": "Lint all packages and apps" },
+    "frontend": { "command": "pnpm --filter frontend lint", "description": "Lint frontend only" },
+    "backend": { "command": "pnpm --filter backend lint", "description": "Lint and auto-fix backend only" }
   }
 }

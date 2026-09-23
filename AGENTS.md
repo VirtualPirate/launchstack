@@ -26,12 +26,13 @@ pnpm build:packages         # Build shared packages only
 
 ### Database (requires Docker postgres running)
 ```bash
-docker compose up -d        # Start PostgreSQL (11753), Temporal (7233) + Temporal UI (8080)
+docker compose up -d        # Start PostgreSQL (11753), Temporal (7233), Temporal UI (8080) + admin-tools CLI
 pnpm db:generate <name>     # Create a new (empty) Kysely migration file
 pnpm db:up                  # Apply migrations
 pnpm db:down                # Rollback last migration
 pnpm db:status              # Show migration status
 pnpm db:fresh               # Roll back everything and re-apply (destructive)
+pnpm temporal:reset         # Drop + rebuild the local Temporal databases (destructive; asks first, -y skips)
 ```
 
 ### Testing (backend)

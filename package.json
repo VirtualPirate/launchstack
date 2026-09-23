@@ -24,7 +24,8 @@
     "db:up": "pnpm --filter backend db:up",
     "db:down": "pnpm --filter backend db:down",
     "db:status": "pnpm --filter backend db:status",
-    "db:fresh": "pnpm --filter backend db:fresh"
+    "db:fresh": "pnpm --filter backend db:fresh",
+    "temporal:reset": "bash ./scripts/temporal-reset.sh"
   },
   "engines": {
     "node": ">=22.12.0"

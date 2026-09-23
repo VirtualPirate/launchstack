@@ -1,4 +1,6 @@
 import type { OrganizationRole } from "@launchstack/api-interfaces";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,6 +42,9 @@ import {
   useResendInvite,
   useRevokeInvite,
 } from "@/hooks/api/use-invites";
+import { extractErrorMessage } from "@/lib/extract-error";
+
+const onError = (err: unknown) => toast.error(extractErrorMessage(err));
 
 export function OrganizationMembersPage() {
   const session = useAuthSession();
@@ -62,15 +67,15 @@ export function OrganizationMembersPage() {
 
   const handleRoleChange = (memberId: string, role: OrganizationRole) => {
     if (role === "owner") return;
-    updateRole.mutate({
-      memberId,
-      payload: { role: role as "admin" | "viewer" },
-    });
+    updateRole.mutate(
+      { memberId, payload: { role: role as "admin" | "viewer" } },
+      { onError },
+    );
   };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-6">
-      <h1 className="text-2xl font-semibold">Members</h1>
+      <PageHeader title="Members" />
 
       <Card>
         <CardHeader>
@@ -122,7 +127,12 @@ export function OrganizationMembersPage() {
                           size="sm"
                           variant="outline"
                           onClick={async () => {
-                            await leave.mutateAsync();
+                            try {
+                              await leave.mutateAsync();
+                            } catch (err) {
+                              onError(err);
+                              return;
+                            }
                             await exitOrganization(m.organizationId);
                           }}
                           disabled={leave.isPending}
@@ -133,7 +143,7 @@ export function OrganizationMembersPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => removeMember.mutate(m.id)}
+                          onClick={() => removeMember.mutate(m.id, { onError })}
                           disabled={removeMember.isPending}
                         >
                           Remove
@@ -189,7 +199,7 @@ export function OrganizationMembersPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => resend.mutate(invite.id)}
+                        onClick={() => resend.mutate(invite.id, { onError })}
                         disabled={resend.isPending}
                       >
                         Resend
@@ -197,7 +207,7 @@ export function OrganizationMembersPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => revoke.mutate(invite.id)}
+                        onClick={() => revoke.mutate(invite.id, { onError })}
                         disabled={revoke.isPending}
                       >
                         Revoke

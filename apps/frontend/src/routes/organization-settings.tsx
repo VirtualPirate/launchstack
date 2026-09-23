@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { UpdateOrganizationSchema } from "@launchstack/api-interfaces";
+import { PageHeader } from "@/components/shared/page-header";
+import { SkeletonList } from "@/components/shared/skeleton-list";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +28,7 @@ import {
   useUpdateCurrentOrganization,
 } from "@/hooks/api/use-organizations";
 import { useCurrentOrganizationMembers } from "@/hooks/api/use-members";
+import { extractErrorMessage } from "@/lib/extract-error";
 
 export function OrganizationSettingsPage() {
   const current = useCurrentOrganization();
@@ -46,7 +50,11 @@ export function OrganizationSettingsPage() {
     members.data?.data.filter((m) => m.role === "admin") ?? [];
 
   if (!org) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>;
+    return (
+      <div className="mx-auto max-w-3xl py-6">
+        <SkeletonList rows={3} rowHeight={160} />
+      </div>
+    );
   }
 
   const handleUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -65,19 +73,28 @@ export function OrganizationSettingsPage() {
       setName("");
       setSlug("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setError(extractErrorMessage(err));
     }
   };
 
   const handleTransfer = async () => {
     if (!newOwnerId) return;
-    await transfer.mutateAsync({ newOwnerUserId: newOwnerId });
-    setNewOwnerId("");
+    try {
+      await transfer.mutateAsync({ newOwnerUserId: newOwnerId });
+      setNewOwnerId("");
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
   };
 
   const handleDelete = async () => {
     if (deleteConfirm !== org.name) return;
-    await deleteOrg.mutateAsync();
+    try {
+      await deleteOrg.mutateAsync();
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+      return;
+    }
     await exitOrganization(org.id);
   };
 
@@ -86,7 +103,7 @@ export function OrganizationSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-6">
-      <h1 className="text-2xl font-semibold">Organization settings</h1>
+      <PageHeader title="Organization settings" />
 
       <Card>
         <CardHeader>

@@ -6,12 +6,14 @@ import './index.css'
 import { router } from './router.tsx'
 import { ThemeProvider } from './components/theme/theme-provider'
 import { queryClient } from './lib/query-client'
+import { Toaster } from './components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
+        <Toaster position="bottom-right" />
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,

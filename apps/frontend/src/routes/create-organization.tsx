@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateOrganization } from "@/hooks/api/use-organizations";
 import { useActiveOrganizationStore } from "@/stores/active-organization-store";
+import { extractErrorMessage } from "@/lib/extract-error";
 
 export function CreateOrganizationPage() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export function CreateOrganizationPage() {
       setActive(result.data.id);
       await navigate({ to: "/" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create organization");
+      setError(extractErrorMessage(err));
     }
   };
 

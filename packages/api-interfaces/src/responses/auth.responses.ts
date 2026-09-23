@@ -73,3 +73,31 @@ export interface AuthForgetPasswordResponse {
 export interface AuthResetPasswordResponse {
   success?: boolean;
 }
+
+export interface AuthUpdateUserResponse {
+  status: boolean;
+}
+
+export interface AuthChangePasswordResponse {
+  /** Present only when `revokeOtherSessions` was set. */
+  token?: string | null;
+  user?: AuthUser;
+}
+
+export type AuthListSessionsResponse = AuthSession[];
+
+export interface AuthRevokeSessionResponse {
+  status: boolean;
+}
+
+/** One row per way the user can sign in: `credential`, `google`, … */
+export interface AuthAccount {
+  id: string;
+  providerId: string;
+  accountId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  scopes?: string[];
+}
+
+export type AuthListAccountsResponse = AuthAccount[];

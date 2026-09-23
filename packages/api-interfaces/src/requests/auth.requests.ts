@@ -45,3 +45,19 @@ export interface AuthResetPasswordWithOtpRequest {
   otp: string;
   password: string;
 }
+
+export interface AuthUpdateUserRequest {
+  name?: string;
+  image?: string | null;
+}
+
+export interface AuthChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  /** Ends every other session; the current one gets a fresh token back. */
+  revokeOtherSessions?: boolean;
+}
+
+export interface AuthRevokeSessionRequest {
+  token: string;
+}

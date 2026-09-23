@@ -1,4 +1,6 @@
 import {
+  type AuthChangePasswordRequest,
+  type AuthChangePasswordResponse,
   type AuthClientResult,
   type AuthEmailSignInRequest,
   type AuthEmailSignInResponse,
@@ -7,13 +9,18 @@ import {
   type AuthForgetPasswordRequest,
   type AuthForgetPasswordResponse,
   type AuthGoogleSignInRequest,
+  type AuthListAccountsResponse,
+  type AuthListSessionsResponse,
   type AuthResetPasswordResponse,
   type AuthResetPasswordWithOtpRequest,
+  type AuthRevokeSessionResponse,
   type AuthSendVerificationOtpRequest,
   type AuthSendVerificationOtpResponse,
   type AuthSessionResponse,
   type AuthSignOutResponse,
   type AuthSocialSignInResponse,
+  type AuthUpdateUserRequest,
+  type AuthUpdateUserResponse,
   type AuthVerifyEmailOtpRequest,
   type AuthVerifyEmailOtpResponse,
 } from "@launchstack/api-interfaces";
@@ -144,5 +151,92 @@ export function useResetPasswordWithOtp() {
     AuthResetPasswordWithOtpRequest
   >({
     mutationFn: (payload) => AuthAPI.resetPasswordWithOtp(payload),
+  });
+}
+
+export const authSessionsQueryKey = ["auth", "sessions"] as const;
+export const authAccountsQueryKey = ["auth", "accounts"] as const;
+
+/**
+ * The Better Auth client resolves with `{ data, error }` instead of rejecting,
+ * so a failed request would otherwise look like a successful empty one. The
+ * settings screen renders a real error state for both of these, hence the
+ * unwrap.
+ */
+function unwrap<T>(result: AuthClientResult<T>): T {
+  if (result.error) {
+    throw new Error(result.error.message || "Request failed");
+  }
+  return result.data as T;
+}
+
+/** Every device the user is signed in on, current one included. */
+export function useAuthSessions() {
+  return useQuery<AuthListSessionsResponse>({
+    queryKey: authSessionsQueryKey,
+    queryFn: async () => unwrap(await AuthAPI.listSessions()),
+    retry: false,
+  });
+}
+
+/** Ways the user can sign in — `credential`, `google`, … */
+export function useAuthAccounts() {
+  return useQuery<AuthListAccountsResponse>({
+    queryKey: authAccountsQueryKey,
+    queryFn: async () => unwrap(await AuthAPI.listAccounts()),
+    retry: false,
+  });
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AuthUpdateUserResponse, Error, AuthUpdateUserRequest>({
+    mutationFn: async (payload) => unwrap(await AuthAPI.updateUser(payload)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: authSessionQueryKey });
+    },
+  });
+}
+
+export function useChangePassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    AuthChangePasswordResponse,
+    Error,
+    AuthChangePasswordRequest
+  >({
+    mutationFn: async (payload) =>
+      unwrap(await AuthAPI.changePassword(payload)),
+    onSuccess: async () => {
+      // `revokeOtherSessions` ends every other session and reissues this one's
+      // token, so both the session and the device list are stale.
+      await queryClient.invalidateQueries({ queryKey: authSessionQueryKey });
+      await queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    },
+  });
+}
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AuthRevokeSessionResponse, Error, { token: string }>({
+    mutationFn: async (payload) =>
+      unwrap(await AuthAPI.revokeSession(payload)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    },
+  });
+}
+
+export function useRevokeOtherSessions() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AuthRevokeSessionResponse, Error, void>({
+    mutationFn: async () => unwrap(await AuthAPI.revokeOtherSessions()),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    },
   });
 }

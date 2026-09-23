@@ -21,6 +21,7 @@ import {
   OrganizationMembersRepository,
   OrganizationInvitesRepository,
 } from './repositories';
+import { OrganizationTeardownService } from './services/organization-teardown.service';
 import { OrgContextGuard } from './guards/org-context.guard';
 import { OrgDeactivationGuard } from './guards/org-deactivation.guard';
 
@@ -31,6 +32,7 @@ import { OrgDeactivationGuard } from './guards/org-deactivation.guard';
     OrganizationMembersRepository,
     OrganizationInvitesRepository,
     OrganizationsService,
+    OrganizationTeardownService,
     MembersService,
     InvitesService,
     InviteMailer,

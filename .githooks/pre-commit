@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks the commit if the monorepo does not build. Skip with SKIP_BUILD=1 git commit ...
+[ -n "$SKIP_BUILD" ] && exit 0
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+echo "pre-commit: building packages + apps..."
+pnpm build
+echo "pre-commit: build OK"

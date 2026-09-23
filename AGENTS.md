@@ -22,6 +22,8 @@ pnpm build                  # Build packages first, then apps
 pnpm build:packages         # Build shared packages only
 ```
 
+`.githooks/pre-commit` runs `pnpm build` and blocks the commit on failure. `pnpm install` enables it (`prepare` sets `core.hooksPath`). Bypass with `SKIP_BUILD=1 git commit …`. There is no CI, so this is the only gate.
+
 ### Database (requires Docker postgres running)
 ```bash
 docker compose up -d        # Start PostgreSQL (11753), Temporal (7233) + Temporal UI (8080)

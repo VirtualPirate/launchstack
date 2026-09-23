@@ -24,7 +24,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:e2e:watch": "vitest --config vitest.e2e.config.ts",
     "db:generate": "kysely migrate:make",
     "db:up": "kysely migrate:latest",
     "db:down": "kysely migrate:down",
@@ -65,6 +66,9 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.1.6",
+    "@swc/core": "^1.16.2",
+    "@temporalio/testing": "^1.24.0",
+    "@testcontainers/postgresql": "^12.1.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.17",
@@ -88,7 +92,9 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.20.0"
+    "typescript-eslint": "^8.20.0",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^5.0.1"
   },
   "jest": {
     "moduleFileExtensions": [

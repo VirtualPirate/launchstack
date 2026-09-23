@@ -37,7 +37,7 @@ pnpm db:fresh               # Roll back everything and re-apply (destructive)
 cd apps/backend
 pnpm test                   # Run unit tests (Jest)
 pnpm test:watch             # Watch mode
-pnpm test:e2e               # E2E tests (uses test/jest-e2e.json)
+pnpm test:e2e               # E2E tests (Vitest + Testcontainers; needs Docker)
 pnpm test -- --testPathPattern=<pattern>  # Run a single test file
 ```
 

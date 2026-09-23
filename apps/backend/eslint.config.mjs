@@ -34,4 +34,27 @@ export default tseslint.config(
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
+  {
+    // Tests and manual mocks are built out of `jest.fn()` and untyped
+    // fixtures: supertest's `res.body` is `any` by design, a partial mock is
+    // cast into place rather than implemented, and a mock declared `async`
+    // for signature parity rarely awaits anything. The assertions are the
+    // type check here, so the type-safety family only produces noise.
+    files: [
+      'test/**/*.ts',
+      'src/**/__tests__/**/*.ts',
+      'src/**/*.spec.ts',
+      'src/__mocks__/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/require-await': 'off',
+      // `expect(obj.method).toHaveBeenCalled()` is the idiom, not a bug.
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );

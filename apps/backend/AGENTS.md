@@ -14,7 +14,7 @@ pnpm start:debug            # Debug + watch mode
 pnpm test                   # Unit tests (Jest)
 pnpm test -- --testPathPattern=<pattern>  # Single test file
 pnpm test:watch             # Watch mode
-pnpm test:e2e               # E2E tests (test/jest-e2e.json)
+pnpm test:e2e               # E2E tests (Vitest; needs Docker — see test/e2e/README.md)
 pnpm test:cov               # Coverage report
 pnpm lint                   # Lint + autofix
 pnpm format                 # Prettier on src/ and test/
@@ -180,7 +180,7 @@ Returns `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", success: tr
 
 **Operational notes:**
 
-- **API boot needs Temporal.** `TemporalModule` connects eagerly, so the API (and e2e tests that import `AppModule`) fail to boot when the server at `TEMPORAL_ADDRESS` is unreachable.
+- **API boot needs Temporal.** `TemporalModule` connects eagerly, so the API fails to boot when the server at `TEMPORAL_ADDRESS` is unreachable. (The e2e suite starts its own Temporal dev server.)
 - **Legacy cleanup.** The `pgboss` Postgres schema from the old queue is orphaned. Drop it manually (`DROP SCHEMA pgboss CASCADE;`) once no in-flight jobs matter.
 
 ### Testing
@@ -194,7 +194,7 @@ Returns `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", success: tr
 
 When adding new ESM-only dependencies used in tests, you'll need to add corresponding mocks and `moduleNameMapper` entries.
 
-**E2E tests** (`test/`): Use `@nestjs/testing` + `supertest`. Configured separately via `test/jest-e2e.json`.
+**E2E tests** (`test/e2e/`): Vitest (`vitest.e2e.config.ts`, swc for decorator metadata) against a Testcontainers Postgres cloned from a migrated template per file, a Temporal CLI dev server, and the real Better Auth — only `resend` is mocked. Specs boot `AppModule` through `test/e2e/harness/create-test-app.ts`, which applies the same `configureApp()` (`src/bootstrap/configure-app.ts`) as `main.ts`. `queue.e2e.spec.ts` runs a real Temporal worker end to end. Env comes from `.env.test`. Docker must be running. Full harness notes: `test/e2e/README.md`.
 
 ### Response Format
 

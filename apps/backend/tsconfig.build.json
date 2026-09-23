@@ -16,6 +16,7 @@
     "migrations",
     "docs",
     "**/*spec.ts",
-    "kysely.config.ts"
+    "kysely.config.ts",
+    "vitest.e2e.config.ts"
   ]
 }

@@ -46,6 +46,9 @@ pnpm test -- --testPathPattern=<pattern>  # Run a single test file
 pnpm lint                   # Lint all workspaces
 ```
 
+### Deployment
+Production runs on Dokploy as two Compose apps (`temporal`, `launchstack`) built from `infra/docker/`. See `infra/dokploy/README.md` for topology and first-deploy steps, and `infra/dokploy/AGENTS.md` before editing any file there.
+
 ## Architecture
 
 ### Monorepo Layout

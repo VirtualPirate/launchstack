@@ -1,0 +1,185 @@
+# LaunchStack APPLICATION stack — deployed by DOKPLOY (Compose type, not Stack: Stack has no `build`).
+#
+# TEMPORAL IS NOT IN THIS FILE. It is a SEPARATE Dokploy app deployed from
+# infra/dokploy/temporal/docker-compose.yaml, and it must be up BEFORE this one. See
+# infra/dokploy/README.md for the two-app topology. The link between them is
+# `dokploy-network` (external, host-wide) plus the network alias `temporal` that the other
+# stack publishes — that is what TEMPORAL_ADDRESS resolves.
+# Consequences of the split, both load-bearing:
+#   - `depends_on` CANNOT cross compose files. Nothing gates boot on Temporal being healthy;
+#     backend/worker crash-loop under `restart: unless-stopped` until it answers.
+#   - Deploying the temporal stack restarts every consumer here. Expect churn, not an outage.
+#
+# Dokploy owns Traefik, TLS (Let's Encrypt) and ports 80/443, so this file ships NO traefik
+# service and NO ports. Routing comes from the Dokploy UI (Domains tab), which injects the
+# Traefik labels itself. Add two domains there:
+#   backend    port 3000  host ${API_DOMAIN}   -> NestJS API (auth lives under /api/auth/*)
+#   frontend   port 80    host ${APP_DOMAIN}   -> React SPA (nginx)
+#
+# Constraints between the two domains:
+#   - The SPA bakes its API base URL at BUILD time (VITE_API_BASE_URI=https://${API_DOMAIN}).
+#     Changing API_DOMAIN needs a REBUILD of `frontend`, not just a restart.
+#   - Keep APP_DOMAIN a sibling subdomain of API_DOMAIN. Same-site (cross-origin) is what
+#     lets session cookies work on Better Auth's default SameSite=Lax — no SameSite=None,
+#     no cookie-domain widening. The SPA's origin must also be FRONTEND_URL so it lands in
+#     trustedOrigins and passes the production auth CSRF check.
+#
+# PATHS: this file does NOT live at the repo root, but the build context does. Compose
+# resolves every relative path against the COMPOSE FILE'S directory, so `context:` is
+# ../../.. (launchstack -> dokploy -> infra -> repo root) and the otel config mount is
+# ../../otel-collector/. `dockerfile:` stays repo-root-relative because it is resolved
+# against the context, not the file. Moving this file breaks all three.
+#
+# Env: Dokploy writes the UI environment variables to `.env` in the compose directory —
+# i.e. NEXT TO THIS FILE, not at the repo root. Compose auto-loads it for `${...}`
+# interpolation, and `env_file: [.env]` injects it into the containers. Fill it from the
+# .env.example sitting beside this file.
+#
+# Postgres is EXTERNAL to this file (DATABASE_URL). If it is a Dokploy-managed Postgres
+# service, it lives on `dokploy-network` — which is why backend, worker and migrate all
+# join that network, not just the web-facing ones.
+#
+# DB migrations are NOT run by a deploy. They are an operator step — see the `migrate`
+# service below (profile-gated, so `up` skips it).
+#
+# Local/manual bring-up (no Dokploy) still works, but you must supply your own reverse
+# proxy and create the network first:
+#   docker network create dokploy-network
+#   docker compose -f infra/dokploy/launchstack/docker-compose.yaml up -d --build
+
+services:
+  # Manual, opt-in migrator — behind a compose profile, so `docker compose up` (what Dokploy
+  # runs on deploy) NEVER starts it. The runtime image ships --prod deps only, so kysely-ctl
+  # (a devDep) isn't in it; the `migrate` stage keeps the full builder.
+  #   docker compose -f infra/dokploy/launchstack/docker-compose.yaml run --rm --build migrate
+  migrate:
+    profiles: ["migrate"]
+    image: launchstack/backend-migrate:latest
+    build:
+      context: ../../.. # repo root — relative to THIS file, not the cwd
+      dockerfile: infra/docker/Dockerfile.backend
+      target: migrate
+    restart: "no"
+    env_file:
+      - .env
+    networks:
+      - dokploy-network # reaches a Dokploy-managed Postgres
+
+  backend:
+    image: launchstack/backend:latest
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile.backend
+      target: runtime
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+      # Resolved over dokploy-network via the alias published by the temporal stack
+      # (TEMPORAL_ALIAS there). Must match, and must be unique across the whole host.
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal:7233}
+      LOG_FILE_PATH: /var/log/app/app.log
+    expose:
+      - "3000" # container network only; Dokploy's Traefik routes ${API_DOMAIN} here
+    # LIVENESS only. `GET /` is anonymous and touches no dependency, so a DB or Temporal
+    # blip cannot turn into a restart loop. The runtime image has no curl/wget — probe with
+    # node's built-in fetch. 127.0.0.1 skips DNS.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - app_logs:/var/log/app
+    networks:
+      - dokploy-network
+      - internal
+
+  # Horizontally scalable: set WORKER_REPLICAS. Workers are stateless long-poll gRPC
+  # pollers, so N replicas just means N pullers on the same task queue. Nothing here binds
+  # a port or a fixed container_name, so replicas cannot collide.
+  worker:
+    image: launchstack/backend:latest
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile.backend
+      target: runtime
+    restart: unless-stopped
+    # LOG_FILE_PATH must be PER REPLICA. pino-roll opens the file with O_APPEND and its own
+    # in-process rotation counter; two replicas on one path interleave partial writes and
+    # race rotation, producing truncated JSON lines the OTel filelog json_parser drops.
+    # $$(hostname) is the container ID. `$$` escapes Compose interpolation; `exec` makes
+    # node PID 1 so it receives SIGTERM and drains in-flight activities.
+    # Trade-off: dead replicas leave orphan worker-<id>.log* files on app_logs. Prune it.
+    command:
+      - sh
+      - -c
+      - export LOG_FILE_PATH=/var/log/app/worker-$$(hostname).log; exec node dist/worker.js
+    env_file:
+      - .env
+    environment:
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal:7233}
+      # PER-REPLICA limits, not cluster-wide. Real ceiling is REPLICAS x this value —
+      # against the app Postgres pool. Scale one, lower the other.
+      TEMPORAL_MAX_CONCURRENT_ACTIVITIES: ${TEMPORAL_MAX_CONCURRENT_ACTIVITIES:-20}
+      TEMPORAL_MAX_CONCURRENT_WORKFLOW_TASKS: ${TEMPORAL_MAX_CONCURRENT_WORKFLOW_TASKS:-20}
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+    volumes:
+      - app_logs:/var/log/app
+    networks:
+      - dokploy-network # app DB + the temporal stack's alias
+      - internal
+
+  frontend:
+    image: launchstack/frontend:latest
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile.frontend
+      args:
+        # Baked into the bundle. Empty API_DOMAIN ships the literal "https://" and the SPA
+        # renders blank — Compose fails the build instead via :? below.
+        VITE_API_BASE_URI: https://${API_DOMAIN:?API_DOMAIN is required}
+    restart: unless-stopped
+    expose:
+      - "80" # Dokploy's Traefik routes ${APP_DOMAIN} here
+    networks:
+      - dokploy-network
+
+  # Ships backend/worker logs to Grafana Cloud (reads app_logs volume).
+  # The config file comes from the git checkout Dokploy re-clones on every deploy.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    restart: unless-stopped
+    user: "0:0"
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ../../otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - app_logs:/var/log/app:ro
+      - otel_checkpoints:/var/lib/otelcol/checkpoints
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-production}
+      GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT}
+      GRAFANA_CLOUD_OTLP_AUTH: ${GRAFANA_CLOUD_OTLP_AUTH}
+    networks:
+      - internal
+
+networks:
+  # The ONLY network shared with the temporal stack. `internal` below is project-scoped:
+  # a second compose file declaring `internal:` gets its own separate bridge, so anything
+  # that must reach Temporal has to be on dokploy-network too.
+  dokploy-network: # Dokploy's Traefik-facing bridge (+ its managed databases)
+    external: true
+  internal: # backend <-> worker <-> otel, no host exposure
+
+volumes:
+  otel_checkpoints:
+  app_logs:

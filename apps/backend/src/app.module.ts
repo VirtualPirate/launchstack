@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HealthController } from './health/health.controller';
 import { KyselyModule } from './databases/kysely';
 import { AppAuthModule } from './auth';
 import { OrganizationsModule } from './organizations';
@@ -19,7 +20,7 @@ import { LoggerModule, RequestIdMiddleware } from './logger';
     OrganizationsModule,
     QueueModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {

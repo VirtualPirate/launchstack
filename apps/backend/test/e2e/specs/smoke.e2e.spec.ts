@@ -87,6 +87,12 @@ describe('app harness', () => {
     expect(res.body.data.message).toBe('Hello from launchstack!');
   });
 
+  it('serves the anonymous liveness probe the container healthcheck uses', async () => {
+    const res = await request(testApp.server).get('/api/health/live');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ status: 'ok' });
+  });
+
   it('protects a route that has no @AllowAnonymous', async () => {
     // AuthGuard is registered as a global APP_GUARD by
     // @thallesp/nestjs-better-auth and throws UnauthorizedException when there

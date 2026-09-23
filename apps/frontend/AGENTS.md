@@ -22,7 +22,9 @@ src/
   api/                       # axios-client.ts + one <domain>.api.ts per backend domain (auth.api.ts is the AuthAPI facade)
   components/
     auth/                    # Email/Google auth forms, PasswordInput
-    organization/            # Org switcher, invite form, role badge
+    layout/                  # AppShell (protected layout: sidebar, no-org gate, <Outlet/>) + Topbar
+    organization/            # Org switcher, create/invite forms, role badge, no-org gate, deactivated banner
+    settings/                # Account settings dialogs (change password, devices)
     shared/                  # PageHeader, EmptyState, ErrorState, SkeletonList, SectionLabel
     theme/                   # ThemeProvider + toggles
     ui/                      # shadcn/ui primitives
@@ -30,11 +32,10 @@ src/
   hooks/
     api/use-<domain>.ts      # React Query hooks + query-key factory per domain
     use-bootstrap-active-organization.ts
-  lib/                       # auth-client, auth-redirect, extract-error, query-client, utils (cn)
+  lib/                       # auth-client, auth-redirect, extract-error, query-client, session-device, utils (cn)
   routes/                    # One page component per route (<name>.tsx exports <Name>Page)
   stores/                    # Zustand stores (active org)
   router.tsx                 # ALL route definitions (code-based TanStack Router)
-  App.tsx                    # Protected layout: header, sidebar, <Outlet/>
   main.tsx                   # ThemeProvider > QueryClientProvider > RouterProvider + Toaster
   index.css                  # Tailwind imports + CSS variable theme (oklch)
 ```
@@ -48,11 +49,13 @@ src/
 Routes are defined **code-based** in `src/router.tsx` (no file-based routing plugin). Two tiers under the root route:
 
 - **Public routes** — `/sign-in`, `/sign-up`, `/google-sign-in`, `/google-sign-up`, `/verify-email`, `/forgot-password`, `/reset-password`, `/auth/error`, `/accept-invite`. The auth pages' `beforeLoad` (`redirectAuthenticatedUser`) sends an already-signed-in user on to their redirect target.
-- **`protectedRoute`** (pathless, `id: "protected"`) — wraps everything else. Its `beforeLoad` calls `AuthAPI.getSession()`: no session → `clearSignedOutUserState()` and redirect to `/sign-in?redirect=<path>`; unverified email → `/verify-email`. Its component is `App`.
+- **`protectedRoute`** (pathless, `id: "protected"`) — wraps everything else. Its `beforeLoad` calls `AuthAPI.getSession()`: no session → `clearSignedOutUserState()` and redirect to `/sign-in?redirect=<path>`; unverified email → `/verify-email`. Its component is `AppShell` (`components/layout/app-shell.tsx`).
 
 To add a page:
 1. Create `src/routes/<kebab-name>.tsx` exporting a named `<PascalName>Page` component.
 2. In `router.tsx`: `createRoute({ getParentRoute: () => protectedRoute, path: "...", component: ... })` and add it to the `protectedRoute.addChildren([...])` list in `routeTree`.
+
+A page that owns its height and scroll (a full-height editor, a chat) sets `staticData: { fullBleed: true }` on its route: `AppShell` then renders it edge to edge instead of inside the padded, scrolling container. The key is typed in `router.tsx` (`StaticDataRouteOption`).
 
 Search params are validated with hand-written `validateSearch` functions (plain `typeof` checks returning a typed object, not Zod). A redirect target from a search param must go through `normalizeRedirectPath` from `@/lib/auth-redirect`, which rejects anything that resolves off-origin.
 
@@ -62,9 +65,11 @@ Most data is scoped to the active organization:
 
 - `useActiveOrganizationStore` (Zustand, persisted to localStorage) holds `activeOrganizationId`.
 - The axios request interceptor (`src/api/axios-client.ts`) sends it as the `X-Organization-Id` header on **every** request. Backend URLs use `/api/organizations/current/...`.
-- `useBootstrapActiveOrganization()` (called once in `App`) selects the first org when none is active, and drops the selection only when a list fetched during this mount no longer contains it.
+- `useBootstrapActiveOrganization()` (called once in `AppShell`) selects the first org when none is active, and drops the selection only when a list fetched during this mount no longer contains it.
 - After deleting or leaving the active org, call `useExitActiveOrganization()`: it picks the next org from a fresh list and navigates.
 - Every org-scoped query includes `orgId` in its key and gates with `enabled: !!orgId`, so switching orgs refetches automatically.
+- A user with no organization would sit on those disabled queries forever, so `AppShell` replaces the page body with `NoOrganizationGate` (the create-org form) and makes the sidebar `inert`. `/invites` and `/organizations/new` stay reachable (`NO_ORG_ROUTES`); add a route there only if it works without an org and the gate links to it.
+- When the active org is deactivated (`organization.deactivatedAt`), `DeactivatedBanner` explains why writes answer 403 `ORG_DEACTIVATED`. Controls stay enabled; the backend enforces it.
 
 ## API Integration Pattern
 
@@ -140,6 +145,7 @@ Rules:
 - `src/lib/auth-client.ts` creates the Better Auth client (`createAuthClient` with the `emailOTPClient()` plugin, `baseURL: globalEnv.apiBaseUri`).
 - **Components and routes never call `authClient` directly.** They go through the `AuthAPI` facade (`src/api/auth.api.ts`), which wraps the authClient methods (sign-in/up, Google OAuth, session, sign-out, password reset) and raw OTP endpoints, typed via `AuthClientResult<T>` from `@launchstack/api-interfaces`. Hooks over it live in `hooks/api/use-auth.ts`.
 - Sessions are cookie-based (`withCredentials: true` on the axios instance). There is no token handling in the frontend.
+- Account settings (`/settings`) use only Better Auth built-ins through the facade: `updateUser`, `changePassword` (with `revokeOtherSessions`), `listSessions` / `revokeSession` / `revokeOtherSessions`, `listAccounts`. Their hooks run results through `unwrap()`, because the Better Auth client resolves `{ data, error }` instead of rejecting and React Query would otherwise treat a failure as success. Do the same for any new authClient-backed query or mutation.
 - When a session ends, `clearSignedOutUserState()` clears the QueryClient and the active org so the next user in the tab sees nothing cached.
 - Auth pages pass `redirect`/`email` search params. Build URLs with the helpers in `@/lib/auth-redirect`.
 

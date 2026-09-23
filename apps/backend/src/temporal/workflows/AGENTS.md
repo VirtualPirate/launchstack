@@ -32,6 +32,7 @@ Moving a call site from one profile to another changes timeouts only (same activ
 - **Adding an activity:** add its signature to `../activities.interface.ts`, implement it as an `@Activity('name')` method on a DI provider in the owning feature module, then call it through a proxy from `activity-proxies.ts`.
 - **Adding a workflow:** create the file, export it from `index.ts`, and add a key to `../workflow-types.ts` `WORKFLOW` so callers use that const, not a string literal.
 - **`ParentClosePolicy.ABANDON` on every `startChild` from a dispatcher.** A parent that fans out work is a dispatcher, not a supervisor: its completion must not cancel in-flight children.
+- **Org-scoped children pass `searchAttributes: orgSearchAttributes(organizationId)` on `startChild`.** Org deletion terminates by that attribute (`../search-attributes.ts`); set it explicitly on every child rather than relying on inheritance. `../search-attributes.ts` has no Node imports, so it is safe to import here.
 - **Fan-out uses `Promise.allSettled`** when partial failure is acceptable and the activity records its own failure. Use `Promise.all` only when one failure should abort the run.
 - **Bound history.** Any unbounded fan-out or loop needs `continueAsNew` after a fixed page size. Temporal terminates a run whose history grows past its limits.
 - **Bound the argument too.** `continueAsNew` carrying a list that grows with the data hits the 2 MB payload cap eventually. Carry a cursor and re-query in the next run.

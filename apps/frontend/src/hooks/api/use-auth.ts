@@ -19,9 +19,24 @@ import {
 } from "@launchstack/api-interfaces";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { queryClient } from "@/lib/query-client";
+import { useActiveOrganizationStore } from "@/stores/active-organization-store";
 import { AuthAPI } from "../../api/auth.api";
 
 export const authSessionQueryKey = ["auth", "session"] as const;
+
+/**
+ * Wipe the signed-out user from this tab: cached server state, and the
+ * persisted active org the axios interceptor sends as `X-Organization-Id`.
+ * Otherwise the next user in this tab inherits both.
+ *
+ * Call it after leaving the protected shell: mounted org-scoped screens would
+ * refetch at once, and the bootstrap hook would re-install orgs[0].
+ */
+export function clearSignedOutUserState() {
+  queryClient.clear();
+  useActiveOrganizationStore.getState().clear();
+}
 
 export function useAuthSession() {
   return useQuery<AuthClientResult<AuthSessionResponse>>({

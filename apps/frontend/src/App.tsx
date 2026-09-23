@@ -17,7 +17,11 @@ import { Separator } from "@/components/ui/separator";
 import { OrgSwitcher } from "@/components/organization/org-switcher";
 import { PendingInvitesBadge } from "@/components/organization/pending-invites-badge";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { useAuthSession, useSignOut } from "@/hooks/api/use-auth";
+import {
+  clearSignedOutUserState,
+  useAuthSession,
+  useSignOut,
+} from "@/hooks/api/use-auth";
 import { useBootstrapActiveOrganization } from "@/hooks/use-bootstrap-active-organization";
 
 const navItems = [
@@ -49,6 +53,7 @@ function App() {
   const handleSignOut = async () => {
     await signOutMutation.mutateAsync();
     await navigate({ to: "/sign-in" });
+    clearSignedOutUserState();
   };
 
   const isRouteActive = (to: string) => {

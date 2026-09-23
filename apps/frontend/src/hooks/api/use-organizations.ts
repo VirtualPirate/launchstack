@@ -3,6 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import type {
   CreateOrganizationRequest,
   TransferOwnershipRequest,
@@ -31,6 +32,30 @@ export function useCurrentOrganization() {
     queryFn: () => OrganizationsAPI.getCurrent(),
     enabled: !!activeOrgId,
   });
+}
+
+/**
+ * After the active org is deleted or left: select another from a freshly
+ * fetched list and go home, or go create one. Staying put would re-render the
+ * page against whatever org the bootstrap hook swaps in, or load forever.
+ */
+export function useExitActiveOrganization() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const setActive = useActiveOrganizationStore((s) => s.setActiveOrganizationId);
+
+  return async (goneOrgId: string) => {
+    // fetchQuery, not the cache: the cached list may predate the delete/leave.
+    const list = await queryClient.fetchQuery({
+      queryKey: organizationsKeys.me,
+      queryFn: () => OrganizationsAPI.listMine(),
+    });
+    const nextOrgId =
+      list.data.find((entry) => entry.organization.id !== goneOrgId)
+        ?.organization.id ?? null;
+    setActive(nextOrgId);
+    await navigate({ to: nextOrgId ? "/" : "/organizations/new" });
+  };
 }
 
 export function useCreateOrganization() {

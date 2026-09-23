@@ -1,5 +1,10 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { MailPlus } from "lucide-react";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { SkeletonList } from "@/components/shared/skeleton-list";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,11 +20,14 @@ import {
   useMyPendingInvites,
 } from "@/hooks/api/use-invites";
 import { useActiveOrganizationStore } from "@/stores/active-organization-store";
+import { extractErrorMessage } from "@/lib/extract-error";
+
+const onError = (err: unknown) => toast.error(extractErrorMessage(err));
 
 export function PendingInvitesPage() {
   const session = useAuthSession();
   const userId = session.data?.data?.user.id;
-  const { data, isLoading } = useMyPendingInvites(userId);
+  const { data, isLoading, isError, error, refetch } = useMyPendingInvites(userId);
   const accept = useAcceptInvite();
   const decline = useDeclineInvite();
   const navigate = useNavigate();
@@ -28,22 +36,38 @@ export function PendingInvitesPage() {
   const invites = data?.data ?? [];
 
   const handleAccept = async (inviteId: string) => {
-    const result = await accept.mutateAsync({ inviteId });
+    let result;
+    try {
+      result = await accept.mutateAsync({ inviteId });
+    } catch (err) {
+      onError(err);
+      return;
+    }
     setActive(result.data.organization.id);
     await navigate({ to: "/" });
   };
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 py-6">
-      <div className="flex items-center gap-3">
-        <MailPlus className="size-6" />
-        <h1 className="text-2xl font-semibold">Pending invites</h1>
-      </div>
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading...</p> : null}
-      {!isLoading && invites.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          You have no pending invites.
-        </p>
+      <PageHeader title="Pending invites" />
+      {isLoading ? <SkeletonList rows={2} rowHeight={120} /> : null}
+      {isError ? (
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => void refetch()}
+        />
+      ) : null}
+      {!isLoading && !isError && invites.length === 0 ? (
+        <EmptyState
+          icon={<MailPlus className="size-6" />}
+          title="No pending invites"
+          description="Ask a teammate to invite you, or start your own organization."
+          action={
+            <Button asChild>
+              <Link to="/organizations/new">Create organization</Link>
+            </Button>
+          }
+        />
       ) : null}
       {invites.map((invite) => (
         <Card key={invite.id}>
@@ -64,7 +88,7 @@ export function PendingInvitesPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => decline.mutate({ inviteId: invite.id })}
+              onClick={() => decline.mutate({ inviteId: invite.id }, { onError })}
               disabled={decline.isPending}
             >
               Decline

@@ -7,7 +7,10 @@ export const VERIFY_EMAIL_ROUTE_PATH = "/verify-email";
 type AuthMode = "sign-in" | "sign-up";
 
 function isSafeRedirectPath(path: string) {
-  return path.startsWith("/") && !path.startsWith("//");
+  if (!path.startsWith("/")) return false;
+  // Resolve like the browser will: "//evil.com", "/\evil.com" and "/<tab>/evil.com"
+  // all start with "/" but land off-origin.
+  return new URL(path, window.location.origin).origin === window.location.origin;
 }
 
 export function normalizeRedirectPath(redirect?: string) {

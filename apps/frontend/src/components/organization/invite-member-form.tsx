@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateInvite } from "@/hooks/api/use-invites";
+import { extractErrorMessage } from "@/lib/extract-error";
 
 export function InviteMemberForm() {
   const [email, setEmail] = useState("");
@@ -34,7 +35,7 @@ export function InviteMemberForm() {
       setEmail("");
       setRole("viewer");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to send invite");
+      setError(extractErrorMessage(err));
     }
   };
 

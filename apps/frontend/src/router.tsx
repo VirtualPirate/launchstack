@@ -8,6 +8,7 @@ import {
 
 import App from "@/App";
 import { AuthAPI } from "@/api/auth.api";
+import { clearSignedOutUserState } from "@/hooks/api/use-auth";
 import { normalizeRedirectPath } from "@/lib/auth-redirect";
 import { AcceptInvitePage } from "@/routes/accept-invite";
 import { AuthErrorPage } from "@/routes/auth-error";
@@ -218,6 +219,8 @@ const protectedRoute = createRoute({
   beforeLoad: async ({ location }) => {
     const sessionResult = await AuthAPI.getSession();
     if (!sessionResult.data?.session) {
+      // Sessions also end without a click on Sign out (expiry, revocation).
+      clearSignedOutUserState();
       throw redirect({
         to: "/sign-in",
         search: {

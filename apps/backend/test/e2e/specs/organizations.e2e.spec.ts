@@ -5,6 +5,7 @@ import type { Database } from '../../../src/databases/kysely/database.types';
 import { createFileDatabase } from '../harness/database';
 import { createTestApp, type TestApp } from '../harness/create-test-app';
 import { createVerifiedUser } from '../harness/auth-client';
+import { seedMember } from '../harness/fixtures';
 
 const PASSWORD = 'correct-horse-battery-staple';
 
@@ -138,5 +139,78 @@ describe('organizations', () => {
 
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({ code: 'ORG_SLUG_CONFLICT' });
+  });
+
+  it('answers concurrent creates by one user with 201 and 409, never 500', async () => {
+    const racer = await createVerifiedUser(testApp.server, db, {
+      email: 'create-racer@example.com',
+      password: PASSWORD,
+      name: 'Create Racer',
+    });
+    const statuses = await Promise.all(
+      ['Race One', 'Race Two'].map((name) =>
+        request(testApp.server)
+          .post('/api/organizations')
+          .set('Cookie', racer.cookie)
+          .send({ name })
+          .then((r) => r.status),
+      ),
+    );
+    expect(statuses.sort()).toEqual([201, 409]);
+  });
+
+  it('lets only one of two concurrent ownership transfers win', async () => {
+    const owner = await createVerifiedUser(testApp.server, db, {
+      email: 'transfer-owner@example.com',
+      password: PASSWORD,
+      name: 'Transfer Owner',
+    });
+    const created = await request(testApp.server)
+      .post('/api/organizations')
+      .set('Cookie', owner.cookie)
+      .send({ name: 'Contested Inc' });
+    const orgId = created.body.data.id as string;
+
+    const admins = await Promise.all(
+      ['transfer-a@example.com', 'transfer-b@example.com'].map((email) =>
+        createVerifiedUser(testApp.server, db, {
+          email,
+          password: PASSWORD,
+          name: email,
+        }),
+      ),
+    );
+    for (const admin of admins) {
+      await seedMember(db, {
+        organizationId: orgId,
+        userId: admin.userId,
+        role: 'admin',
+      });
+    }
+
+    const statuses = await Promise.all(
+      admins.map((admin) =>
+        request(testApp.server)
+          .post('/api/organizations/current/transfer-ownership')
+          .set('Cookie', owner.cookie)
+          .set('x-organization-id', orgId)
+          .send({ newOwnerUserId: admin.userId })
+          .then((r) => r.status),
+      ),
+    );
+    expect(statuses.sort()).toEqual([201, 409]);
+
+    const owners = await db
+      .selectFrom('organizationMembers')
+      .select('userId')
+      .where('organizationId', '=', orgId)
+      .where('role', '=', 'owner')
+      .execute();
+    const org = await db
+      .selectFrom('organizations')
+      .select('ownerId')
+      .where('id', '=', orgId)
+      .executeTakeFirstOrThrow();
+    expect(owners).toEqual([{ userId: org.ownerId }]);
   });
 });

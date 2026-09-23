@@ -12,7 +12,7 @@ All commands run from `apps/backend/`:
 pnpm start:dev              # Watch mode (port 3000)
 pnpm start:debug            # Debug + watch mode
 pnpm test                   # Unit tests (Jest)
-pnpm test -- --testPathPattern=<pattern>  # Single test file
+pnpm exec jest --testPathPatterns=<pattern>  # Single test file
 pnpm test:watch             # Watch mode
 pnpm test:e2e               # E2E tests (Vitest; needs Docker — see test/e2e/README.md)
 pnpm test:cov               # Coverage report
@@ -35,20 +35,51 @@ pnpm db:fresh               # Roll back all migrations and re-apply (destructive
 ### Module Graph
 
 ```
-AppModule
+AppModule ─── controllers: AppController, HealthController (+ HealthService)
 ├── ConfigModule (global)
+├── LoggerModule ─── nestjs-pino + RequestIdMiddleware
 ├── KyselyModule (global) ─── provides KYSELY_DB token
 ├── TemporalModule (global) ─── provides TemporalProducerService, TEMPORAL_CLIENT
-└── AppAuthModule
-    └── BetterAuthModule.forRootAsync()
-        └── injects KYSELY_DB + ConfigService
+├── AppAuthModule
+│   └── BetterAuthModule.forRootAsync()
+│       └── injects KYSELY_DB + ConfigService
+├── OrganizationsModule ─── organizations, members, invites + OrgContextGuard
+└── QueueModule ─── noop smoke-test activity/controller
 ```
 
 ### Key Entry Points
 
-- **`src/main.ts`** — NestJS bootstrap. Body parser disabled (`bodyParser: false`) because Better Auth handles its own request parsing.
+- **`src/main.ts`** — NestJS bootstrap with `bodyParser: false` (Better Auth parses its own requests) and `bufferLogs: true`. `configureApp()` (`src/bootstrap/configure-app.ts`, shared with the e2e harness) wires the pino logger, CORS, the global `AllExceptionsFilter` and shutdown hooks.
 - **`src/worker.ts`** — Temporal worker process. Boots the same `AppModule` without HTTP and runs `@Activity` methods (see "Background jobs (Temporal)").
 - **`src/app.module.ts`** — Root module importing all feature modules.
+
+**Body parsing is opt-in per controller.** The global parser is off for Better Auth, so any controller with a `@Body()` param needs `express.json()` applied in its module's `configure()`. Existing examples: `AppAuthModule` (`EmailOtpController`), `OrganizationsModule`, `QueueModule`. **Forget this and the body arrives `undefined`.**
+
+**Health.** `GET /api/health/live` touches nothing and always returns 200 while the process serves HTTP: point container healthchecks and restart policies here. `GET /api/health` is readiness: it probes Postgres (`select 1`) and Temporal (`getSystemInfo`) in parallel, 2s timeout each, and returns 503 with per-dependency detail when either fails. Never wire a restart to readiness, or a database blip becomes a crash loop.
+
+### Graceful-degradation config pattern
+
+An optional integration must not block boot. When its env vars are missing, provide a **stub client whose methods throw `AppError.<NAME>_NOT_CONFIGURED()`** instead of throwing at module init, and log once that it is disabled. The app boots, unrelated routes work, and only a call that needs the integration fails with a clear code. Google sign-in follows the same idea: omit `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and the provider is not registered. Follow this pattern for new integrations.
+
+### Errors
+
+All in `src/common/errors/`:
+
+- **`AppError`** (`application-errors.ts`) — sealed registry of typed error factories. Throw from services as `throw AppError.ORG_NOT_FOUND()`; each code carries its HTTP status and message, and the registry key is the wire `code`. Add new codes here with `defineError({ status, message, details? })` (`define-error.ts`).
+- **`ApiException`** (`api-errors.ts`) — `HttpException` subclass whose body is the shared `ApiError` shape (`code`, `message`, `details?`).
+- **`AllExceptionsFilter`** (`all-exceptions.filter.ts`) — global filter: skips `/api/auth/*` (Better Auth owns those responses), wraps plain `HttpException`s into `ApiError`, and logs and converts unknown errors to a generic 500.
+
+Prefer `AppError.*` over Nest's built-in exceptions so clients get a stable `code`.
+
+### Logging
+
+`nestjs-pino`, configured in `src/logger/pino.config.ts`:
+
+- `LOG_LEVEL` env (default `info`). Redacts `authorization`/`cookie` request headers and `set-cookie` response headers.
+- Request IDs: honors an incoming `x-request-id` or generates a UUID. `RequestIdMiddleware` echoes it on the response.
+- Transports: dev = pretty console + rolling file; production = file only. The file (`pino-roll`) is JSON at `LOG_FILE_PATH` (default `../../logs/app.log`, i.e. `<repo-root>/logs/`), rotated by `LOG_FILE_MAX_SIZE`/`LOG_FILE_KEEP_FILES`, and shipped by the OTel collector.
+- The dev console prints one line per request (`GET /path 200 (12ms)`) via pino-pretty's `messageFormat`. That only changes console output; the file keeps every field.
+- Use the standard NestJS `Logger` class in services. It routes through pino (`app.useLogger(app.get(Logger))`).
 
 ### Database (Kysely)
 
@@ -141,7 +172,7 @@ Inject `TEMPORAL_CLIENT` for anything else (signals, queries, schedules).
 
 Then start it: `await temporal.start(WORKFLOW.sendWelcomeEmail, { args: [userId] })`.
 
-**Workflow code is sandboxed.** Files under `src/temporal/workflows/` must be deterministic: no NestJS, no DB, no network, no `Date.now()`/`Math.random()` outside what the SDK patches. Import only `@temporalio/workflow` and type-only imports. Use `sleep()`, `startChild()`, `continueAsNew()` from `@temporalio/workflow` for timers and fan-out.
+**Workflow code is sandboxed.** Files under `src/temporal/workflows/` must be deterministic: no NestJS, no DB, no network, no `Date.now()`/`Math.random()` outside what the SDK patches. Import only `@temporalio/workflow` and type-only imports. Use `sleep()`, `startChild()`, `continueAsNew()` from `@temporalio/workflow` for timers and fan-out. Read `src/temporal/workflows/AGENTS.md` (retry profiles, versioning, fan-out, history bounds, testing) before editing any workflow.
 
 **Retry mapping** (from the old pg-boss job options):
 
@@ -176,7 +207,7 @@ curl -X POST http://localhost:3000/api/_internal/queue/noop \
   -d '{"message":"hello"}'
 ```
 
-Returns `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", success: true }`. The worker logs `[noop] received: hello`, and the run shows as Completed in the Temporal UI.
+Returns **202** `{ data: { jobId: "NoopWorkflow:..." }, message: "enqueued", success: true }`. The worker logs `[noop] received: hello`, and the run shows as Completed in the Temporal UI.
 
 **Operational notes:**
 
@@ -198,11 +229,15 @@ When adding new ESM-only dependencies used in tests, you'll need to add correspo
 
 ### Response Format
 
-All API responses use the shared `ApiResponse<T>` type from `@launchstack/api-interfaces`:
+All non-auth responses use the shared `ApiResponse<T>` type from `@launchstack/api-interfaces`:
 
 ```typescript
 { data: T, message: string, success: boolean }
 ```
+
+Errors use the `ApiError` shape (`code`, `message`, `details?`) produced by `ApiException`.
+
+An endpoint that starts background work returns **202** with `{ jobId }` (the workflow id from `TemporalProducerService.start`), via `@HttpCode(HttpStatus.ACCEPTED)`. The client polls a status endpoint or the resource itself. It never waits on the job inside the request. `POST /api/_internal/queue/noop` is the example.
 
 ## Environment Variables
 

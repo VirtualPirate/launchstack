@@ -30,8 +30,14 @@ const buildTargets = (level: string) => {
     options: {
       colorize: true,
       translateTime: 'SYS:HH:MM:ss.l',
-      ignore: 'pid,hostname',
-      singleLine: false,
+      ignore: 'pid,hostname,req,res,responseTime',
+      singleLine: true,
+      // Console only: `messageFormat`/`ignore` live on the pino-pretty target,
+      // so the JSON in the log file (shipped by the OTel collector) keeps every
+      // field. Request logs render as "GET /path 200 (12ms)"; other logs keep
+      // their own message.
+      messageFormat:
+        '{if req}{req.method} {req.url} {res.statusCode} ({responseTime}ms) {end}{msg}',
     },
   };
 

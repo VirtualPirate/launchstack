@@ -1,5 +1,6 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { MailOpen } from "lucide-react";
+import { toast } from "sonner";
 import { AuthThemeToggle } from "@/components/theme/auth-theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,9 @@ import {
   useInvitePreview,
 } from "@/hooks/api/use-invites";
 import { useActiveOrganizationStore } from "@/stores/active-organization-store";
+import { extractErrorMessage } from "@/lib/extract-error";
+
+const onError = (err: unknown) => toast.error(extractErrorMessage(err));
 
 export function AcceptInvitePage() {
   const search = useSearch({ strict: false }) as { token?: string };
@@ -161,7 +165,13 @@ export function AcceptInvitePage() {
   }
 
   const handleAccept = async () => {
-    const result = await accept.mutateAsync({ token });
+    let result;
+    try {
+      result = await accept.mutateAsync({ token });
+    } catch (err) {
+      onError(err);
+      return;
+    }
     setActive(result.data.organization.id);
     await navigate({ to: "/" });
   };
@@ -177,7 +187,7 @@ export function AcceptInvitePage() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => decline.mutate({ token })}
+          onClick={() => decline.mutate({ token }, { onError })}
           disabled={decline.isPending}
         >
           Decline

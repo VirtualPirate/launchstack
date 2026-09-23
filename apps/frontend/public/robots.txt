@@ -1,0 +1,3 @@
+# The app is auth-gated: nothing here to index, on any host.
+User-agent: *
+Disallow: /

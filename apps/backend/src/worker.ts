@@ -1,3 +1,7 @@
+// Same pin as main.ts: the API and this worker must share one zone or Better
+// Auth's naive `timestamp` columns shift session and OTP expiry.
+process.env.TZ ??= 'UTC';
+
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { NativeConnection, Worker } from '@temporalio/worker';

@@ -1,4 +1,6 @@
 import type { OrganizationRole } from "@launchstack/api-interfaces";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +27,10 @@ import {
 import { InviteMemberForm } from "@/components/organization/invite-member-form";
 import { RoleBadge } from "@/components/organization/role-badge";
 import { useAuthSession } from "@/hooks/api/use-auth";
-import { useCurrentOrganization } from "@/hooks/api/use-organizations";
+import {
+  useCurrentOrganization,
+  useExitActiveOrganization,
+} from "@/hooks/api/use-organizations";
 import {
   useCurrentOrganizationMembers,
   useLeaveOrganization,
@@ -37,6 +42,9 @@ import {
   useResendInvite,
   useRevokeInvite,
 } from "@/hooks/api/use-invites";
+import { extractErrorMessage } from "@/lib/extract-error";
+
+const onError = (err: unknown) => toast.error(extractErrorMessage(err));
 
 export function OrganizationMembersPage() {
   const session = useAuthSession();
@@ -50,21 +58,24 @@ export function OrganizationMembersPage() {
   const revoke = useRevokeInvite();
 
   const callerRole = current.data?.data.role;
+  // Gate on a loaded role: `callerRole !== "viewer"` is also true while it loads.
+  const canManageMembers = callerRole === "owner" || callerRole === "admin";
+  const exitOrganization = useExitActiveOrganization();
   const callerUserId = session.data?.data?.user.id;
   const members = membersQuery.data?.data ?? [];
   const invites = invitesQuery.data?.data ?? [];
 
   const handleRoleChange = (memberId: string, role: OrganizationRole) => {
     if (role === "owner") return;
-    updateRole.mutate({
-      memberId,
-      payload: { role: role as "admin" | "viewer" },
-    });
+    updateRole.mutate(
+      { memberId, payload: { role: role as "admin" | "viewer" } },
+      { onError },
+    );
   };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-6">
-      <h1 className="text-2xl font-semibold">Members</h1>
+      <PageHeader title="Members" />
 
       <Card>
         <CardHeader>
@@ -115,16 +126,24 @@ export function OrganizationMembersPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => leave.mutate()}
+                          onClick={async () => {
+                            try {
+                              await leave.mutateAsync();
+                            } catch (err) {
+                              onError(err);
+                              return;
+                            }
+                            await exitOrganization(m.organizationId);
+                          }}
                           disabled={leave.isPending}
                         >
                           Leave
                         </Button>
-                      ) : callerRole !== "viewer" && m.role !== "owner" ? (
+                      ) : canManageMembers && m.role !== "owner" ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => removeMember.mutate(m.id)}
+                          onClick={() => removeMember.mutate(m.id, { onError })}
                           disabled={removeMember.isPending}
                         >
                           Remove
@@ -180,7 +199,7 @@ export function OrganizationMembersPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => resend.mutate(invite.id)}
+                        onClick={() => resend.mutate(invite.id, { onError })}
                         disabled={resend.isPending}
                       >
                         Resend
@@ -188,7 +207,7 @@ export function OrganizationMembersPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => revoke.mutate(invite.id)}
+                        onClick={() => revoke.mutate(invite.id, { onError })}
                         disabled={revoke.isPending}
                       >
                         Revoke

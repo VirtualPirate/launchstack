@@ -25,6 +25,18 @@ function buildSlug(name: string): string {
   return `${base || 'org'}-${suffix}`;
 }
 
+/**
+ * Name of the unique index that rejected a write (Postgres 23505), if any.
+ * Pre-checks can't see a concurrent uncommitted insert, so the indexes are
+ * what arbitrate slug and owner clashes.
+ */
+function uniqueViolation(err: unknown): string | undefined {
+  const e = err as { code?: unknown; constraint?: unknown } | null;
+  return e?.code === '23505' && typeof e.constraint === 'string'
+    ? e.constraint
+    : undefined;
+}
+
 export function serializeOrganization(row: OrganizationSelect): Organization {
   return {
     id: row.id,
@@ -51,34 +63,40 @@ export class OrganizationsService {
     organization: Organization;
     membership: OrganizationMemberSelect;
   }> {
-    const existing = await this.orgs.findByOwnerId(ownerUserId);
-    if (existing) {
-      throw AppError.ORG_OWNER_CONFLICT();
-    }
+    // A slug clash retries with a fresh random suffix; an owner clash is final.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const result = await this.db.transaction().execute(async (tx) => {
+          const org = await this.orgs.create(
+            {
+              name: input.name,
+              slug: buildSlug(input.name),
+              ownerId: ownerUserId,
+            },
+            tx,
+          );
+          const membership = await this.members.create(
+            { organizationId: org.id, userId: ownerUserId, role: 'owner' },
+            tx,
+          );
+          return { org, membership };
+        });
 
-    const result = await this.db.transaction().execute(async (tx) => {
-      let slug = buildSlug(input.name);
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const clash = await this.orgs.findBySlug(slug, tx);
-        if (!clash) break;
-        slug = buildSlug(input.name);
+        return {
+          organization: serializeOrganization(result.org),
+          membership: result.membership,
+        };
+      } catch (err) {
+        const index = uniqueViolation(err);
+        if (index === 'organizations_owner_id_unique') {
+          throw AppError.ORG_OWNER_CONFLICT();
+        }
+        if (index !== 'organizations_slug_unique') {
+          throw err;
+        }
       }
-
-      const org = await this.orgs.create(
-        { name: input.name, slug, ownerId: ownerUserId },
-        tx,
-      );
-      const membership = await this.members.create(
-        { organizationId: org.id, userId: ownerUserId, role: 'owner' },
-        tx,
-      );
-      return { org, membership };
-    });
-
-    return {
-      organization: serializeOrganization(result.org),
-      membership: result.membership,
-    };
+    }
+    throw AppError.ORG_SLUG_CONFLICT();
   }
 
   async listMyOrganizations(userId: string): Promise<MyOrganization[]> {
@@ -104,13 +122,15 @@ export class OrganizationsService {
     organizationId: string,
     patch: { name?: string; slug?: string },
   ): Promise<Organization> {
-    if (patch.slug) {
-      const clash = await this.orgs.findBySlug(patch.slug);
-      if (clash && clash.id !== organizationId) {
+    let updated: OrganizationSelect | null;
+    try {
+      updated = await this.orgs.update(organizationId, patch);
+    } catch (err) {
+      if (uniqueViolation(err) === 'organizations_slug_unique') {
         throw AppError.ORG_SLUG_CONFLICT();
       }
+      throw err;
     }
-    const updated = await this.orgs.update(organizationId, patch);
     if (!updated) {
       throw AppError.ORG_NOT_FOUND();
     }
@@ -130,46 +150,56 @@ export class OrganizationsService {
       throw AppError.ORG_TRANSFER_TO_SELF();
     }
 
-    return await this.db.transaction().execute(async (tx) => {
-      const target = await this.members.findByOrgAndUser(
-        input.organizationId,
-        input.newOwnerUserId,
-        tx,
-      );
-      if (!target || target.role !== 'admin') {
-        throw AppError.ORG_TRANSFER_TARGET_NOT_ADMIN();
-      }
+    try {
+      return await this.db.transaction().execute(async (tx) => {
+        // Lock first: otherwise two concurrent transfers both read the old
+        // roles under READ COMMITTED and each promotes its own target.
+        if (!(await this.orgs.lockById(input.organizationId, tx))) {
+          throw AppError.ORG_NOT_FOUND();
+        }
 
-      const targetOwnsElsewhere = await this.orgs.findByOwnerId(
-        input.newOwnerUserId,
-        tx,
-      );
-      if (targetOwnsElsewhere) {
+        const target = await this.members.findByOrgAndUser(
+          input.organizationId,
+          input.newOwnerUserId,
+          tx,
+        );
+        if (!target || target.role !== 'admin') {
+          throw AppError.ORG_TRANSFER_TARGET_NOT_ADMIN();
+        }
+
+        const currentOwnerMembership = await this.members.findByOrgAndUser(
+          input.organizationId,
+          input.currentOwnerUserId,
+          tx,
+        );
+        if (
+          !currentOwnerMembership ||
+          currentOwnerMembership.role !== 'owner'
+        ) {
+          throw AppError.ORG_TRANSFER_CALLER_NOT_OWNER();
+        }
+
+        const updatedOrg = await this.orgs.setOwner(
+          input.organizationId,
+          input.newOwnerUserId,
+          tx,
+        );
+        if (!updatedOrg) {
+          throw AppError.ORG_NOT_FOUND();
+        }
+
+        // Demote before promote: organization_members_single_owner_unique is
+        // checked per statement.
+        await this.members.updateRole(currentOwnerMembership.id, 'admin', tx);
+        await this.members.updateRole(target.id, 'owner', tx);
+
+        return serializeOrganization(updatedOrg);
+      });
+    } catch (err) {
+      if (uniqueViolation(err) === 'organizations_owner_id_unique') {
         throw AppError.ORG_TRANSFER_TARGET_OWNS_ELSEWHERE();
       }
-
-      const currentOwnerMembership = await this.members.findByOrgAndUser(
-        input.organizationId,
-        input.currentOwnerUserId,
-        tx,
-      );
-      if (!currentOwnerMembership || currentOwnerMembership.role !== 'owner') {
-        throw AppError.ORG_TRANSFER_CALLER_NOT_OWNER();
-      }
-
-      const updatedOrg = await this.orgs.setOwner(
-        input.organizationId,
-        input.newOwnerUserId,
-        tx,
-      );
-      if (!updatedOrg) {
-        throw AppError.ORG_NOT_FOUND();
-      }
-
-      await this.members.updateRole(target.id, 'owner', tx);
-      await this.members.updateRole(currentOwnerMembership.id, 'admin', tx);
-
-      return serializeOrganization(updatedOrg);
-    });
+      throw err;
+    }
   }
 }

@@ -68,6 +68,20 @@ services:
     ports:
       - "${TEMPORAL_UI_PORT:-8080}:8080"
 
+  # CLI container (`temporal`, `tctl`). Used by `pnpm temporal:reset` to poll
+  # cluster health; also handy for `docker exec -it launchstack-temporal-admin temporal workflow list`.
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.29.7-tctl-1.18.4-cli-1.7.2
+    container_name: launchstack-temporal-admin
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
 volumes:
   postgres_data:
   otel_checkpoints:

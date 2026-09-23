@@ -141,7 +141,7 @@ Inject `TEMPORAL_CLIENT` for anything else (signals, queries, schedules).
 
 Then start it: `await temporal.start(WORKFLOW.sendWelcomeEmail, { args: [userId] })`.
 
-**Workflow code is sandboxed.** Files under `src/temporal/workflows/` must be deterministic: no NestJS, no DB, no network, no `Date.now()`/`Math.random()` outside what the SDK patches. Import only `@temporalio/workflow` and type-only imports. Use `sleep()`, `startChild()`, `continueAsNew()` from `@temporalio/workflow` for timers and fan-out.
+**Workflow code is sandboxed.** Files under `src/temporal/workflows/` must be deterministic: no NestJS, no DB, no network, no `Date.now()`/`Math.random()` outside what the SDK patches. Import only `@temporalio/workflow` and type-only imports. Use `sleep()`, `startChild()`, `continueAsNew()` from `@temporalio/workflow` for timers and fan-out. Read `src/temporal/workflows/AGENTS.md` (retry profiles, versioning, fan-out, history bounds, testing) before editing any workflow.
 
 **Retry mapping** (from the old pg-boss job options):
 

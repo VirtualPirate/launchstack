@@ -34,6 +34,9 @@ coverage/
 
 # Turbo
 .turbo/
+
+# TypeScript incremental build info
+*.tsbuildinfo
 docs/superpowers/
 
 .docs/*

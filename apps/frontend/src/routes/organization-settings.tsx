@@ -20,11 +20,11 @@ import {
 import {
   useCurrentOrganization,
   useDeleteCurrentOrganization,
+  useExitActiveOrganization,
   useTransferOwnership,
   useUpdateCurrentOrganization,
 } from "@/hooks/api/use-organizations";
 import { useCurrentOrganizationMembers } from "@/hooks/api/use-members";
-import { useActiveOrganizationStore } from "@/stores/active-organization-store";
 
 export function OrganizationSettingsPage() {
   const current = useCurrentOrganization();
@@ -32,7 +32,7 @@ export function OrganizationSettingsPage() {
   const updateOrg = useUpdateCurrentOrganization();
   const deleteOrg = useDeleteCurrentOrganization();
   const transfer = useTransferOwnership();
-  const clearActive = useActiveOrganizationStore((s) => s.clear);
+  const exitOrganization = useExitActiveOrganization();
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -78,7 +78,7 @@ export function OrganizationSettingsPage() {
   const handleDelete = async () => {
     if (deleteConfirm !== org.name) return;
     await deleteOrg.mutateAsync();
-    clearActive();
+    await exitOrganization(org.id);
   };
 
   const canEdit = role === "owner" || role === "admin";

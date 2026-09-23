@@ -25,7 +25,10 @@ import {
 import { InviteMemberForm } from "@/components/organization/invite-member-form";
 import { RoleBadge } from "@/components/organization/role-badge";
 import { useAuthSession } from "@/hooks/api/use-auth";
-import { useCurrentOrganization } from "@/hooks/api/use-organizations";
+import {
+  useCurrentOrganization,
+  useExitActiveOrganization,
+} from "@/hooks/api/use-organizations";
 import {
   useCurrentOrganizationMembers,
   useLeaveOrganization,
@@ -50,6 +53,9 @@ export function OrganizationMembersPage() {
   const revoke = useRevokeInvite();
 
   const callerRole = current.data?.data.role;
+  // Gate on a loaded role: `callerRole !== "viewer"` is also true while it loads.
+  const canManageMembers = callerRole === "owner" || callerRole === "admin";
+  const exitOrganization = useExitActiveOrganization();
   const callerUserId = session.data?.data?.user.id;
   const members = membersQuery.data?.data ?? [];
   const invites = invitesQuery.data?.data ?? [];
@@ -115,12 +121,15 @@ export function OrganizationMembersPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => leave.mutate()}
+                          onClick={async () => {
+                            await leave.mutateAsync();
+                            await exitOrganization(m.organizationId);
+                          }}
                           disabled={leave.isPending}
                         >
                           Leave
                         </Button>
-                      ) : callerRole !== "viewer" && m.role !== "owner" ? (
+                      ) : canManageMembers && m.role !== "owner" ? (
                         <Button
                           size="sm"
                           variant="outline"
